@@ -4,7 +4,7 @@ import { existsSync, readFileSync, rmSync } from "node:fs";
 import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { platform } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
 import { hasInteractiveUi, showText, writePrivateJsonSync, xdgConfigHome, xdgDataHome, xdgStateHome } from "../shared.ts";
 
@@ -74,12 +74,20 @@ export function authSessionPath(): string {
   return join(xdgDataHome(), "pi", "spotify-auth-session.json");
 }
 
+function jsonReadDetail(error: unknown): string {
+  if (error instanceof SyntaxError) return `: ${error.message}`;
+  if (typeof error === "object" && error && "code" in error && typeof (error as { code?: unknown }).code === "string") {
+    return `: ${(error as { code: string }).code}`;
+  }
+  return "";
+}
+
 function readJson<T>(path: string): T | undefined {
   if (!existsSync(path)) return undefined;
   try {
     return JSON.parse(readFileSync(path, "utf8")) as T;
   } catch (error) {
-    throw new Error(`Spotify JSON state is unreadable or malformed at ${path}: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Spotify JSON state is unreadable or malformed in ${basename(path)}${jsonReadDetail(error)}`);
   }
 }
 

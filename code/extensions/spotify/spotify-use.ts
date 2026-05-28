@@ -4,7 +4,7 @@ import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 
 import { getRemoteTurnOrigin } from "../remote-origin.ts";
-import { showText } from "../shared.ts";
+import { showText, toolError } from "../shared.ts";
 import {
   accessToken,
   authSessionPath,
@@ -464,11 +464,15 @@ export function registerSpotifyUse(pi: ExtensionAPI): void {
     ],
     parameters: SpotifyParams,
     async execute(_toolCallId, params) {
-      const text = await spotifyAction(params);
-      return {
-        content: [{ type: "text", text }],
-        details: { action: params.action, query: params.query, uri: params.uri, deviceId: params.deviceId },
-      };
+      try {
+        const text = await spotifyAction(params);
+        return {
+          content: [{ type: "text", text }],
+          details: { action: params.action, query: params.query, uri: params.uri, deviceId: params.deviceId },
+        };
+      } catch (error) {
+        throw toolError("spotify_control", error);
+      }
     },
     renderCall(args, theme) {
       let text = theme.fg("toolTitle", theme.bold("spotify_control ")) + theme.fg("muted", args.action || "");

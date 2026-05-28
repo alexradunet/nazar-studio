@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
+import { truncateUtf8 } from "../extensions/shared.ts";
 import {
   addJournalEntry,
   compactMemory,
@@ -138,6 +139,14 @@ test("root package exposes Nazar Pi package resources", () => {
   assert.equal(Object.hasOwn(pkg, "dependencies"), false);
   assert.equal(pkg.optionalDependencies["@whiskeysockets/baileys"], "7.0.0-rc13");
   assert.equal(pkg.optionalDependencies["sherpa-onnx-node"], "1.13.2");
+});
+
+test("memory tool output truncation caps text at 50KB", () => {
+  assert.equal(truncateUtf8("short output", 50 * 1024), "short output");
+
+  const output = truncateUtf8("α".repeat(60 * 1024), 50 * 1024);
+  assert.equal(Buffer.byteLength(output, "utf8") <= 50 * 1024, true);
+  assert.match(output, /\[Output truncated\]$/);
 });
 
 test("path derivation uses only repo root and ignores stale PI_MEMORY env vars", () => {

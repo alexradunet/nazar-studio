@@ -9,6 +9,29 @@ export function trim(value: string | undefined | null): string {
   return (value ?? "").trim();
 }
 
+export function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+export function toolError(toolName: string, error: unknown): Error {
+  return new Error(`${toolName}: ${errorMessage(error)}`);
+}
+
+export function truncateUtf8(text: string, maxBytes: number, suffix = "\n\n[Output truncated]"): string {
+  if (Buffer.byteLength(text, "utf8") <= maxBytes) return text;
+
+  const budget = Math.max(0, maxBytes - Buffer.byteLength(suffix, "utf8"));
+  let output = "";
+  let bytes = 0;
+  for (const char of text) {
+    const size = Buffer.byteLength(char, "utf8");
+    if (bytes + size > budget) break;
+    output += char;
+    bytes += size;
+  }
+  return `${output}${suffix}`;
+}
+
 export function hasInteractiveUi(ctx: { hasUI?: boolean } | undefined): boolean {
   return ctx?.hasUI !== false;
 }

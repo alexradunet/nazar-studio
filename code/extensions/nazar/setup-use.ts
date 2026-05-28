@@ -10,7 +10,7 @@ import { sherpaModelStatus } from "../voice/sherpa-runtime.ts";
 import { saveSpotifySetupConfig, spotifyLoginWithLocalCallback, spotifySetupStatusText } from "../spotify/spotify-use.ts";
 import { startWhatsAppQrPairing } from "../whatsapp/whatsapp-use.ts";
 import { loadWhatsAppConfig, maskPhone, phoneToPersonalJid, saveWhatsAppConfig, whatsappAuthDir, whatsappConfigPath } from "../whatsapp/whatsapp-utils.ts";
-import { showText } from "../shared.ts";
+import { hasInteractiveUi, showText } from "../shared.ts";
 import {
   defaultMemoryConfig,
   defaultVoiceModelDir,

@@ -54,3 +54,9 @@ test("TTS streaming chunk split leaves incomplete rest", () => {
   assert.deepEqual(result.chunks, ["Hello world."]);
   assert.equal(result.rest, "More words are still streaming");
 });
+
+test("TTS splitting handles single-word and empty input", () => {
+  assert.deepEqual(splitLongText("word", { maxChunkChars: 10 }), ["word"]);
+  assert.deepEqual(splitLongText("   ", { maxChunkChars: 10 }), []);
+  assert.deepEqual(splitSpeakableChunks("", { minChars: 10 }), { chunks: [], rest: "" });
+});

@@ -104,6 +104,8 @@ const MAX_IMAGE_BYTES = positiveIntEnv("PI_WHATSAPP_MAX_IMAGE_BYTES", 8 * 1024 *
 const MAX_AUDIO_BYTES = positiveIntEnv("PI_WHATSAPP_MAX_AUDIO_BYTES", 12 * 1024 * 1024);
 const MAX_PCM_BYTES = positiveIntEnv("PI_WHATSAPP_MAX_PCM_BYTES", 20 * 1024 * 1024);
 const MAX_RECONNECT_ATTEMPTS = positiveIntEnv("PI_WHATSAPP_MAX_RECONNECT_ATTEMPTS", 12);
+const FFMPEG_TIMEOUT_MS = positiveIntEnv("PI_WHATSAPP_FFMPEG_TIMEOUT_MS", 30_000);
+const MAX_FFMPEG_STDERR_BYTES = 64 * 1024;
 
 function setStatus(next: WhatsAppStatus, detail?: string): void {
   status = next;
@@ -298,15 +300,51 @@ async function convertAudioToPcm16(audio: Buffer): Promise<Buffer> {
 
     const stdout: Buffer[] = [];
     const stderr: Buffer[] = [];
-    child.stdout.on("data", (chunk) => stdout.push(Buffer.from(chunk)));
-    child.stderr.on("data", (chunk) => stderr.push(Buffer.from(chunk)));
-    child.on("error", reject);
-    child.on("close", (code) => {
-      if (code === 0) {
-        resolve(Buffer.concat(stdout));
+    let stdoutBytes = 0;
+    let stderrBytes = 0;
+    let settled = false;
+
+    const finish = (error?: Error, value?: Buffer): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      if (error) reject(error);
+      else resolve(value || Buffer.alloc(0));
+    };
+
+    const timeout = setTimeout(() => {
+      child.kill("SIGKILL");
+      finish(new Error(`ffmpeg timed out after ${FFMPEG_TIMEOUT_MS}ms`));
+    }, FFMPEG_TIMEOUT_MS);
+
+    child.stdout.on("data", (chunk) => {
+      if (settled) return;
+      const buffer = Buffer.from(chunk);
+      stdoutBytes += buffer.length;
+      if (stdoutBytes > MAX_PCM_BYTES) {
+        child.kill("SIGKILL");
+        finish(new Error(`ffmpeg PCM output exceeded ${MAX_PCM_BYTES} bytes`));
         return;
       }
-      reject(new Error(Buffer.concat(stderr).toString("utf8").trim() || `ffmpeg exited with code ${code}`));
+      stdout.push(buffer);
+    });
+    child.stderr.on("data", (chunk) => {
+      const buffer = Buffer.from(chunk);
+      const remaining = MAX_FFMPEG_STDERR_BYTES - stderrBytes;
+      if (remaining > 0) stderr.push(buffer.subarray(0, remaining));
+      stderrBytes += buffer.length;
+    });
+    child.on("error", (error) => finish(error instanceof Error ? error : new Error(String(error))));
+    child.stdin.on("error", (error) => {
+      if (!settled) finish(error instanceof Error ? error : new Error(String(error)));
+    });
+    child.on("close", (code) => {
+      if (settled) return;
+      if (code === 0) {
+        finish(undefined, Buffer.concat(stdout));
+        return;
+      }
+      finish(new Error(Buffer.concat(stderr).toString("utf8").trim() || `ffmpeg exited with code ${code}`));
     });
     child.stdin.end(audio);
   });
@@ -806,7 +844,11 @@ export function registerWhatsAppUse(pi: ExtensionAPI) {
   });
 
   pi.on("session_shutdown", async () => {
-    await stopWhatsApp();
+    try {
+      await stopWhatsApp();
+    } finally {
+      ctxRef = undefined;
+    }
   });
 
   pi.registerCommand("whatsapp", {

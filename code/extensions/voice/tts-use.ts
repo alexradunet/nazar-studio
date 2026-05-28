@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
-import { hasInteractiveUi } from "../shared.ts";
+import { hasInteractiveUi, toolError } from "../shared.ts";
 import { sherpaModelStatus, speakWithSherpa, stopSherpaSpeech } from "./sherpa-runtime.ts";
 import { cleanForTts, splitLongText, splitSpeakableChunks } from "../voice-text.ts";
 
@@ -35,6 +35,12 @@ const STATE: TtsState = {
 
 let debounceTimer: NodeJS.Timeout | undefined;
 let currentSpeech: Promise<void> | undefined;
+
+function clearDebounceTimer(): void {
+  if (!debounceTimer) return;
+  clearTimeout(debounceTimer);
+  debounceTimer = undefined;
+}
 
 const HELP_TEXT = `Pi local TTS commands
 - /tts on — enable speaking assistant replies
@@ -77,6 +83,7 @@ function stopCurrentSpeech(): void {
 }
 
 function clearSpeech(): void {
+  clearDebounceTimer();
   STATE.queue = [];
   STATE.streamBuffer = "";
   stopCurrentSpeech();
@@ -221,13 +228,18 @@ export function registerTtsUse(pi: ExtensionAPI) {
     name: "tts_toggle",
     label: "TTS Toggle",
     description: "Enable or disable Pi text-to-speech for assistant replies.",
+    promptGuidelines: ["Use tts_toggle when the user asks to enable or disable Pi text-to-speech for assistant replies."],
     parameters: Type.Object({
       enabled: Type.Boolean({ description: "Whether TTS should be enabled." }),
     }),
     async execute(_toolCallId, params) {
-      STATE.enabled = params.enabled;
-      if (!STATE.enabled) clearSpeech();
-      return { content: [{ type: "text", text: `TTS ${STATE.enabled ? "enabled for the main interactive conversation" : "disabled"}.` }] };
+      try {
+        STATE.enabled = params.enabled;
+        if (!STATE.enabled) clearSpeech();
+        return { content: [{ type: "text", text: `TTS ${STATE.enabled ? "enabled for the main interactive conversation" : "disabled"}.` }] };
+      } catch (error) {
+        throw toolError("tts_toggle", error);
+      }
     },
   });
 
@@ -237,7 +249,7 @@ export function registerTtsUse(pi: ExtensionAPI) {
     if (CONFIG.interruptOnNewMessage) clearSpeech();
     STATE.streamBuffer = "";
     STATE.fullTextSeen = "";
-    if (debounceTimer) clearTimeout(debounceTimer);
+    clearDebounceTimer();
   });
 
   pi.on("message_update", async (event, ctx) => {
@@ -258,19 +270,22 @@ export function registerTtsUse(pi: ExtensionAPI) {
     STATE.fullTextSeen = full;
     STATE.streamBuffer += delta;
 
-    if (debounceTimer) clearTimeout(debounceTimer);
+    clearDebounceTimer();
     debounceTimer = setTimeout(() => flushStreamingBuffer(false), CONFIG.debounceMs);
   });
 
   pi.on("message_end", async (event, ctx) => {
     if (event.message.role !== "assistant") return;
     if (!canAutoSpeak(ctx)) return;
-    if (debounceTimer) clearTimeout(debounceTimer);
+    clearDebounceTimer();
     flushStreamingBuffer(true);
   });
 
   pi.on("session_shutdown", async (_event, ctx) => {
+    clearDebounceTimer();
     clearSpeech();
+    STATE.speaking = false;
+    STATE.fullTextSeen = "";
     ctx.ui.setWidget("tts", undefined);
   });
 }

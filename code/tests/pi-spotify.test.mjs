@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import {
   authSessionPath,
@@ -12,9 +12,11 @@ import {
   createCodeVerifier,
   DEFAULT_REDIRECT_URI,
   loadStoredConfig,
+  loadToken,
   saveConfig,
   shouldRefreshToken,
   tokenFromResponse,
+  tokenPath,
 } from "../extensions/spotify/spotify-auth.ts";
 import { callbackParts, normalizeSpotifyUri, spotifyUrlToUri } from "../extensions/spotify/spotify-utils.ts";
 
@@ -99,10 +101,27 @@ test("Spotify token conversion keeps refresh token and applies refresh skew", ()
   assert.equal(token.refreshToken, "refresh-a");
   assert.equal(token.expiresAt, now + 120_000);
   assert.equal(shouldRefreshToken(token, now + 30_000), false);
-  assert.equal(shouldRefreshToken(token, now + 61_000), true);
+  assert.equal(shouldRefreshToken(token, now + 59_999), false);
+  assert.equal(shouldRefreshToken(token, now + 60_000), true);
 
   const refreshed = tokenFromResponse({ access_token: "access-b", expires_in: 60 }, token, now + 1_000);
   assert.equal(refreshed.accessToken, "access-b");
   assert.equal(refreshed.refreshToken, "refresh-a");
   assert.throws(() => tokenFromResponse({ access_token: "access" }, undefined, now), /refresh token/);
 });
+
+test("Spotify corrupt token errors avoid full local paths", () => withSpotifyEnv((tmp) => {
+  const path = tokenPath();
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, "{not-json", "utf8");
+
+  assert.throws(
+    () => loadToken(),
+    (error) => {
+      assert.match(error.message, /spotify-token\.json/);
+      assert.equal(error.message.includes(tmp), false);
+      assert.equal(error.message.includes(dirname(path)), false);
+      return true;
+    },
+  );
+}));
