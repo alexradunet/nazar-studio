@@ -7,7 +7,6 @@
 
 # Extension-local npm dependencies are reproducible from package-lock.json
 code/extensions/voice/node_modules/**
-code/extensions/websearch/node_modules/**
 code/extensions/whatsapp/node_modules/**
 
 # Private/generated Pi memory (external vault preferred; repo-local fallback is local-only)

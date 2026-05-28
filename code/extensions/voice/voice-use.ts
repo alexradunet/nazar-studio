@@ -1,5 +1,5 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { hasInteractiveUi, trim } from "../shared.ts";
+import { hasInteractiveUi, notify, trim } from "../shared.ts";
 import {
   type RecordingProcess,
   recordingByteLength,
@@ -144,8 +144,7 @@ function startRecording(pi: ExtensionAPI, ctx: ExtensionContext, action: VoiceAc
     const bytes = recordingByteLength(session.child);
     if (bytes < 16000 * 2 * 0.25) {
       const message = `${noAudioHint()} Captured ${bytes} byte(s).`;
-      if (hasInteractiveUi(session.ctx)) session.ctx.ui.notify(message, "warning");
-      else console.log(message);
+      notify(session.ctx, message, "warning");
       return;
     }
 
@@ -154,15 +153,14 @@ function startRecording(pi: ExtensionAPI, ctx: ExtensionContext, action: VoiceAc
         const text = trim(transcript);
         if (!text) {
           const message = `No transcript returned. Raw audio was captured (${bytes} bytes), but sherpa did not detect speech.`;
-          if (hasInteractiveUi(session.ctx)) session.ctx.ui.notify(message, "warning");
-          else console.log(message);
+          notify(session.ctx, message, "warning");
           return;
         }
         deliverTranscript(pi, session.ctx, session.action, text);
       })
       .catch((error) => {
         const message = error instanceof Error ? error.message : String(error);
-        if (hasInteractiveUi(session.ctx)) session.ctx.ui.notify(`Voice transcription failed: ${message}`, "error");
+        notify(session.ctx, `Voice transcription failed: ${message}`, "error");
       });
   });
 
@@ -212,8 +210,7 @@ export function registerVoiceUse(pi: ExtensionAPI) {
       if (command === "mic-test" || command === "test-mic" || command === "mic") {
         if (recordingSession) {
           const text = "Stop or cancel the active voice recording before running /voice mic-test.";
-          if (!hasInteractiveUi(ctx)) console.log(text);
-          else ctx.ui.notify(text, "warning");
+          notify(ctx, text, "warning");
           return;
         }
         setVoiceStatus(ctx, "Voice: microphone test… speak now");
@@ -228,8 +225,7 @@ export function registerVoiceUse(pi: ExtensionAPI) {
           }
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
-          if (!hasInteractiveUi(ctx)) console.log(`Microphone test failed: ${message}`);
-          else ctx.ui.notify(`Microphone test failed: ${message}`, "error");
+          notify(ctx, `Microphone test failed: ${message}`, "error");
         } finally {
           setVoiceStatus(ctx, undefined);
         }
@@ -238,15 +234,13 @@ export function registerVoiceUse(pi: ExtensionAPI) {
 
       if (command === "cancel" || command === "off") {
         const text = stopRecording(ctx, true);
-        if (!hasInteractiveUi(ctx)) console.log(text);
-        else ctx.ui.notify(text, "info");
+        notify(ctx, text, "info");
         return;
       }
 
       if (command === "stop" || command === "send") {
         const text = stopRecording(ctx);
-        if (!hasInteractiveUi(ctx)) console.log(text);
-        else ctx.ui.notify(text, "info");
+        notify(ctx, text, "info");
         return;
       }
 

@@ -9,7 +9,6 @@ import { ensureVaultScaffold } from "./vault.ts";
 const MAX_BULLET_CHARS = 360;
 const MAX_DAILY_BULLETS = 45;
 const MAX_WEEKLY_DAY_BULLETS = 8;
-const MAX_MONTHLY_WEEK_BULLETS = 10;
 const COMPACT_LOCK_STALE_MS = 10 * 60_000;
 
 const PINNED_SECTION_USER = "User preferences";
@@ -177,11 +176,6 @@ function mondayOfIsoWeek(week: string): Date {
   return new Date(monday.getUTCFullYear(), monday.getUTCMonth(), monday.getUTCDate());
 }
 
-function weekMonth(week: string): string {
-  const monday = mondayOfIsoWeek(week);
-  return `${monday.getFullYear()}-${pad2(monday.getMonth() + 1)}`;
-}
-
 function isClosedDay(day: string, today = localToday()): boolean {
   return day < today;
 }
@@ -193,11 +187,12 @@ function isClosedWeek(week: string, today = localToday()): boolean {
   return dayString(sunday) < today;
 }
 
+let ensuredDirsKey: string | undefined;
+
 function ensureDirs(): void {
   const paths = getMemoryPaths();
-  const { DAILY_DIR, WEEKLY_DIR, MONTHLY_DIR } = rollupDirs();
-  ensureVaultScaffold(paths);
-  for (const path of [
+  const { DAILY_DIR, WEEKLY_DIR } = rollupDirs();
+  const dirs = [
     paths.MEMORY_ROOT,
     paths.PAGES_DIR,
     paths.AI_PAGES_DIR,
@@ -211,15 +206,17 @@ function ensureDirs(): void {
     paths.ARCHIVE_DIR,
     DAILY_DIR,
     WEEKLY_DIR,
-    MONTHLY_DIR,
-  ]) {
-    mkdirSync(path, { recursive: true });
-  }
-  ensurePinnedMemoryPage();
+  ];
+  const key = [...dirs, paths.PINNED_MEMORY_PAGE, paths.VAULT_DIR || ""].map((path) => resolve(path)).join("\0");
+  if (ensuredDirsKey === key && existsSync(paths.PINNED_MEMORY_PAGE) && dirs.every((path) => existsSync(path))) return;
+
+  ensureVaultScaffold(paths);
+  for (const path of dirs) mkdirSync(path, { recursive: true });
+  ensurePinnedMemoryPage(paths);
+  ensuredDirsKey = key;
 }
 
-function ensurePinnedMemoryPage(): void {
-  const paths = getMemoryPaths();
+function ensurePinnedMemoryPage(paths = getMemoryPaths()): void {
   mkdirSync(dirname(paths.PINNED_MEMORY_PAGE), { recursive: true });
   if (!existsSync(paths.PINNED_MEMORY_PAGE)) writeFileSync(paths.PINNED_MEMORY_PAGE, PINNED_MEMORY_TEMPLATE, "utf8");
 }
@@ -580,6 +577,9 @@ function isJournalPrivateMessage(message: MemoryMessage): boolean {
 }
 
 function isMemoryWorthy(message: MemoryMessage): boolean {
+  // Deliberately deterministic/offline: this heuristic is cheap, private, and testable,
+  // but it is English- and verb-prefix-bound. An opt-in LLM summarizer can replace or
+  // augment it later if higher recall becomes worth the token cost and nondeterminism.
   if (isJournalPrivateMessage(message)) return false;
   const text = compactText(message.text);
   if (!text || isNoisy(text)) return false;
@@ -752,47 +752,6 @@ function writeWeekly(dailyPaths: string[]): string[] {
   return written;
 }
 
-function writeMonthly(weeklyPaths: string[]): string[] {
-  const { MONTHLY_DIR } = rollupDirs();
-  const today = localToday();
-  const byMonth = new Map<string, string[]>();
-
-  for (const path of weeklyPaths) {
-    const week = basename(path, ".md");
-    if (!isClosedWeek(week, today)) continue;
-    const month = weekMonth(week);
-    const bucket = byMonth.get(month) || [];
-    bucket.push(path);
-    byMonth.set(month, bucket);
-  }
-
-  const written: string[] = [];
-  for (const [month, paths] of [...byMonth.entries()].sort(([a], [b]) => a.localeCompare(b))) {
-    const lines = [
-      `# Monthly memory: ${month}`,
-      "",
-      "Generated from closed weekly memory notes by the project-local Pi memory extension.",
-      "",
-      "## Weeks",
-    ];
-
-    for (const path of paths.sort()) {
-      const week = basename(path, ".md");
-      lines.push("", `### [${week}](${relative(MONTHLY_DIR, path)})`);
-      const bullets = readIfExists(path).split(/\r?\n/).filter((line) => line.startsWith("- ")).slice(0, MAX_MONTHLY_WEEK_BULLETS);
-      lines.push(...(bullets.length ? bullets : ["- No durable weekly memory extracted."]));
-    }
-
-    lines.push("");
-    const out = join(MONTHLY_DIR, `${month}.md`);
-    writeFileSync(out, redactSecrets(lines.join("\n")), "utf8");
-    written.push(out);
-  }
-
-  syncGeneratedDir(MONTHLY_DIR, written);
-  return written;
-}
-
 function journalFileHeader(day: string): string {
   return [
     `# Journal entries: ${day}`,
@@ -845,24 +804,22 @@ export function compactMemory(options: CompactOptions = {}): CompactResult {
     if (paths.length === 0) {
       const dailyPaths = markdownFiles(DAILY_DIR);
       const weeklyPaths = writeWeekly(dailyPaths);
-      const monthlyPaths = writeMonthly(markdownFiles(WEEKLY_DIR));
-      return { code: 0, text: `No session source supplied or no session files found. Existing rollups preserved.\nWeekly closed-day rollups: ${weeklyPaths.length} -> ${WEEKLY_DIR}\nMonthly closed-week rollups: ${monthlyPaths.length}\n` };
+      return { code: 0, text: `No session source supplied or no session files found. Existing rollups preserved.\nWeekly closed-day rollups: ${weeklyPaths.length} -> ${WEEKLY_DIR}\nMonthly rollup generation is disabled; legacy monthly files are left untouched.\n` };
     }
 
     if (grouped.size === 0) return { code: 1, text: "No compactable user/assistant text messages found.\n" };
 
-    const { DAILY_DIR: dailyDir, WEEKLY_DIR: weeklyDir, MONTHLY_DIR: monthlyDir } = rollupDirs();
+    const { DAILY_DIR: dailyDir, WEEKLY_DIR: weeklyDir } = rollupDirs();
     const writtenDaily = writeDaily(grouped);
     const dailyPaths = markdownFiles(dailyDir);
     const weeklyPaths = writeWeekly(dailyPaths);
-    const monthlyPaths = writeMonthly(markdownFiles(weeklyDir));
 
     const lines = [
       `Compacted ${paths.length} session file(s).`,
       `Text messages considered: ${messages.length}; tool calls/results omitted; private journal command history excluded from rollups.`,
       `Daily chunks written: ${writtenDaily.length} -> ${dailyDir}`,
       `Weekly closed-day rollups: ${weeklyPaths.length} -> ${weeklyDir}`,
-      `Monthly closed-week rollups: ${monthlyPaths.length} -> ${monthlyDir}`,
+      "Monthly rollup generation is disabled; legacy monthly files are left untouched.",
     ];
 
     return { code: 0, text: `${lines.join("\n")}\n` };
@@ -907,7 +864,7 @@ export function memoryStatusText(): string {
     `QMD collections: ${memoryCollectionSpecs(paths).map((spec) => spec.name).join(", ")}`,
     `Daily chunks: ${markdownFiles(DAILY_DIR).length}`,
     `Weekly chunks: ${markdownFiles(WEEKLY_DIR).length}`,
-    `Monthly chunks: ${markdownFiles(MONTHLY_DIR).length}`,
+    `Monthly chunks (legacy; no longer generated): ${markdownFiles(MONTHLY_DIR).length}`,
   ].join("\n");
 }
 

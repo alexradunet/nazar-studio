@@ -24,9 +24,9 @@ test("review remediation keeps critical runtime fixes wired", () => {
 
 test("memory_search tool truncates search output before returning", () => {
   const memoryExtension = source("code/extensions/memory.ts");
-  assert.match(memoryExtension, /const TOOL_OUTPUT_LIMIT_BYTES = 50 \* 1024/);
-  assert.match(memoryExtension, /truncateUtf8\(await searchMemoryText\([\s\S]*TOOL_OUTPUT_LIMIT_BYTES\)/);
-  assert.match(memoryExtension, /truncateUtf8\(memoryStatusText\(\), TOOL_OUTPUT_LIMIT_BYTES\)/);
+  assert.doesNotMatch(memoryExtension, /TOOL_OUTPUT_LIMIT_BYTES/);
+  assert.match(memoryExtension, /await truncateToolOutput\(await searchMemoryText\(/);
+  assert.match(memoryExtension, /await truncateToolOutput\(memoryStatusText\(\)\)/);
   assert.match(memoryExtension, /throw toolError\("memory_search", error\)/);
   assert.match(memoryExtension, /StringEnum\(\["search", "query"\]/);
   assert.match(memoryExtension, /before_agent_start[\s\S]*buildDurableMemoryContext\(\)/);
@@ -34,21 +34,42 @@ test("memory_search tool truncates search output before returning", () => {
 
 test("spotify_control tool truncates action output before returning", () => {
   const spotifyUse = source("code/extensions/spotify/spotify-use.ts");
-  assert.match(spotifyUse, /truncateUtf8\(await spotifyAction\(params\), TOOL_OUTPUT_LIMIT_BYTES\)/);
+  assert.doesNotMatch(spotifyUse, /TOOL_OUTPUT_LIMIT_BYTES/);
+  assert.match(spotifyUse, /await truncateToolOutput\(await spotifyAction\(params\)\)/);
 });
 
-test("voice and tts extensions reset sherpa runtime on shutdown", () => {
+test("voice runtime uses ESM-safe native loading and resets on shutdown", () => {
+  const voicePackage = JSON.parse(source("code/extensions/voice/package.json"));
+  const setupUse = source("code/extensions/nazar/setup-use.ts");
   const voiceUse = source("code/extensions/voice/voice-use.ts");
   const ttsUse = source("code/extensions/voice/tts-use.ts");
   const sherpaRuntime = source("code/extensions/voice/sherpa-runtime.ts");
+  assert.equal(voicePackage.type, "module");
+  assert.match(sherpaRuntime, /createRequire\(import\.meta\.url\)/);
+  assert.doesNotMatch(sherpaRuntime, /eslint-disable-next-line @typescript-eslint\/no-var-requires/);
   assert.match(sherpaRuntime, /export function resetSherpaRuntime\(\)/);
+  assert.match(setupUse, /parseAvfoundationAudioDevices/);
+  assert.match(setupUse, /"-f", "avfoundation"/);
+  assert.match(setupUse, /`:\$\{deviceId\}`/);
   assert.match(voiceUse, /resetSherpaRuntime\(\)/);
   assert.match(ttsUse, /resetSherpaRuntime\(\)/);
+});
+
+test("voice runtime imports under the extension package scope", async () => {
+  const runtime = await import("../extensions/voice/sherpa-runtime.ts");
+  assert.equal(typeof runtime.sherpaModelStatus, "function");
 });
 
 test("tts_toggle advertises itself in the system prompt tool list", () => {
   const ttsUse = source("code/extensions/voice/tts-use.ts");
   assert.match(ttsUse, /name: "tts_toggle"[\s\S]*promptSnippet:/);
+});
+
+test("stale websearch extension ignore rule is removed", () => {
+  const gitignore = source(".gitignore");
+  assert.doesNotMatch(gitignore, /code\/extensions\/websearch\/node_modules/);
+  assert.match(gitignore, /code\/extensions\/voice\/node_modules/);
+  assert.match(gitignore, /code\/extensions\/whatsapp\/node_modules/);
 });
 
 test("Spotify JSON state errors avoid leaking full paths", () => {

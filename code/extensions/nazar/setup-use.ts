@@ -165,6 +165,25 @@ function parseDirectShowAudioDevices(output: string): string[] {
   return [...new Set(devices)];
 }
 
+function parseAvfoundationAudioDevices(output: string): Array<{ index: string; name: string }> {
+  const devices: Array<{ index: string; name: string }> = [];
+  let inAudioSection = false;
+  for (const line of output.split(/\r?\n/)) {
+    if (/AVFoundation audio devices:/i.test(line)) {
+      inAudioSection = true;
+      continue;
+    }
+    if (/AVFoundation video devices:/i.test(line)) {
+      inAudioSection = false;
+      continue;
+    }
+    if (!inAudioSection) continue;
+    const match = line.match(/\[(\d+)\]\s+(.+)\s*$/);
+    if (match?.[1] && match[2]) devices.push({ index: match[1], name: match[2].trim() });
+  }
+  return devices;
+}
+
 async function configureWindowsVoice(pi: ExtensionAPI, ctx: ExtensionContext): Promise<boolean> {
   const ffmpeg = await pi.exec("powershell.exe", ["-NoProfile", "-Command", "(Get-Command ffmpeg -ErrorAction SilentlyContinue).Source"], { timeout: 5000 });
   const ffmpegPath = ffmpeg.stdout.trim().split(/\r?\n/).filter(Boolean).at(-1) || "";
@@ -185,6 +204,29 @@ async function configureWindowsVoice(pi: ExtensionAPI, ctx: ExtensionContext): P
   return true;
 }
 
+async function configureMacVoice(pi: ExtensionAPI, ctx: ExtensionContext): Promise<boolean> {
+  const ffmpeg = await pi.exec("sh", ["-lc", "command -v ffmpeg"], { timeout: 5000 });
+  const ffmpegPath = ffmpeg.stdout.trim().split(/\r?\n/).filter(Boolean).at(-1) || "";
+  if (!ffmpegPath || ffmpeg.code !== 0) {
+    await show(ctx, "FFmpeg missing", "FFmpeg is not available on PATH. Install FFmpeg for macOS, then rerun /nazar setup or configure PI_STT_COMMAND/PI_STT_ARGS manually.", "warning");
+    return false;
+  }
+
+  const devicesResult = await pi.exec(ffmpegPath, ["-hide_banner", "-f", "avfoundation", "-list_devices", "true", "-i", ""], { timeout: 10000 });
+  const devices = parseAvfoundationAudioDevices(`${devicesResult.stdout}\n${devicesResult.stderr}`);
+  const labels = devices.map((device) => `[${device.index}] ${device.name}`);
+  const selected = labels.length > 0
+    ? await choose(ctx, "Choose microphone", labels)
+    : await input(ctx, "Microphone avfoundation index", "0");
+  if (!selected) return false;
+
+  const deviceId = selected.match(/^\[(\d+)\]/)?.[1] || selected.trim();
+  if (!deviceId) return false;
+  const sttArgs = ["-hide_banner", "-loglevel", "error", "-f", "avfoundation", "-i", `:${deviceId}`, "-ac", "1", "-ar", "16000", "-f", "s16le", "-"];
+  writeNazarSetupConfig({ voice: { modelDir: readNazarSetupConfig().voice?.modelDir || defaultVoiceModelDir(), sttCommand: ffmpegPath, sttArgs } });
+  return true;
+}
+
 async function configureVoice(pi: ExtensionAPI, ctx: ExtensionContext): Promise<void> {
   const voiceModelDir = readNazarSetupConfig().voice?.modelDir || defaultVoiceModelDir();
   writeNazarSetupConfig({ voice: { modelDir: voiceModelDir } });
@@ -201,6 +243,8 @@ async function configureVoice(pi: ExtensionAPI, ctx: ExtensionContext): Promise<
 
   if (process.platform === "win32") {
     await configureWindowsVoice(pi, ctx);
+  } else if (process.platform === "darwin") {
+    await configureMacVoice(pi, ctx);
   } else {
     const command = await input(ctx, "Optional custom STT command", readNazarSetupConfig().voice?.sttCommand || "");
     if (command?.trim()) {

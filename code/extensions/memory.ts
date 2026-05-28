@@ -11,9 +11,7 @@ import {
   registerMemoryUse,
   searchMemoryText,
 } from "./memory/memory-use.ts";
-import { toolError, truncateUtf8 } from "./shared.ts";
-
-const TOOL_OUTPUT_LIMIT_BYTES = 50 * 1024;
+import { toolError, truncateToolOutput } from "./shared.ts";
 
 const baseDir = dirname(fileURLToPath(import.meta.url));
 const memoryJanitorSkillPath = join(baseDir, "memory", "skills", "memory-janitor");
@@ -60,7 +58,7 @@ export default function memoryExtension(pi: ExtensionAPI) {
     parameters: Type.Object({}),
     async execute() {
       try {
-        const text = truncateUtf8(memoryStatusText(), TOOL_OUTPUT_LIMIT_BYTES);
+        const text = await truncateToolOutput(memoryStatusText());
         return { content: [{ type: "text", text }], details: { command: "memoryStatusText()" } };
       } catch (error) {
         throw toolError("memory_status", error);
@@ -88,7 +86,7 @@ export default function memoryExtension(pi: ExtensionAPI) {
       try {
         const mode = params.mode === "query" ? "query" : "search";
         const scope = ["personal", "ai", "archive", "all"].includes(params.scope || "") ? params.scope as "personal" | "ai" | "archive" | "all" : "default";
-        const text = truncateUtf8(await searchMemoryText(pi, params.query, params.limit ?? 5, mode, scope), TOOL_OUTPUT_LIMIT_BYTES);
+        const text = await truncateToolOutput(await searchMemoryText(pi, params.query, params.limit ?? 5, mode, scope));
         return { content: [{ type: "text", text }], details: { command: `qmd ${mode} ${JSON.stringify(params.query)}` } };
       } catch (error) {
         throw toolError("memory_search", error);

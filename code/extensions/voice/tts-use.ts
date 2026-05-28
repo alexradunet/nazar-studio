@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
-import { hasInteractiveUi, toolError } from "../shared.ts";
+import { hasInteractiveUi, notify, toolError } from "../shared.ts";
 import { resetSherpaRuntime, sherpaModelStatus, speakWithSherpa, stopSherpaSpeech } from "./sherpa-runtime.ts";
 import { cleanForTts, splitLongText, splitSpeakableChunks } from "../voice-text.ts";
 
@@ -164,23 +164,20 @@ export function registerTtsUse(pi: ExtensionAPI) {
       if (command === "on") {
         STATE.enabled = true;
         const text = "TTS enabled for the main interactive conversation.";
-        if (hasInteractiveUi(ctx)) ctx.ui.notify(text, "info");
-        else console.log(text);
+        notify(ctx, text, "info");
         return;
       }
 
       if (command === "off") {
         STATE.enabled = false;
         clearSpeech();
-        if (hasInteractiveUi(ctx)) ctx.ui.notify("TTS disabled", "info");
-        else console.log("TTS disabled");
+        notify(ctx, "TTS disabled", "info");
         return;
       }
 
       if (command === "stop") {
         clearSpeech();
-        if (hasInteractiveUi(ctx)) ctx.ui.notify("TTS stopped", "info");
-        else console.log("TTS stopped");
+        notify(ctx, "TTS stopped", "info");
         return;
       }
 
@@ -191,12 +188,10 @@ export function registerTtsUse(pi: ExtensionAPI) {
         try {
           await speakText(testText);
           STATE.lastError = "";
-          if (hasInteractiveUi(ctx)) ctx.ui.notify("TTS test played", "info");
-          else console.log("TTS test played");
+          notify(ctx, "TTS test played", "info");
         } catch (error) {
           STATE.lastError = error instanceof Error ? error.message : String(error);
-          if (hasInteractiveUi(ctx)) ctx.ui.notify(`TTS test failed: ${STATE.lastError}`, "error");
-          else console.log(`TTS test failed: ${STATE.lastError}`);
+          notify(ctx, `TTS test failed: ${STATE.lastError}`, "error");
         } finally {
           STATE.speaking = false;
           if (STATE.queue.length > 0) void processQueue();

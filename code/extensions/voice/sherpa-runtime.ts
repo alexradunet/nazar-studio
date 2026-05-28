@@ -1,5 +1,6 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { accessSync, constants, existsSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { delimiter, isAbsolute, join, resolve } from "node:path";
 import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from "node:child_process";
@@ -7,6 +8,7 @@ import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from "node:chil
 import { defaultVoiceModelDir, readNazarSetupConfig } from "../nazar/setup-store.ts";
 
 const SHERPA_SETUP_HINT = "Run from this repository: cd code/extensions/voice && npm install && node setup-sherpa.mjs";
+const require = createRequire(import.meta.url);
 
 let sherpaModule: any | undefined;
 let sherpaLoadError: string | undefined;
@@ -16,7 +18,6 @@ function loadSherpa(): any {
   try {
     // sherpa-onnx-node is a CommonJS native addon package installed next to this module.
     // Load lazily so a missing optional runtime does not prevent Pi from starting.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     sherpaModule = require("sherpa-onnx-node");
     sherpaLoadError = undefined;
     return sherpaModule;
@@ -54,13 +55,20 @@ function asrModelDir(): string {
   return resolve(modelRoot(), ASR_MODEL_NAME);
 }
 
-type AudioTarget = {
+export type AudioTarget = {
   backend: "pulse" | "alsa" | "custom" | "powershell" | "native";
   command: string;
   args: string[];
   label: string;
   hint?: string;
   unavailableReason?: string;
+};
+
+type AudioResolveOptions = {
+  platform?: NodeJS.Platform;
+  env?: (name: string) => string;
+  pulseSourceIsXrdp?: boolean;
+  pulseSinkIsXrdp?: boolean;
 };
 
 function envValue(name: string): string {
@@ -94,8 +102,8 @@ function splitEnvArgs(value: string, replacements: Record<string, string> = {}):
   });
 }
 
-function executableNames(command: string): string[] {
-  if (process.platform !== "win32") return [command];
+function executableNames(command: string, runtimePlatform: NodeJS.Platform = process.platform): string[] {
+  if (runtimePlatform !== "win32") return [command];
   const hasExtension = /\.[^\\/]+$/.test(command);
   if (hasExtension) return [command];
   const extensions = (process.env.PATHEXT || ".COM;.EXE;.BAT;.CMD").split(";").filter(Boolean);
@@ -106,9 +114,9 @@ function executableNames(command: string): string[] {
   ];
 }
 
-function canExecute(path: string): boolean {
+function canExecute(path: string, runtimePlatform: NodeJS.Platform = process.platform): boolean {
   try {
-    if (process.platform === "win32") return existsSync(path);
+    if (runtimePlatform === "win32") return existsSync(path);
     accessSync(path, constants.X_OK);
     return true;
   } catch {
@@ -116,11 +124,11 @@ function canExecute(path: string): boolean {
   }
 }
 
-function commandAvailable(command: string): boolean {
+function commandAvailable(command: string, runtimePlatform: NodeJS.Platform = process.platform): boolean {
   if (!command) return false;
-  if (isAbsolute(command) || command.includes("/") || command.includes("\\")) return canExecute(command);
+  if (isAbsolute(command) || command.includes("/") || command.includes("\\")) return canExecute(command, runtimePlatform);
   const pathDirs = (process.env.PATH || "").split(delimiter).filter(Boolean);
-  return pathDirs.some((dir) => executableNames(command).some((name) => canExecute(join(dir, name))));
+  return pathDirs.some((dir) => executableNames(command, runtimePlatform).some((name) => canExecute(join(dir, name), runtimePlatform)));
 }
 
 function targetAvailability(target: AudioTarget): string {
@@ -164,19 +172,21 @@ function micVolumeTarget(): string {
   return isXrdpPulseDefault("Source") ? XRDP_MIC_VOLUME : MIC_VOLUME;
 }
 
-function resolveSttInput(): AudioTarget {
-  const customCommand = envValue("PI_STT_COMMAND");
+function resolveSttInput(options: AudioResolveOptions = {}): AudioTarget {
+  const runtimePlatform = options.platform ?? process.platform;
+  const value = options.env ?? envValue;
+  const customCommand = value("PI_STT_COMMAND");
   if (customCommand) {
     return {
       backend: "custom",
       command: customCommand,
-      args: splitEnvArgs(envValue("PI_STT_ARGS")),
+      args: splitEnvArgs(value("PI_STT_ARGS")),
       label: `custom STT recorder ${customCommand}`,
       hint: "The command must write raw signed 16-bit little-endian mono PCM at 16 kHz to stdout.",
     };
   }
 
-  if (process.platform === "win32") {
+  if (runtimePlatform === "win32") {
     return {
       backend: "native",
       command: "",
@@ -187,21 +197,22 @@ function resolveSttInput(): AudioTarget {
     };
   }
 
-  if (process.platform === "darwin") {
+  if (runtimePlatform === "darwin") {
     return {
       backend: "native",
       command: "",
       args: [],
       label: "macOS microphone input",
       unavailableReason: "no default macOS recorder is bundled",
-      hint: "Install a recorder such as FFmpeg and set PI_STT_COMMAND/PI_STT_ARGS to output raw signed 16-bit little-endian mono PCM at 16 kHz to stdout.",
+      hint: "Use /nazar setup on macOS to configure FFmpeg avfoundation, or set PI_STT_COMMAND/PI_STT_ARGS manually.",
     };
   }
 
-  const configured = envValue("PI_STT_ALSA_DEVICE");
-  const pulseSource = envValue("PI_STT_PULSE_SOURCE");
+  const configured = value("PI_STT_ALSA_DEVICE");
+  const pulseSource = value("PI_STT_PULSE_SOURCE");
+  const sourceIsXrdp = options.pulseSourceIsXrdp ?? isXrdpPulseDefault("Source");
 
-  if (pulseSource || isPulseDevice(configured) || isXrdpPulseDefault("Source")) {
+  if (pulseSource || isPulseDevice(configured) || sourceIsXrdp) {
     const args = ["--record", "--device=@DEFAULT_SOURCE@", "--format=s16le", "--rate=16000", "--channels=1", "--raw"];
     if (pulseSource) args[1] = `--device=${pulseSource}`;
     return {
@@ -222,10 +233,12 @@ function resolveSttInput(): AudioTarget {
   };
 }
 
-function resolveTtsOutput(path: string): AudioTarget {
-  const customCommand = envValue("PI_TTS_COMMAND");
+function resolveTtsOutput(path: string, options: AudioResolveOptions = {}): AudioTarget {
+  const runtimePlatform = options.platform ?? process.platform;
+  const value = options.env ?? envValue;
+  const customCommand = value("PI_TTS_COMMAND");
   if (customCommand) {
-    const configuredArgs = splitEnvArgs(envValue("PI_TTS_ARGS"), { file: path });
+    const configuredArgs = splitEnvArgs(value("PI_TTS_ARGS"), { file: path });
     return {
       backend: "custom",
       command: customCommand,
@@ -235,7 +248,7 @@ function resolveTtsOutput(path: string): AudioTarget {
     };
   }
 
-  if (process.platform === "win32") {
+  if (runtimePlatform === "win32") {
     const script = [
       "Add-Type -AssemblyName System",
       `$player = [System.Media.SoundPlayer]::new(${powerShellSingleQuoted(path)})`,
@@ -250,7 +263,7 @@ function resolveTtsOutput(path: string): AudioTarget {
     };
   }
 
-  if (process.platform === "darwin") {
+  if (runtimePlatform === "darwin") {
     return {
       backend: "native",
       command: "afplay",
@@ -260,10 +273,11 @@ function resolveTtsOutput(path: string): AudioTarget {
     };
   }
 
-  const configured = envValue("PI_TTS_ALSA_DEVICE");
-  const pulseSink = envValue("PI_TTS_PULSE_SINK");
+  const configured = value("PI_TTS_ALSA_DEVICE");
+  const pulseSink = value("PI_TTS_PULSE_SINK");
+  const sinkIsXrdp = options.pulseSinkIsXrdp ?? isXrdpPulseDefault("Sink");
 
-  if (pulseSink || isPulseDevice(configured) || isXrdpPulseDefault("Sink")) {
+  if (pulseSink || isPulseDevice(configured) || sinkIsXrdp) {
     const args = pulseSink ? [`--device=${pulseSink}`, path] : [path];
     return {
       backend: "pulse",
@@ -281,6 +295,14 @@ function resolveTtsOutput(path: string): AudioTarget {
     label: `ALSA device ${configured || PULSE_DEFAULT_DEVICE}`,
     hint: "Install ALSA aplay/pasuspender or set PI_TTS_COMMAND/PI_TTS_ARGS for a custom player.",
   };
+}
+
+export function resolveSttInputForTest(options: AudioResolveOptions = {}): AudioTarget {
+  return resolveSttInput(options);
+}
+
+export function resolveTtsOutputForTest(path: string, options: AudioResolveOptions = {}): AudioTarget {
+  return resolveTtsOutput(path, options);
 }
 
 let tts: any | undefined;

@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
-import { truncateUtf8 } from "../extensions/shared.ts";
+import { truncateToolOutput, truncateUtf8 } from "../extensions/shared.ts";
 import {
   addJournalEntry,
   buildDurableMemoryContext,
@@ -143,12 +143,19 @@ test("root package exposes Nazar Pi package resources", () => {
   assert.equal(pkg.optionalDependencies["sherpa-onnx-node"], "1.13.2");
 });
 
-test("memory tool output truncation caps text at 50KB", () => {
+test("memory tool output truncation caps text at 50KB", async () => {
   assert.equal(truncateUtf8("short output", 50 * 1024), "short output");
 
   const output = truncateUtf8("α".repeat(60 * 1024), 50 * 1024);
   assert.equal(Buffer.byteLength(output, "utf8") <= 50 * 1024, true);
   assert.match(output, /\[Output truncated\]$/);
+
+  const lineCapped = await truncateToolOutput(["one", "two", "three"].join("\n"), { maxLines: 2, maxBytes: 1024 });
+  assert.equal(lineCapped, "one\ntwo\n\n[Output truncated]");
+
+  const byteCapped = await truncateToolOutput("β".repeat(200), { maxLines: 2000, maxBytes: 64 });
+  assert.equal(Buffer.byteLength(byteCapped, "utf8") <= 64, true);
+  assert.match(byteCapped, /\[Output truncated\]$/);
 });
 
 test("path derivation uses only repo root and ignores stale PI_MEMORY env vars", () => {
@@ -284,6 +291,7 @@ test("explicit session compaction writes rollups and omits tool results", () => 
     assert.match(daily, /Outcome: Done\. Added a compaction lock for generated memory writes\./);
     assert.doesNotMatch(daily, /secret tool output/);
     assert.equal(existsSync(join(ctx.root, "memory", "rollups", "active.md")), false);
+    assert.equal(existsSync(join(ctx.root, "memory", "rollups", "monthly")), false);
     assert.equal(existsSync(join(ctx.root, "memory", "pages", "personal", "pinned-memory.md")), true);
     assert.equal(existsSync(join(ctx.root, "memory", "sessions")), false);
   } finally {
@@ -303,6 +311,7 @@ test("compactSessionFile refreshes rollups from the current Pi session file", ()
     assert.equal(existsSync(join(ctx.root, "memory", "context", "bootstrap.md")), false);
     assert.equal(existsSync(join(ctx.root, "memory", "rollups", "active.md")), false);
     assert.equal(existsSync(join(ctx.root, "memory", "rollups", "daily", `${DAY}.md`)), true);
+    assert.equal(existsSync(join(ctx.root, "memory", "rollups", "monthly")), false);
   } finally {
     cleanup(ctx);
   }

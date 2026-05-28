@@ -4,7 +4,7 @@ import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 
 import { getRemoteTurnOrigin } from "../remote-origin.ts";
-import { showText, toolError, truncateUtf8 } from "../shared.ts";
+import { showText, toolError, truncateToolOutput } from "../shared.ts";
 import {
   accessToken,
   authSessionPath,
@@ -26,7 +26,6 @@ import {
 import { callbackParts, normalizeSpotifyUri } from "./spotify-utils.ts";
 
 const API_BASE = "https://api.spotify.com";
-const TOOL_OUTPUT_LIMIT_BYTES = 50 * 1024;
 
 const HELP_TEXT = `Spotify Web API commands
 - /spotify status — show config/auth status plus current playback when logged in
@@ -466,7 +465,7 @@ export function registerSpotifyUse(pi: ExtensionAPI): void {
     parameters: SpotifyParams,
     async execute(_toolCallId, params) {
       try {
-        const text = truncateUtf8(await spotifyAction(params), TOOL_OUTPUT_LIMIT_BYTES);
+        const text = await truncateToolOutput(await spotifyAction(params));
         return {
           content: [{ type: "text", text }],
           details: { action: params.action, query: params.query, uri: params.uri, deviceId: params.deviceId },

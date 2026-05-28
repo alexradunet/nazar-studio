@@ -3,7 +3,7 @@ import { mkdir, open, readFile, rm, type FileHandle } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { dirname } from "node:path";
 import { clearRemoteTurnOrigin, setRemoteTurnOrigin } from "../remote-origin.ts";
-import { hasInteractiveUi } from "../shared.ts";
+import { hasInteractiveUi, notify } from "../shared.ts";
 import { transcribeSherpaPcm16 } from "../voice/sherpa-runtime.ts";
 import {
   assistantText,
@@ -880,9 +880,7 @@ export function registerWhatsAppUse(pi: ExtensionAPI) {
       if (command === "allowed" || command === "allow") {
         const jid = phoneToPersonalJid(value);
         if (!jid) {
-          const text = "Usage: /whatsapp allowed +15551234567";
-          if (!hasInteractiveUi(ctx)) console.log(text);
-          else ctx.ui.notify(text, "error");
+          notify(ctx, "Usage: /whatsapp allowed +15551234567", "error");
           return;
         }
         config = { ...config, allowedPhone: value };
@@ -890,77 +888,57 @@ export function registerWhatsAppUse(pi: ExtensionAPI) {
         await saveWhatsAppConfig(config);
         if (socket && status === "connected") await resolveAllowedLids();
         setStatus(status, maskPhone(value));
-        const text = `Allowed WhatsApp contact set to ${maskPhone(value)}.`;
-        if (!hasInteractiveUi(ctx)) console.log(text);
-        else ctx.ui.notify(text, "info");
+        notify(ctx, `Allowed WhatsApp contact set to ${maskPhone(value)}.`, "info");
         return;
       }
 
       if (command === "autostart" || command === "auto-start") {
         const normalized = value.toLowerCase();
         if (!["on", "off", "true", "false", "1", "0", "status", ""].includes(normalized)) {
-          const text = "Usage: /whatsapp autostart on|off|status";
-          if (!hasInteractiveUi(ctx)) console.log(text);
-          else ctx.ui.notify(text, "error");
+          notify(ctx, "Usage: /whatsapp autostart on|off|status", "error");
           return;
         }
         if (normalized && normalized !== "status") {
           config = { ...config, autoStart: ["on", "true", "1"].includes(normalized) };
           await saveWhatsAppConfig(config);
         }
-        const text = `WhatsApp autostart is ${config.autoStart === true ? "on" : "off"}.`;
-        if (!hasInteractiveUi(ctx)) console.log(text);
-        else ctx.ui.notify(text, "info");
+        notify(ctx, `WhatsApp autostart is ${config.autoStart === true ? "on" : "off"}.`, "info");
         return;
       }
 
       if (command === "start" || command === "connect") {
-        const text = await startWhatsApp(pi);
-        if (!hasInteractiveUi(ctx)) console.log(text);
-        else ctx.ui.notify(text, "info");
+        notify(ctx, await startWhatsApp(pi), "info");
         return;
       }
 
       if (command === "pair" || command === "pair-code") {
         if (!value) {
-          const text = "Usage: /whatsapp pair +15551230000  (the Pi-only WhatsApp account phone number)";
-          if (!hasInteractiveUi(ctx)) console.log(text);
-          else ctx.ui.notify(text, "error");
+          notify(ctx, "Usage: /whatsapp pair +15551230000  (the Pi-only WhatsApp account phone number)", "error");
           return;
         }
-        const text = await startWhatsApp(pi, value);
-        if (!hasInteractiveUi(ctx)) console.log(text);
-        else ctx.ui.notify(text, "info");
+        notify(ctx, await startWhatsApp(pi, value), "info");
         return;
       }
 
       if (command === "stop" || command === "disconnect") {
-        const text = await stopWhatsApp();
-        if (!hasInteractiveUi(ctx)) console.log(text);
-        else ctx.ui.notify(text, "info");
+        notify(ctx, await stopWhatsApp(), "info");
         return;
       }
 
       if (command === "ping" || command === "send-test") {
         if (!socket || status !== "connected") {
-          const text = "WhatsApp is not connected.";
-          if (!hasInteractiveUi(ctx)) console.log(text);
-          else ctx.ui.notify(text, "error");
+          notify(ctx, "WhatsApp is not connected.", "error");
           return;
         }
         const jid = allowedJid();
         if (!jid) {
-          const text = "Allowed phone is not configured.";
-          if (!hasInteractiveUi(ctx)) console.log(text);
-          else ctx.ui.notify(text, "error");
+          notify(ctx, "Allowed phone is not configured.", "error");
           return;
         }
         const body = value || "Pi WhatsApp test message.";
         await socket.sendMessage(jid, { text: body });
         lastOutbound = `${new Date().toISOString()} sent manual test to ${jid}`;
-        const text = `Sent WhatsApp test message to ${maskPhone(config.allowedPhone)}.`;
-        if (!hasInteractiveUi(ctx)) console.log(text);
-        else ctx.ui.notify(text, "info");
+        notify(ctx, `Sent WhatsApp test message to ${maskPhone(config.allowedPhone)}.`, "info");
         return;
       }
 
@@ -969,21 +947,16 @@ export function registerWhatsAppUse(pi: ExtensionAPI) {
         if (!ok) return;
         const resetError = await assertCanResetAuth();
         if (resetError) {
-          if (!hasInteractiveUi(ctx)) console.log(resetError);
-          else ctx.ui.notify(resetError, "error");
+          notify(ctx, resetError, "error");
           return;
         }
         await stopWhatsApp();
         await deleteWhatsAppAuth();
-        const text = "WhatsApp auth state deleted.";
-        if (!hasInteractiveUi(ctx)) console.log(text);
-        else ctx.ui.notify(text, "warning");
+        notify(ctx, "WhatsApp auth state deleted.", "warning");
         return;
       }
 
-      const text = `Unknown /whatsapp command: ${command}. Try /whatsapp help.`;
-      if (!hasInteractiveUi(ctx)) console.log(text);
-      else ctx.ui.notify(text, "error");
+      notify(ctx, `Unknown /whatsapp command: ${command}. Try /whatsapp help.`, "error");
     },
   });
 }
