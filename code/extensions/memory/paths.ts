@@ -8,7 +8,6 @@ export type MemoryPaths = {
   VAULT_DIR?: string;
   NAZAR_DIR: string;
   LLM_WIKI_DIR: string;
-  LLM_WIKI_RAW_DIR: string;
   LLM_WIKI_PAGES_DIR: string;
   MEMORY_ROOT: string;
   PAGES_DIR: string;
@@ -16,11 +15,6 @@ export type MemoryPaths = {
   PERSONAL_PAGES_DIR: string;
   ROLLUPS_DIR: string;
   STATE_DIR: string;
-  JOURNAL_DIR: string;
-  JOURNAL_ENTRIES_DIR: string;
-  SOURCES_DIR: string;
-  INDEXES_DIR: string;
-  ARCHIVE_DIR: string;
   PINNED_MEMORY_PAGE: string;
 };
 
