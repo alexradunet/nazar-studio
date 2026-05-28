@@ -4,7 +4,7 @@ import { basename, dirname, join, relative, resolve, sep } from "node:path";
 
 import { showText, truncateUtf8, trim, xdgDataHome } from "../shared.ts";
 import { getMemoryPaths, QMD_COLLECTION, QMD_CONTEXT, QMD_INDEX } from "./paths.ts";
-import { ensureVaultScaffold } from "./vault.ts";
+import { ensureVaultScaffold, VAULT_MEMORY_DIRS } from "./vault.ts";
 
 const MAX_BULLET_CHARS = 360;
 const MAX_DAILY_BULLETS = 45;
@@ -192,7 +192,7 @@ let ensuredDirsKey: string | undefined;
 function ensureDirs(): void {
   const paths = getMemoryPaths();
   const { DAILY_DIR, WEEKLY_DIR } = rollupDirs();
-  const dirs = [
+  const runtimeDirs = [
     paths.MEMORY_ROOT,
     paths.PAGES_DIR,
     paths.AI_PAGES_DIR,
@@ -207,11 +207,19 @@ function ensureDirs(): void {
     DAILY_DIR,
     WEEKLY_DIR,
   ];
-  const key = [...dirs, paths.PINNED_MEMORY_PAGE, paths.VAULT_DIR || ""].map((path) => resolve(path)).join("\0");
-  if (ensuredDirsKey === key && existsSync(paths.PINNED_MEMORY_PAGE) && dirs.every((path) => existsSync(path))) return;
+  const vault = paths.VAULT_DIR;
+  const vaultDirs = vault
+    ? [...VAULT_MEMORY_DIRS.map((name) => join(vault, name)), paths.LLM_WIKI_RAW_DIR, paths.LLM_WIKI_PAGES_DIR]
+    : [];
+  // Self-healing memo: reuse one path set for both the cache key and the existence
+  // re-check, so an externally deleted runtime or vault directory is rebuilt on the
+  // next turn without a /reload while still skipping the mkdir storm on the hot path.
+  const required = [...runtimeDirs, ...vaultDirs, paths.PINNED_MEMORY_PAGE];
+  const key = required.map((path) => resolve(path)).join("\0");
+  if (ensuredDirsKey === key && required.every((path) => existsSync(path))) return;
 
   ensureVaultScaffold(paths);
-  for (const path of dirs) mkdirSync(path, { recursive: true });
+  for (const path of runtimeDirs) mkdirSync(path, { recursive: true });
   ensurePinnedMemoryPage(paths);
   ensuredDirsKey = key;
 }
