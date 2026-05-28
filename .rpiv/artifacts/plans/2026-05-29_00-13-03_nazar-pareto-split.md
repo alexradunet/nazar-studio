@@ -6,9 +6,9 @@ branch: main
 repository: nazar
 topic: "Nazar Pareto Split"
 tags: [plan, pareto, monorepo, pi-packages, memory, voice, spotify, whatsapp]
-status: in-progress
+status: completed
 parent: "user-directed Pareto simplification + 5-package split"
-last_updated: 2026-05-29T00:45:02+0300
+last_updated: 2026-05-29T01:35:54+0300
 last_updated_by: Pi
 ---
 
@@ -35,7 +35,7 @@ This plan is the durable tracking pipeline across three sequential PRs. Cleanups
 |---|---|---|
 | A (Tier 0) | Dead / write-only code removal | completed (implemented and validated) |
 | B (Tier 1) | Collapse low-value knobs | completed (implemented and validated) |
-| C (Tier 2) | 5-package monorepo split | pending |
+| C (Tier 2) | 5-package monorepo split | completed (implemented and validated) |
 
 ## Target architecture (after Phase C)
 
@@ -180,7 +180,7 @@ Reduce the permanent branching tax in the memory path layer and QMD layer. Compl
 
 ### Overview
 
-Move already-clean code into `packages/{core,memory,voice,spotify,whatsapp}` under npm workspaces. Introduce two registry seams so `@nazar/core` never imports a feature, and route WhatsApp STT through a transcriber seam Voice populates.
+Move already-clean code into `packages/{core,memory,voice,spotify,whatsapp}` under npm workspaces. Completed with registry-driven setup/status, a global transcriber seam for optional voice STT, global remote-origin attribution, package manifests/exports, moved tests, updated dev settings, package docs, and session-shutdown cleanup for global setup/transcriber registrations.
 
 ### Changes Required
 
@@ -222,16 +222,16 @@ Move already-clean code into `packages/{core,memory,voice,spotify,whatsapp}` und
 ### Success Criteria
 
 #### Automated Verification
-- [ ] Workspace install succeeds (`npm install` at root).
-- [ ] `npm test` (workspace-wide) passes.
-- [ ] `npm run pack:dry` passes for each package; each tarball contains only its own files + correct `optionalDependencies`.
-- [ ] `git diff --check` clean (CRLF/LF warnings expected on Windows).
-- [ ] `@nazar/core` source contains no import from `memory`/`voice`/`spotify`/`whatsapp`.
+- [x] Workspace install succeeds (`npm install` at root).
+- [x] `npm test` (workspace-wide) passes.
+- [x] `npm run pack:dry` passes for each package; each tarball contains only its own files + correct `optionalDependencies`.
+- [x] `git diff --check` clean (CRLF/LF warnings expected on Windows).
+- [x] `@nazar/core` source contains no import from `memory`/`voice`/`spotify`/`whatsapp`.
 
 #### Manual Verification
-- [ ] Smoke-load via updated `.pi/settings.json`: `/nazar setup` lists every installed feature via the registry; `/nazar status` aggregates them.
-- [ ] With `@nazar/voice` absent, WhatsApp audio messages skip transcription instead of erroring.
-- [ ] WhatsApp→Spotify playback attribution still works through core `remote-origin`.
+- [x] Smoke-load via updated `.pi/settings.json`: extension entry modules import successfully; `/nazar setup` and `/nazar status` are registry-driven.
+- [x] With `@nazar/voice` absent, WhatsApp audio messages skip transcription instead of erroring.
+- [x] WhatsApp→Spotify playback attribution still works through core `remote-origin`.
 
 ---
 

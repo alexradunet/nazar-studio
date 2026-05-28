@@ -16,7 +16,7 @@ Nazar follows the design philosophy of Pi (the minimal terminal coding agent by 
 
 ## Product shape: Pi extension only
 
-- Nazar always ships as a **Pi package of extensions** (`package.json` `pi.extensions` + `pi.skills`). Never build against Pi RPC mode or the Pi SDK/`pi-agent-core` runtime; never fork or patch Pi core.
+- Nazar ships as **Pi packages of extensions** under `packages/*` (`package.json` `pi.extensions` + `pi.skills` where applicable). Never build against Pi RPC mode or the Pi SDK/`pi-agent-core` runtime; never fork or patch Pi core.
 - Stay within the documented extension surface only: `pi.registerTool`, `pi.registerCommand`, `pi.registerShortcut`, `pi.on(event)`, `pi.registerProvider`-style hooks, and `ctx.ui`. If Pi does not expose a seam for it, do not do it.
 - **No MCP.** Pi deliberately omits MCP; mirror that. Expose capability as a CLI tool with a README (an Agent Skill) or as a registered tool, not an MCP server. The model pays the token cost only when it reads the skill (progressive disclosure).
 - **No sub-agent frameworks, no permission gates, no bespoke plan/todo engines** baked into Nazar. These are Pi-core concerns; assemble from primitives if ever needed, and only when a concrete need exists.
@@ -25,9 +25,9 @@ Nazar follows the design philosophy of Pi (the minimal terminal coding agent by 
 
 ## Architecture patterns
 
-- **Thin entry points.** Each `code/extensions/<name>.ts` is ~5–10 lines: import and call a `register<Name>Use(pi)` (or a default factory like `memory.ts`). No logic in entry files.
+- **Thin entry points.** Each `packages/<pkg>/code/extensions/<name>.ts` is ~5–10 lines: import and call `register<Name>Use(pi)`/provider registration only. No logic in entry files.
 - **Small, single-purpose modules.** Split a feature into `paths.ts`, `<name>-use.ts`, `<name>-utils.ts`, `<name>-auth.ts`, etc. Pure/format/parse helpers live in `*-utils.ts` or `*-text.ts` so they are unit-testable without Pi or I/O. Treat a module past ~500 lines as a smell to decompose, not extend.
-- **Shared helpers live in `code/extensions/shared.ts`.** Reuse `hasInteractiveUi`, `notify`, `showText`, `truncateToolOutput`, `truncateUtf8`, `toolError`, `errorMessage`, `trim`, the `xdg*` home resolvers, and `writePrivateFileSync`/`writePrivateJsonSync`. Do not re-implement these per extension.
+- **Shared helpers live in `@nazar/core/shared` (`packages/core/code/extensions/shared.ts`).** Reuse `hasInteractiveUi`, `notify`, `showText`, `truncateToolOutput`, `truncateUtf8`, `toolError`, `errorMessage`, `trim`, the `xdg*` home resolvers, and `writePrivateFileSync`/`writePrivateJsonSync`. Do not re-implement these per extension.
 - **Lifecycle events, used for their intent:** `before_agent_start` for cache-stable system-prompt injection; `session_compact` to refresh rollups; `session_shutdown` to release sockets/timers/widgets and reset native runtimes; `resources_discover` to contribute skills; `message_start`/`message_update`/`message_end` for streaming; `agent_end` for outbound replies. Always clean up in `session_shutdown`.
 - **Tools:** `pi.registerTool` with `name`, `label`, `description`, `promptSnippet`, `promptGuidelines`, TypeBox `parameters`, and an `execute` that wraps its body in `try/catch` and rethrows via `toolError("<tool>", error)`. Use `StringEnum` (from `pi-ai`) for enum params (Google compatibility). Truncate tool output with `truncateToolOutput()` so it honors byte and line caps.
 - **Commands and UI:** register `/commands` with `pi.registerCommand`. Branch on `ctx.hasUI` via `hasInteractiveUi(ctx)`; use `notify(ctx, text, level)` for notification-only output and `showText(ctx, widget, text, title, level)` when a widget should be set. Never call `ctx.ui.*` unguarded on the headless path.
@@ -39,7 +39,7 @@ Nazar follows the design philosophy of Pi (the minimal terminal coding agent by 
 
 - **Erasable TypeScript only.** Tests run under `node --test` with type-stripping; do not use `enum`, `namespace`, constructor parameter properties, or other syntax that needs emit. Use `type`/`interface`, `as const`, and `StringEnum` instead.
 - Prefer pure functions, early returns, and plain data over classes and inheritance. No premature abstraction or config "frameworks."
-- Centralize configuration in `memory/paths.ts` and `nazar/setup-store.ts`. Resolve config lazily at call time (so `/nazar setup` + `/reload` is honored); never freeze derived paths at import time.
+- Centralize configuration in `packages/memory/code/extensions/memory/paths.ts` and `@nazar/core/setup`. Resolve config lazily at call time (so `/nazar setup` + `/reload` is honored); never freeze derived paths at import time.
 - Keep secret-bearing files private: write with `writePrivateFileSync` (`0600` files, `0700` dirs), redact secrets before persisting memory, and sanitize error messages to basenames (never leak full local paths).
 - Comments explain non-obvious intent, trade-offs, or constraints — never narrate what the code already says.
 - Prefer `winget`-installable, portable host dependencies; document env-var overrides rather than hardcoding machine paths.
@@ -54,19 +54,19 @@ Nazar follows the design philosophy of Pi (the minimal terminal coding agent by 
 
 ## Testing & validation
 
-- Tests are `code/tests/*.test.mjs` run with `node --test`. Cover pure helpers directly; for I/O use temp dirs + overridden `XDG_*`/`NAZAR_*` env, and a fake `pi.exec` for CLI-backed code.
+- Tests are `packages/*/code/tests/*.test.mjs` run workspace-wide with `npm test`. Cover pure helpers directly; for I/O use temp dirs + overridden `XDG_*`/`NAZAR_*` env, and a fake `pi.exec` for CLI-backed code.
 - Make platform/native logic testable through injected seams (`resolve*ForTest({ platform, env })`) instead of mutating `process.platform`.
 - Source-level assertions are acceptable to lock in structural invariants (e.g. truncation wiring, ESM-safe loading).
 - Before declaring done, run: `npm test`, `npm run pack:dry`, and `git diff --check`. CRLF/LF warnings on Windows are expected and non-blocking.
 
 ## Known limitations & deferred work
 
-- `memory/memory-use.ts` and `whatsapp/whatsapp-use.ts` are oversized; a pure decomposition into `rollups.ts`/`pinned.ts`/`journal.ts`/`sessions.ts`/`qmd.ts` (and a WhatsApp state split) is deferred — do it as a behavior-free refactor, not mixed with fixes.
+- `packages/memory/code/extensions/memory/memory-use.ts` and `packages/whatsapp/code/extensions/whatsapp/whatsapp-use.ts` are oversized; a pure decomposition into `rollups.ts`/`pinned.ts`/`sessions.ts`/`qmd.ts` (and a WhatsApp state split) is deferred — do it as a behavior-free refactor, not mixed with fixes.
 - The memory-worthiness heuristic is English/verb-prefix-bound by design (deterministic + offline). An opt-in LLM summarizer is a possible future hook, not a default.
 - Generated rollups are not QMD-indexed; monthly rollups are no longer generated (legacy files are left untouched).
 - `truncateToolOutput()` uses the Pi SDK truncation helpers when present and a local byte+line fallback otherwise, because the SDK is a peer dependency not installed in this repo.
 - Native-dependency surfaces (`sherpa-onnx-node`, Baileys) keep narrow local `any` boundaries; tighten only the fields actually touched.
-- `remote-origin.ts` is an accepted same-process singleton for WhatsApp→Spotify attribution; revisit only if it must cross processes.
+- `@nazar/core/remote-origin` is an accepted same-process singleton for WhatsApp→Spotify attribution; it uses `globalThis`/`Symbol.for` so split packages share one process-local channel.
 - Legacy `debrandMemoryText()` migration shim is scheduled for removal after 2026-08-01.
 
 ## Safety

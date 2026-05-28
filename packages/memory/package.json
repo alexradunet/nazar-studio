@@ -1,0 +1,38 @@
+{
+  "name": "@nazar/memory",
+  "version": "0.1.0",
+  "description": "Nazar Pi memory extension package.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "nazar",
+    "memory"
+  ],
+  "pi": {
+    "extensions": [
+      "./code/extensions/memory.ts"
+    ],
+    "skills": [
+      "./code/extensions/memory/skills"
+    ]
+  },
+  "files": [
+    "code/extensions/**/*.ts",
+    "code/extensions/memory/README.md",
+    "code/extensions/memory/skills/**"
+  ],
+  "scripts": {
+    "test": "node --test code/tests/*.test.mjs",
+    "pack:dry": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "@nazar/core": "0.1.0"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  }
+}

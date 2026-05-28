@@ -10,7 +10,7 @@ Memory, voice, music, messaging, and your knowledge base — woven together as a
 
 ## Overview
 
-Nazar is a TypeScript Pi.Dev extension product packaged as `@nazar/nazar-pi`. It is intentionally:
+Nazar is a TypeScript Pi.Dev extension product split into five installable Pi packages: `@nazar/core`, `@nazar/memory`, `@nazar/voice`, `@nazar/spotify`, and `@nazar/whatsapp`. It is intentionally:
 
 - **OS-agnostic.** No NixOS, no Fedora, no Docker host assumptions. Install dependencies through the package manager of your platform. The extensions stay portable.
 - **Local-first.** Your memory, transcripts, and state live on your machine in a portable Obsidian vault. Cloud integrations (Spotify, WhatsApp) are optional and explicit.
@@ -21,17 +21,17 @@ Nazar is a TypeScript Pi.Dev extension product packaged as `@nazar/nazar-pi`. It
 
 ## What's in the suite
 
-Five core extensions and two starter Agent Skills:
+Five Pi packages and two starter Agent Skills:
 
 ### Extensions
 
 | Extension | Commands | What it does |
 | --- | --- | --- |
-| **`nazar`** | `/nazar-setup`, `/nazar-status` | Post-install setup and status across memory, voice, WhatsApp, and Spotify. |
-| **`memory`** | `/memory`, `memory_status`, `memory_search` | Durable memory, generated rollups, searchable project knowledge. Ships with the integrated `memory-janitor` Agent Skill. |
-| **`voice`** | `/tts`, `/voice`, `tts_toggle` | Text-to-speech and push-to-talk voice input. Local Sherpa-ONNX models, no cloud dependency. |
-| **`spotify`** | `/spotify`, `spotify_control` | Spotify Web API control — play, queue, search, playlist management. |
-| **`whatsapp`** | (bridge) | A minimal one-whitelisted-contact WhatsApp bridge via Baileys. |
+| **`@nazar/core`** | `/nazar setup`, `/nazar status`, `/nazar-setup`, `/nazar-status` | Post-install setup/status shell plus shared helpers. |
+| **`@nazar/memory`** | `/memory`, `memory_status`, `memory_search` | Durable memory, generated rollups, searchable project knowledge. Ships with the integrated `memory-janitor` Agent Skill. |
+| **`@nazar/voice`** | `/tts`, `/voice`, `tts_toggle` | Text-to-speech and push-to-talk voice input. Local Sherpa-ONNX models, no cloud dependency. |
+| **`@nazar/spotify`** | `/spotify`, `spotify_control` | Spotify Web API control — play, queue, search, playlist management. |
+| **`@nazar/whatsapp`** | (bridge) | A minimal one-whitelisted-contact WhatsApp bridge via Baileys. |
 
 ### Skills
 
@@ -49,10 +49,14 @@ Nazar runs as a set of extensions inside the [Pi.Dev coding agent](https://githu
 ### 2. Install Nazar
 
 ```sh
-pi install @nazar/nazar-pi
+pi install npm:@nazar/core
+pi install npm:@nazar/memory
+pi install npm:@nazar/voice
+pi install npm:@nazar/spotify
+pi install npm:@nazar/whatsapp
 ```
 
-This registers the five extensions in your Pi settings. WhatsApp and local voice use optional adapter dependencies; install them only on machines that need those features.
+Install `@nazar/core` plus any feature packages you want. WhatsApp and local voice use optional adapter dependencies; install those feature packages only on machines that need them.
 
 ### 3. Point Nazar at your memory vault
 
@@ -65,7 +69,7 @@ export NAZAR_HOME="$HOME/NazarVault"
 Then run setup inside the agent:
 
 ```
-/nazar-setup memory
+/nazar setup memory
 ```
 
 Nazar will scaffold a PARA-style vault structure if one doesn't exist:
@@ -87,7 +91,7 @@ NazarVault/
 ### 4. Verify
 
 ```
-/nazar-status
+/nazar status
 ```
 
 You should see green checks for memory, voice, Spotify (if configured), and WhatsApp (if configured).
@@ -102,7 +106,7 @@ Nazar is opinionated about *where things live* but agnostic about *how the host 
 
 **Your Obsidian vault is the database.** Personal memory (Projects, Areas, Resources) is yours and lives in your vault. The `05_Nazar/` directory is the AI/system control plane — generated runtime state, rollups, and the compiled "llm-wiki" knowledge layer.
 
-**Extensions are TypeScript modules.** Each extension is a single `.ts` file plus an optional sub-directory for assets. Add or remove extensions by editing `.pi/settings.json`.
+**Packages are TypeScript modules.** Each package ships raw `.ts` Pi extensions plus optional skills/assets. Add or remove capabilities by installing or removing the corresponding Pi package.
 
 **Host setup is your problem.** Nazar does not ship installers, container images, or OS configuration. Install Node.js, QMD, audio helpers, GitHub CLI, etc. through your platform's package manager (`apt`, `dnf`, `brew`, `winget`, `nix-env`). Runtime assumptions belong in extension code, settings, or environment variables.
 
@@ -135,7 +139,7 @@ Do not commit secrets. Do not commit raw session transcripts. Do not expose SSH/
 
 ## Status
 
-Nazar is in **active development**. The five core extensions work end-to-end on Linux, Windows, and macOS. The Obsidian-backed memory layer is the current focus; roadmap items include richer multi-vault support, calendar/messaging integrations, and a managed-installer experience for non-developers.
+Nazar is in **active development**. The five Pi packages work end-to-end on Linux, Windows, and macOS. The Obsidian-backed memory layer is the current focus; roadmap items include richer multi-vault support, calendar/messaging integrations, and a managed-installer experience for non-developers.
 
 ---
 

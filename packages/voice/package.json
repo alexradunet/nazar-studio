@@ -1,0 +1,36 @@
+{
+  "name": "@nazar/voice",
+  "version": "0.1.0",
+  "description": "Nazar Pi local voice and TTS extension package.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "nazar",
+    "voice"
+  ],
+  "pi": {
+    "extensions": [
+      "./code/extensions/voice.ts"
+    ]
+  },
+  "files": [
+    "code/extensions/**/*.ts",
+    "code/extensions/voice/setup-sherpa.mjs"
+  ],
+  "scripts": {
+    "test": "node --test code/tests/*.test.mjs",
+    "pack:dry": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "@nazar/core": "0.1.0"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  },
+  "optionalDependencies": {
+    "sherpa-onnx-node": "1.13.2"
+  }
+}

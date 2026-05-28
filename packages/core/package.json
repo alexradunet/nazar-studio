@@ -1,0 +1,39 @@
+{
+  "name": "@nazar/core",
+  "version": "0.1.0",
+  "description": "Nazar core Pi extension, setup shell, and shared helpers.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "nazar"
+  ],
+  "pi": {
+    "extensions": [
+      "./code/extensions/nazar.ts"
+    ],
+    "skills": [
+      "./code/skills"
+    ]
+  },
+  "exports": {
+    "./shared": "./code/extensions/shared.ts",
+    "./setup": "./code/extensions/nazar/setup-store.ts",
+    "./setup-registry": "./code/extensions/nazar/setup-registry.ts",
+    "./transcriber": "./code/extensions/nazar/transcriber-registry.ts",
+    "./remote-origin": "./code/extensions/remote-origin.ts"
+  },
+  "files": [
+    "code/extensions/**/*.ts",
+    "code/skills/**"
+  ],
+  "scripts": {
+    "test": "node --test code/tests/*.test.mjs",
+    "pack:dry": "npm pack --dry-run"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  }
+}

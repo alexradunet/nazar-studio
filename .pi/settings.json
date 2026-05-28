@@ -1,13 +1,14 @@
 {
   "extensions": [
-    "../code/extensions/nazar.ts",
-    "../code/extensions/memory.ts",
-    "../code/extensions/voice.ts",
-    "../code/extensions/spotify.ts",
-    "../code/extensions/whatsapp.ts"
+    "../packages/core/code/extensions/nazar.ts",
+    "../packages/memory/code/extensions/memory.ts",
+    "../packages/voice/code/extensions/voice.ts",
+    "../packages/spotify/code/extensions/spotify.ts",
+    "../packages/whatsapp/code/extensions/whatsapp.ts"
   ],
   "skills": [
-    "../code/skills"
+    "../packages/core/code/skills",
+    "../packages/memory/code/extensions/memory/skills"
   ],
   "packages": [
     "npm:pi-subagents"

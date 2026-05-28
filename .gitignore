@@ -5,9 +5,9 @@
 .pi/npm/package-lock.json
 .pi/git/github.com/**
 
-# Extension-local npm dependencies are reproducible from package-lock.json
-code/extensions/voice/node_modules/**
-code/extensions/whatsapp/node_modules/**
+# Workspace/package npm dependencies are reproducible from package manifests
+node_modules/**
+packages/*/node_modules/**
 
 # Private/generated Pi memory (external vault preferred; repo-local fallback is local-only)
 /memory/

@@ -1,0 +1,35 @@
+{
+  "name": "@nazar/spotify",
+  "version": "0.1.0",
+  "description": "Nazar Pi Spotify Web API extension package.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "nazar",
+    "spotify"
+  ],
+  "pi": {
+    "extensions": [
+      "./code/extensions/spotify.ts"
+    ]
+  },
+  "files": [
+    "code/extensions/**/*.ts",
+    "code/extensions/spotify/README.md"
+  ],
+  "scripts": {
+    "test": "node --test code/tests/*.test.mjs",
+    "pack:dry": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "@nazar/core": "0.1.0"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  }
+}
