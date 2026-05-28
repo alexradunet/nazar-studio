@@ -1,90 +1,166 @@
 # Nazar
 
-Nazar is a Pi-native, OS-agnostic, local-first memory appliance built from TypeScript extensions. The core runtime provides durable memory and searchable project knowledge; optional integrations add voice/TTS, Spotify control, and WhatsApp bridging.
+> *The studio for your life.*
 
-The public repository contains code, tests, docs, templates, and AI/infrastructure durable memory. Human/private memory should live outside git or in a private checkout.
+**Nazar** is an OS-agnostic [Pi.Dev](https://github.com/earendil-works/pi-coding-agent) extension suite for building a personal AI assistant that knows what you keep, remembers what matters, and helps you orchestrate your life. It runs on whatever operating system you want — Linux, Windows, macOS, immutable distros, hobby boards — and stores everything in a portable Obsidian vault you own.
 
-## Pi resources
+Memory, voice, music, messaging, and your knowledge base — woven together as a single personal world.
 
-`.pi/settings.json` loads:
+---
 
-- `code/extensions/nazar.ts` — `/nazar-setup` and `/nazar-status` for post-install setup/status across memory, voice, WhatsApp, and Spotify.
-- `code/extensions/memory.ts` — `/memory`, `memory_status`, `memory_search`, and the integrated `memory-janitor` Agent Skill.
-- `code/extensions/voice.ts` — `/tts`, `/voice`, `tts_toggle`, and push-to-talk voice input.
-- `code/extensions/spotify.ts` — `/spotify` and `spotify_control` through the Spotify Web API.
-- `code/extensions/whatsapp.ts` — a minimal one-whitelisted-contact WhatsApp bridge.
-- `code/skills/` — standalone project Agent Skills.
+## Overview
 
-## Host boundary
+Nazar is a TypeScript Pi.Dev extension product packaged as `@nazar/nazar-pi`. It is intentionally:
 
-Nazar does not ship host operating-system configuration. Install Pi, Node.js, QMD, audio helpers, GitHub CLI, or other optional host tools through the package manager for your own platform. On Windows, install Nazar host dependencies through `winget` when a winget package exists. Runtime assumptions belong in TypeScript extension code, settings, or documented environment variables — not in machine-specific host configuration.
+- **OS-agnostic.** No NixOS, no Fedora, no Docker host assumptions. Install dependencies through the package manager of your platform. The extensions stay portable.
+- **Local-first.** Your memory, transcripts, and state live on your machine in a portable Obsidian vault. Cloud integrations (Spotify, WhatsApp) are optional and explicit.
+- **Pi-native.** Built on the Pi.Dev coding-agent extension API. The agent is a first-class part of your environment, not a chatbot bolted on the side.
+- **Privacy-first.** Private memory, OAuth tokens, voice models, and runtime state stay out of git by default.
 
-## Portable Obsidian memory backend
+---
 
-For real use, point Nazar at a private portable Obsidian vault. The vault root is the personal memory layer; `05_Nazar/` is the AI/system control plane and runtime backend:
+## What's in the suite
+
+Five core extensions and two starter Agent Skills:
+
+### Extensions
+
+| Extension | Commands | What it does |
+| --- | --- | --- |
+| **`nazar`** | `/nazar-setup`, `/nazar-status` | Post-install setup and status across memory, voice, WhatsApp, and Spotify. |
+| **`memory`** | `/memory`, `memory_status`, `memory_search` | Durable memory, generated context, searchable project knowledge. Ships with the integrated `memory-janitor` Agent Skill. |
+| **`voice`** | `/tts`, `/voice`, `tts_toggle` | Text-to-speech and push-to-talk voice input. Local Sherpa-ONNX models, no cloud dependency. |
+| **`spotify`** | `/spotify`, `spotify_control` | Spotify Web API control — play, queue, search, playlist management. |
+| **`whatsapp`** | (bridge) | A minimal one-whitelisted-contact WhatsApp bridge via Baileys. |
+
+### Skills
+
+- **`github-manager`** — Agent Skill for managing GitHub repos and workflows.
+- **`windows-setup`** — Windows-specific post-install helper for `winget`-installed dependencies.
+
+---
+
+## Quick start
+
+### 1. Install Pi.Dev
+
+Nazar runs as a set of extensions inside the [Pi.Dev coding agent](https://github.com/earendil-works/pi-coding-agent). Install Pi first per its docs.
+
+### 2. Install Nazar
+
+```sh
+pi install @nazar/nazar-pi
+```
+
+This registers the five extensions in your Pi settings and pulls dependencies (Baileys for WhatsApp, sherpa-onnx-node for voice models, etc.).
+
+### 3. Point Nazar at your memory vault
+
+Nazar uses an Obsidian-style vault as its long-term memory backend. Set `NAZAR_HOME` to your vault root:
 
 ```sh
 export NAZAR_HOME="$HOME/NazarVault"
-# Optional explicit overrides; otherwise derived from NAZAR_HOME:
-export PI_MEMORY_ROOT="$NAZAR_HOME/05_Nazar/runtime"
-export PI_MEMORY_PAGES_DIR="$NAZAR_HOME"
-export PI_AI_MEMORY_DIR="$NAZAR_HOME/05_Nazar/llm-wiki/wiki"
-export PI_HUMAN_MEMORY_DIR="$NAZAR_HOME"
 ```
 
-Nazar scaffolds this Obsidian-friendly layout when `NAZAR_HOME` or `/nazar-setup memory` is used:
+Then run setup inside the agent:
 
-```txt
+```
+/nazar-setup memory
+```
+
+Nazar will scaffold a PARA-style vault structure if one doesn't exist:
+
+```
 NazarVault/
-  00_Inbox/
-  01_Projects/
-  02_Areas/
-  03_Resources/
-  04_Archive/
-  05_Nazar/
-    llm-wiki/{raw,wiki}/
-    runtime/{rollups,state,journal,sources,indexes,archive}/
-    ai-workbench/{proposals,drafts,scratch}/
-    operator-log/
+├── 00_Inbox/           # shared human/AI capture
+├── 01_Projects/        # human-owned
+├── 02_Areas/           # human-owned
+├── 03_Resources/       # human-owned
+├── 04_Archive/         # cold storage (excluded from search)
+└── 05_Nazar/           # AI/system control plane
+    ├── llm-wiki/
+    │   ├── raw/        # AI's raw notes
+    │   └── wiki/       # Karpathy-style compiled wiki
+    ├── runtime/        # generated state, rollups, journals
+    ├── ai-workbench/   # proposals, drafts, scratch
+    └── operator-log/   # audit log
 ```
 
-`00_Inbox` is shared human/AI capture. `01_Projects`, `02_Areas`, and `03_Resources` are human-owned personal memory. `04_Archive` is cold storage and excluded from default memory search. `05_Nazar/llm-wiki/wiki` is the AI-maintained Karpathy-style compiled wiki layer. `05_Nazar/runtime` contains generated transferable state.
+### 4. Verify
 
-If no vault is configured, repo-local development still falls back to the public `memory/` skeleton. Generated rollups, journals, source reports, human/private pages, and local state are ignored by default in this public repo. Public AI/infrastructure pages live under `memory/pages/ai/`.
-
-## Install and setup
-
-Published package target:
-
-```sh
-pi install npm:@nazar/nazar-pi
-pi
-/nazar-setup   # opens the TUI setup dashboard; choose "Run full setup"
-/reload
+```
+/nazar-status
 ```
 
-Repo-local development:
+You should see green checks for memory, voice, Spotify (if configured), and WhatsApp (if configured).
 
-```sh
-cd /path/to/nazar
-pi
-/nazar-setup
-```
+---
 
-Useful checks:
+## Architecture
 
-```sh
-pi --no-session --offline -p "/nazar-status"
-pi --no-session --offline -p "/memory status"
-pi --no-session --offline -p "/tts status"
-pi --no-session --offline -p "/voice help"
-pi --no-session --offline -p "/spotify help"
-pi --no-session --offline -p "/whatsapp status"
-node code/tests/pi-memory.test.mjs
-node code/tests/pi-spotify.test.mjs
-node code/tests/pi-whatsapp.test.mjs
-```
+Nazar is opinionated about *where things live* but agnostic about *how the host machine is configured*.
 
-## Privacy rule
+**The Pi.Dev agent is the runtime.** Nazar registers commands and skills with the Pi extension API. There is no separate daemon, no service to install, no OS layer to provision.
 
-Do not commit private journal entries, generated rollups, source reports, personal durable pages, OAuth tokens, WhatsApp auth state, or local voice models.
+**Your Obsidian vault is the database.** Personal memory (Projects, Areas, Resources) is yours and lives in your vault. The `05_Nazar/` directory is the AI/system control plane — generated context, rollups, the compiled "llm-wiki" knowledge layer.
+
+**Extensions are TypeScript modules.** Each extension is a single `.ts` file plus an optional sub-directory for assets. Add or remove extensions by editing `.pi/settings.json`.
+
+**Host setup is your problem.** Nazar does not ship installers, container images, or OS configuration. Install Node.js, QMD, audio helpers, GitHub CLI, etc. through your platform's package manager (`apt`, `dnf`, `brew`, `winget`, `nix-env`). Runtime assumptions belong in extension code, settings, or environment variables.
+
+---
+
+## Configuration
+
+Common environment variables (set in your shell profile):
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `NAZAR_HOME` | (none) | Root of the Obsidian vault |
+| `PI_MEMORY_ROOT` | `$NAZAR_HOME/05_Nazar/runtime` | Generated runtime state |
+| `PI_MEMORY_PAGES_DIR` | `$NAZAR_HOME` | Personal memory pages root |
+| `PI_AI_MEMORY_DIR` | `$NAZAR_HOME/05_Nazar/llm-wiki/wiki` | AI-maintained compiled wiki |
+| `PI_HUMAN_MEMORY_DIR` | `$NAZAR_HOME` | Human-authored memory pages |
+
+If `NAZAR_HOME` is unset, Nazar falls back to a repo-local `memory/` skeleton for development.
+
+Extension-specific configuration (Spotify OAuth, WhatsApp pairing, voice model paths) is set through the respective `/spotify`, `/whatsapp`, `/voice` setup flows. No secrets are stored in git.
+
+---
+
+## Privacy and safety
+
+Nazar is built around a strict public-private boundary:
+
+- **In git:** code, tests, docs, templates, public AI/infrastructure memory.
+- **Out of git (always):** private memory pages, generated rollups, journals, source reports, OAuth tokens, WhatsApp auth state, local voice models, personal Obsidian vaults.
+
+Do not commit secrets. Do not commit raw session transcripts. Do not expose SSH/RDP services to the internet without an explicit VPN/tunnel plan.
+
+---
+
+## Status
+
+Nazar is in **active development**. The five core extensions work end-to-end on Linux, Windows, and macOS. The Obsidian-backed memory layer is the current focus; roadmap items include richer multi-vault support, calendar/messaging integrations, and a managed-installer experience for non-developers.
+
+---
+
+## Background
+
+Nazar is built by [Alex Radu](https://alexradu.net) as the studio I want to live and work in — a private, sovereign, AI-augmented personal environment that respects the data it learns from.
+
+- Project home: [nazar.studio](https://nazar.studio) *(coming soon)*
+- Source: [github.com/alexradunet/nazar-studio](https://github.com/alexradunet/nazar-studio)
+- Author: [@alexradunet](https://github.com/alexradunet) · [alexradu.net](https://alexradu.net)
+
+---
+
+## Contributing
+
+Issues, PRs, and ideas welcome. The codebase prefers KISS, inspectable, and reversible solutions. See `AGENTS.md` for working-style conventions used by both human and AI contributors.
+
+---
+
+## License
+
+UNLICENSED. Public source for inspection and contribution; please ask before using in commercial products.
