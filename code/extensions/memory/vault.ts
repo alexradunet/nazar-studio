@@ -8,10 +8,7 @@ export const VAULT_MEMORY_DIRS = ["00_Inbox", "01_Projects", "02_Areas", "03_Res
 export function ensureVaultScaffold(paths: MemoryPaths): void {
   if (!paths.VAULT_DIR) return;
   for (const name of VAULT_MEMORY_DIRS) mkdirSync(join(paths.VAULT_DIR, name), { recursive: true });
-  for (const path of [
-    paths.LLM_WIKI_RAW_DIR,
-    paths.LLM_WIKI_PAGES_DIR,
-  ]) mkdirSync(path, { recursive: true });
+  mkdirSync(paths.LLM_WIKI_PAGES_DIR, { recursive: true });
 
   const vaultAgents = join(paths.NAZAR_DIR, "AGENTS.md");
   if (!existsSync(vaultAgents)) {
@@ -20,7 +17,7 @@ export function ensureVaultScaffold(paths: MemoryPaths): void {
 
   const wikiAgents = join(paths.LLM_WIKI_DIR, "AGENTS.md");
   if (!existsSync(wikiAgents)) {
-    writeFileSync(wikiAgents, `# LLM wiki rules\n\n- \`raw/\` contains immutable source snapshots. Do not edit a raw source after ingest; add a corrected source instead.\n- \`wiki/\` contains AI-maintained compiled knowledge pages. Keep pages concise, cross-linked, and citation-friendly.\n- Maintain \`wiki/index.md\` as a content catalog and \`wiki/log.md\` as an append-only operation log.\n- Prefer ingesting from reviewed inbox items or explicit human-provided sources.\n- When a source contradicts existing wiki claims, update the relevant page and note the contradiction rather than silently overwriting history.\n`, "utf8");
+    writeFileSync(wikiAgents, `# LLM wiki rules\n\n- \`wiki/\` contains AI-maintained compiled knowledge pages. Keep pages concise, cross-linked, and citation-friendly.\n- Maintain \`wiki/index.md\` as a content catalog and \`wiki/log.md\` as an append-only operation log.\n- Prefer ingesting from reviewed inbox items or explicit human-provided sources.\n- When a source contradicts existing wiki claims, update the relevant page and note the contradiction rather than silently overwriting history.\n`, "utf8");
   }
 
   const wikiIndex = join(paths.LLM_WIKI_PAGES_DIR, "index.md");

@@ -125,12 +125,11 @@ export function getRuntimePaths(): { RUNTIME_DIR: string; COMPACT_LOCK_DIR: stri
   return { RUNTIME_DIR, COMPACT_LOCK_DIR: join(RUNTIME_DIR, "memory-compact.lock") };
 }
 
-function rollupDirs(): { DAILY_DIR: string; WEEKLY_DIR: string; MONTHLY_DIR: string } {
+function rollupDirs(): { DAILY_DIR: string; WEEKLY_DIR: string } {
   const paths = getMemoryPaths();
   return {
     DAILY_DIR: join(paths.ROLLUPS_DIR, "daily"),
     WEEKLY_DIR: join(paths.ROLLUPS_DIR, "weekly"),
-    MONTHLY_DIR: join(paths.ROLLUPS_DIR, "monthly"),
   };
 }
 
@@ -199,17 +198,12 @@ function ensureDirs(): void {
     paths.PERSONAL_PAGES_DIR,
     paths.ROLLUPS_DIR,
     paths.STATE_DIR,
-    paths.JOURNAL_DIR,
-    paths.JOURNAL_ENTRIES_DIR,
-    paths.SOURCES_DIR,
-    paths.INDEXES_DIR,
-    paths.ARCHIVE_DIR,
     DAILY_DIR,
     WEEKLY_DIR,
   ];
   const vault = paths.VAULT_DIR;
   const vaultDirs = vault
-    ? [...VAULT_MEMORY_DIRS.map((name) => join(vault, name)), paths.LLM_WIKI_RAW_DIR, paths.LLM_WIKI_PAGES_DIR]
+    ? [...VAULT_MEMORY_DIRS.map((name) => join(vault, name)), paths.LLM_WIKI_PAGES_DIR]
     : [];
   // Self-healing memo: reuse one path set for both the cache key and the existence
   // re-check, so an externally deleted runtime or vault directory is rebuilt on the
@@ -577,18 +571,10 @@ function isNoisy(text: string): boolean {
   return NOISY_SUBSTRINGS.some((fragment) => lowered.includes(fragment));
 }
 
-function isJournalPrivateMessage(message: MemoryMessage): boolean {
-  const text = message.text.trim();
-  if (/^\/journal\b/i.test(text)) return true;
-  if (message.role === "assistant" && /\b(journal entry|journal reflection source|candidate review prompts|recent excerpt)\b/i.test(text)) return true;
-  return false;
-}
-
 function isMemoryWorthy(message: MemoryMessage): boolean {
   // Deliberately deterministic/offline: this heuristic is cheap, private, and testable,
   // but it is English- and verb-prefix-bound. An opt-in LLM summarizer can replace or
   // augment it later if higher recall becomes worth the token cost and nondeterminism.
-  if (isJournalPrivateMessage(message)) return false;
   const text = compactText(message.text);
   if (!text || isNoisy(text)) return false;
   if (message.role === "user") {
@@ -634,8 +620,7 @@ function dedupeBullets(bullets: Iterable<string>): string[] {
 
 function dailyMarkdown(day: string, messages: MemoryMessage[]): string {
   const status = isClosedDay(day) ? "closed" : "open";
-  const compactableMessages = messages.filter((message) => !isJournalPrivateMessage(message));
-  const bullets = dedupeBullets(compactableMessages.filter(isMemoryWorthy).map(memoryBullet)).slice(0, MAX_DAILY_BULLETS);
+  const bullets = dedupeBullets(messages.filter(isMemoryWorthy).map(memoryBullet)).slice(0, MAX_DAILY_BULLETS);
   if (bullets.length === 0) {
     bullets.push("- No durable memory extracted. Raw Pi session history remains in Pi's default session storage or the explicit source path used for this refresh.");
   }
@@ -760,30 +745,6 @@ function writeWeekly(dailyPaths: string[]): string[] {
   return written;
 }
 
-function journalFileHeader(day: string): string {
-  return [
-    `# Journal entries: ${day}`,
-    "",
-    "Private source-like personal journal material. Not QMD-indexed, not prompt-injected, and not auto-promoted by default.",
-    "",
-    "## Entries",
-    "",
-  ].join("\n");
-}
-
-export function addJournalEntry(text: string, date = now()): CompactResult {
-  ensureDirs();
-  const clean = redactSecrets(text.trim());
-  if (!clean) return { code: 1, text: "Nothing to journal. Provide text for the private entry.\n" };
-  const paths = getMemoryPaths();
-  const day = localDateString(date);
-  const path = join(paths.JOURNAL_ENTRIES_DIR, `${day}.md`);
-  if (!existsSync(path)) writeFileSync(path, journalFileHeader(day), "utf8");
-  const entry = [`### ${date.toISOString()}`, "", "Provenance: Pi assistant. Private source material; do not auto-promote.", "", clean, ""].join("\n");
-  writeFileSync(path, `${readFileSync(path, "utf8").trimEnd()}\n\n${entry}`, "utf8");
-  return { code: 0, text: `Journal entry added.\nJournal file: ${path}\n` };
-}
-
 function compactPathList(options: CompactOptions): string[] {
   if (options.session) return existsSync(options.session) ? [options.session] : [];
   if (options.sessionDir) return sessionFiles(options.sessionDir);
@@ -812,7 +773,7 @@ export function compactMemory(options: CompactOptions = {}): CompactResult {
     if (paths.length === 0) {
       const dailyPaths = markdownFiles(DAILY_DIR);
       const weeklyPaths = writeWeekly(dailyPaths);
-      return { code: 0, text: `No session source supplied or no session files found. Existing rollups preserved.\nWeekly closed-day rollups: ${weeklyPaths.length} -> ${WEEKLY_DIR}\nMonthly rollup generation is disabled; legacy monthly files are left untouched.\n` };
+      return { code: 0, text: `No session source supplied or no session files found. Existing rollups preserved.\nWeekly closed-day rollups: ${weeklyPaths.length} -> ${WEEKLY_DIR}\n` };
     }
 
     if (grouped.size === 0) return { code: 1, text: "No compactable user/assistant text messages found.\n" };
@@ -824,10 +785,9 @@ export function compactMemory(options: CompactOptions = {}): CompactResult {
 
     const lines = [
       `Compacted ${paths.length} session file(s).`,
-      `Text messages considered: ${messages.length}; tool calls/results omitted; private journal command history excluded from rollups.`,
+      `Text messages considered: ${messages.length}; tool calls/results omitted.`,
       `Daily chunks written: ${writtenDaily.length} -> ${dailyDir}`,
       `Weekly closed-day rollups: ${weeklyPaths.length} -> ${weeklyDir}`,
-      "Monthly rollup generation is disabled; legacy monthly files are left untouched.",
     ];
 
     return { code: 0, text: `${lines.join("\n")}\n` };
@@ -842,7 +802,7 @@ export function compactSessionFile(sessionFile: string | undefined): CompactResu
 export function memoryStatusText(): string {
   ensureDirs();
   const paths = getMemoryPaths();
-  const { DAILY_DIR, WEEKLY_DIR, MONTHLY_DIR } = rollupDirs();
+  const { DAILY_DIR, WEEKLY_DIR } = rollupDirs();
   const { COMPACT_LOCK_DIR } = getRuntimePaths();
   const lockStatus = existsSync(COMPACT_LOCK_DIR) ? `${COMPACT_LOCK_DIR} (present)` : `${COMPACT_LOCK_DIR} (free)`;
 
@@ -852,16 +812,10 @@ export function memoryStatusText(): string {
     `Code root: ${paths.CODE_ROOT}`,
     `Nazar vault: ${paths.VAULT_DIR || "(not configured; using ignored local dev fallback)"}`,
     `Nazar control dir: ${paths.NAZAR_DIR}`,
-    `LLM wiki raw dir: ${paths.LLM_WIKI_RAW_DIR}`,
     `LLM wiki pages dir: ${paths.LLM_WIKI_PAGES_DIR}`,
     `Memory root: ${paths.MEMORY_ROOT}`,
     `Rollups dir: ${paths.ROLLUPS_DIR}`,
     `State dir: ${paths.STATE_DIR}`,
-    `Journal dir: ${paths.JOURNAL_DIR}`,
-    `Journal entries dir: ${paths.JOURNAL_ENTRIES_DIR}`,
-    `Sources dir: ${paths.SOURCES_DIR}`,
-    `Indexes dir: ${paths.INDEXES_DIR}`,
-    `Archive dir: ${paths.ARCHIVE_DIR}`,
     "Pi raw sessions: Pi default session storage (not repo-local); .pi/settings.json does not set sessionDir.",
     `Compaction lock: ${lockStatus}`,
     `Pinned memory page: ${paths.PINNED_MEMORY_PAGE}`,
@@ -872,7 +826,6 @@ export function memoryStatusText(): string {
     `QMD collections: ${memoryCollectionSpecs(paths).map((spec) => spec.name).join(", ")}`,
     `Daily chunks: ${markdownFiles(DAILY_DIR).length}`,
     `Weekly chunks: ${markdownFiles(WEEKLY_DIR).length}`,
-    `Monthly chunks (legacy; no longer generated): ${markdownFiles(MONTHLY_DIR).length}`,
   ].join("\n");
 }
 

@@ -15,8 +15,8 @@ Use this Agent Skill to maintain the configured Nazar memory vault and conversat
 - Keep generated rollups generated. Do not manually edit generated rollups except for repair.
 - Put human-curated long-term facts in pinned memory, preferably through `/memory remember` inside Pi when practical.
 - Put synthesized durable knowledge in the configured durable pages/wiki locations shown by `memory_status`.
-- Put raw reports, copied analyses, and source material under the configured sources directory shown by `memory_status`.
-- Do not add memory pages, rollups, journals, sources, or model/state files to the public git repository.
+- Put copied analyses, reports, and durable source notes under the configured durable pages/wiki locations shown by `memory_status`.
+- Do not add memory pages, rollups, raw transcripts, or model/state files to the public git repository.
 - Prefer concise consolidation over dumping duplicate text.
 - Use Pi's built-in `/compact` when the current chat should be compacted; do not use or recreate `pi-memory`, `/memory compact`, or `memory_compact`.
 
@@ -46,12 +46,12 @@ Tools available to agents:
 
 1. **Inventory** relevant docs, analyses, reports, current memory pages, and current paths from `memory_status`.
 2. **Classify** each item:
-   - raw/source artifact → configured sources directory
+   - raw/source artifact → durable source note under the configured pages/wiki directory
    - synthesized durable page → configured durable pages/wiki directory
    - human-curated standing fact → pinned memory
    - transient/generated chat memory → leave to `/compact` and configured rollups
-3. **Preserve sources** by copying important transient reports into a dated source folder under the configured sources directory.
-4. **Synthesize pages** in the configured durable pages/wiki area with decisions, current state, validation, open questions, and links to sources.
+3. **Preserve source context** by copying important transient reports into dated durable source notes under the configured pages/wiki directory.
+4. **Synthesize pages** in the configured durable pages/wiki area with decisions, current state, validation, open questions, and links to source notes.
 5. **Update maps/logs** if the configured vault has an index/log page.
 6. **Refresh search** after meaningful changes:
 
@@ -95,7 +95,7 @@ Commands:
 
 Before finishing memory janitorial work:
 
-- New pages/sources are under configured external memory paths, not public repo paths.
+- New pages and source notes are under configured external memory paths, not public repo paths.
 - Important new pages are discoverable from the vault's index/log convention when present.
 - `/memory update` has run after large page changes.
 - Built-in `/compact` has run when generated rollups should reflect the current chat.
@@ -104,6 +104,6 @@ Before finishing memory janitorial work:
 ## Safety
 
 - Do not delete source reports or project docs unless the user explicitly asks.
-- Do not expose secrets or copy secret material into memory pages, sources, or rollups.
+- Do not expose secrets or copy secret material into memory pages, source notes, or rollups.
 - Do not silently rewrite Agent Skills; ask before skill self-improvement unless the user explicitly requested it.
 - Current user direction, `AGENTS.md`, and system/developer instructions override memory.

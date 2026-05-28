@@ -30,7 +30,7 @@ When `NAZAR_HOME` is set, defaults are derived from it:
 - `PI_AI_MEMORY_DIR` → `$NAZAR_HOME/05_Nazar/llm-wiki/wiki`
 - `PI_HUMAN_MEMORY_DIR` → `$NAZAR_HOME`
 
-`05_Nazar/llm-wiki/raw` stores immutable source snapshots. `05_Nazar/llm-wiki/wiki` stores AI-maintained compiled wiki pages with `index.md` and `log.md`. `05_Nazar/runtime` stores generated transferable state (`rollups`, `state`, `journal`, `sources`, `indexes`, and `archive`).
+`05_Nazar/llm-wiki/wiki` stores AI-maintained compiled wiki pages with `index.md` and `log.md`. `05_Nazar/runtime` stores generated transferable state (`rollups` and `state`).
 
 ## Repository fallback
 
@@ -39,7 +39,7 @@ If no vault/setup/env path is configured in a source checkout, data defaults rem
 - durable pages: `memory/pages/`
 - generated rollups/state: `memory/`
 
-The public repo does not track this tree. Treat repo-local `memory/` as ignored local runtime state only; real human/private memory, journals, rollups, source reports, and local model/state files belong in `NAZAR_HOME` or explicit external `PI_*` paths.
+The public repo does not track this tree. Treat repo-local `memory/` as ignored local runtime state only; real human/private memory, rollups, copied reports, and local model/state files belong in `NAZAR_HOME` or explicit external `PI_*` paths.
 
 ## Rules
 

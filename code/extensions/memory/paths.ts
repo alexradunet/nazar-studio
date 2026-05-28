@@ -52,7 +52,6 @@ export function getMemoryPaths(root = projectRoot()): MemoryPaths {
   const configuredUnlessEnvVault = (value: string | undefined): string | undefined => (ENV_VAULT_DIR ? undefined : value);
   const NAZAR_DIR = VAULT_DIR ? join(VAULT_DIR, "05_Nazar") : join(PROJECT_ROOT, "memory");
   const LLM_WIKI_DIR = join(NAZAR_DIR, "llm-wiki");
-  const LLM_WIKI_RAW_DIR = join(LLM_WIKI_DIR, "raw");
   const LLM_WIKI_PAGES_DIR = join(LLM_WIKI_DIR, "wiki");
 
   const MEMORY_ROOT = envPath("PI_MEMORY_ROOT", PROJECT_ROOT, VAULT_DIR ? join(NAZAR_DIR, "runtime") : join(PROJECT_ROOT, "memory"), configuredUnlessEnvVault(setupMemory?.rootDir));
@@ -61,11 +60,6 @@ export function getMemoryPaths(root = projectRoot()): MemoryPaths {
   const PERSONAL_PAGES_DIR = envPath("PI_HUMAN_MEMORY_DIR", PROJECT_ROOT, VAULT_DIR || join(PAGES_DIR, "personal"), process.env.PI_PERSONAL_MEMORY_DIR?.trim() || configuredUnlessEnvVault(setupMemory?.humanPagesDir));
   const ROLLUPS_DIR = join(MEMORY_ROOT, "rollups");
   const STATE_DIR = join(MEMORY_ROOT, "state");
-  const JOURNAL_DIR = join(MEMORY_ROOT, "journal");
-  const JOURNAL_ENTRIES_DIR = join(JOURNAL_DIR, "entries");
-  const SOURCES_DIR = join(MEMORY_ROOT, "sources");
-  const INDEXES_DIR = join(MEMORY_ROOT, "indexes");
-  const ARCHIVE_DIR = join(MEMORY_ROOT, "archive");
   const PINNED_MEMORY_PAGE = samePath(VAULT_DIR, PERSONAL_PAGES_DIR) ? join(NAZAR_DIR, "pinned-memory.md") : join(PERSONAL_PAGES_DIR, "pinned-memory.md");
 
   return {
@@ -74,7 +68,6 @@ export function getMemoryPaths(root = projectRoot()): MemoryPaths {
     VAULT_DIR,
     NAZAR_DIR,
     LLM_WIKI_DIR,
-    LLM_WIKI_RAW_DIR,
     LLM_WIKI_PAGES_DIR,
     MEMORY_ROOT,
     PAGES_DIR,
@@ -82,11 +75,6 @@ export function getMemoryPaths(root = projectRoot()): MemoryPaths {
     PERSONAL_PAGES_DIR,
     ROLLUPS_DIR,
     STATE_DIR,
-    JOURNAL_DIR,
-    JOURNAL_ENTRIES_DIR,
-    SOURCES_DIR,
-    INDEXES_DIR,
-    ARCHIVE_DIR,
     PINNED_MEMORY_PAGE,
   };
 }

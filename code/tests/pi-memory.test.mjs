@@ -6,7 +6,6 @@ import { dirname, join, resolve } from "node:path";
 
 import { truncateToolOutput, truncateUtf8 } from "../extensions/shared.ts";
 import {
-  addJournalEntry,
   buildDurableMemoryContext,
   compactMemory,
   compactSessionFile,
@@ -167,7 +166,6 @@ test("path derivation uses only repo root and ignores stale PI_MEMORY env vars",
     assert.equal(paths.VAULT_DIR, undefined);
     assert.equal(paths.NAZAR_DIR, join(ctx.root, "memory"));
     assert.equal(paths.LLM_WIKI_DIR, join(ctx.root, "memory", "llm-wiki"));
-    assert.equal(paths.LLM_WIKI_RAW_DIR, join(ctx.root, "memory", "llm-wiki", "raw"));
     assert.equal(paths.LLM_WIKI_PAGES_DIR, join(ctx.root, "memory", "llm-wiki", "wiki"));
     assert.equal(paths.MEMORY_ROOT, join(ctx.root, "memory"));
     assert.equal(paths.PAGES_DIR, join(ctx.root, "memory", "pages"));
@@ -175,11 +173,6 @@ test("path derivation uses only repo root and ignores stale PI_MEMORY env vars",
     assert.equal(paths.PERSONAL_PAGES_DIR, join(ctx.root, "memory", "pages", "personal"));
     assert.equal(paths.ROLLUPS_DIR, join(ctx.root, "memory", "rollups"));
     assert.equal(paths.STATE_DIR, join(ctx.root, "memory", "state"));
-    assert.equal(paths.JOURNAL_DIR, join(ctx.root, "memory", "journal"));
-    assert.equal(paths.JOURNAL_ENTRIES_DIR, join(ctx.root, "memory", "journal", "entries"));
-    assert.equal(paths.SOURCES_DIR, join(ctx.root, "memory", "sources"));
-    assert.equal(paths.INDEXES_DIR, join(ctx.root, "memory", "indexes"));
-    assert.equal(paths.ARCHIVE_DIR, join(ctx.root, "memory", "archive"));
     assert.equal(paths.PINNED_MEMORY_PAGE, join(ctx.root, "memory", "pages", "personal", "pinned-memory.md"));
 
     const status = memoryStatusText();
@@ -598,46 +591,6 @@ test("vault memory search indexes pinned memory and advanced page overrides", as
     assert.equal(searchedCollections.includes(QMD_COLLECTION), true);
     assert.equal(searchedCollections.includes("memory-personal"), true);
     assert.equal(searchedCollections.includes("memory-ai"), true);
-  } finally {
-    cleanup(ctx);
-  }
-});
-
-test("journal helper writes private entries without editing pinned memory", () => {
-  const ctx = makeProject();
-  try {
-    const date = new Date("2026-05-24T12:34:56.000Z");
-    const pinnedPath = join(ctx.root, "memory", "pages", "personal", "pinned-memory.md");
-    const before = existsSync(pinnedPath) ? readFileSync(pinnedPath, "utf8") : "";
-    const added = addJournalEntry("I felt calm today", date);
-    const after = existsSync(pinnedPath) ? readFileSync(pinnedPath, "utf8") : "";
-    assert.equal(added.code, 0, added.text);
-    assert.doesNotMatch(added.text, /I felt calm/);
-
-    const path = join(ctx.root, "memory", "journal", "entries", `${DAY}.md`);
-    const entry = readFileSync(path, "utf8");
-    assert.match(entry, /I felt calm today/);
-    assert.match(entry, /Private source material/);
-    assert.match(entry, /Pi assistant/);
-    assert.doesNotMatch(after, /I felt calm today/);
-    if (before) assert.equal(after, before);
-  } finally {
-    cleanup(ctx);
-  }
-});
-
-test("journal command payloads are excluded from generated rollups", () => {
-  const ctx = makeProject();
-  const session = join(ctx.tmp, "sessions", "journal.jsonl");
-  const privatePayload = "deeply private sentinel memory qmd";
-  try {
-    writeJsonl(session, [message("user", `/journal add ${privatePayload}`), message("assistant", `Done. Added a journal entry about ${privatePayload}.`)]);
-    const result = compactMemory({ session });
-    assert.equal(result.code, 0, result.text);
-
-    const daily = readFileSync(join(ctx.root, "memory", "rollups", "daily", `${DAY}.md`), "utf8");
-    assert.doesNotMatch(daily, new RegExp(privatePayload));
-    assert.equal(existsSync(join(ctx.root, "memory", "context", "bootstrap.md")), false);
   } finally {
     cleanup(ctx);
   }
