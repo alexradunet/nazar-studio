@@ -2,7 +2,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
 import { hasInteractiveUi, toolError } from "../shared.ts";
-import { sherpaModelStatus, speakWithSherpa, stopSherpaSpeech } from "./sherpa-runtime.ts";
+import { resetSherpaRuntime, sherpaModelStatus, speakWithSherpa, stopSherpaSpeech } from "./sherpa-runtime.ts";
 import { cleanForTts, splitLongText, splitSpeakableChunks } from "../voice-text.ts";
 
 type TtsState = {
@@ -228,6 +228,7 @@ export function registerTtsUse(pi: ExtensionAPI) {
     name: "tts_toggle",
     label: "TTS Toggle",
     description: "Enable or disable Pi text-to-speech for assistant replies.",
+    promptSnippet: "Enable or disable local sherpa text-to-speech for assistant replies.",
     promptGuidelines: ["Use tts_toggle when the user asks to enable or disable Pi text-to-speech for assistant replies."],
     parameters: Type.Object({
       enabled: Type.Boolean({ description: "Whether TTS should be enabled." }),
@@ -286,6 +287,7 @@ export function registerTtsUse(pi: ExtensionAPI) {
     clearSpeech();
     STATE.speaking = false;
     STATE.fullTextSeen = "";
+    resetSherpaRuntime();
     ctx.ui.setWidget("tts", undefined);
   });
 }

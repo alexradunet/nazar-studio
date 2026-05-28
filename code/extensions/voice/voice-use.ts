@@ -3,6 +3,7 @@ import { hasInteractiveUi, trim } from "../shared.ts";
 import {
   type RecordingProcess,
   recordingByteLength,
+  resetSherpaRuntime,
   sampleSherpaMicrophone,
   sherpaModelStatus,
   startSherpaRecording,
@@ -279,6 +280,7 @@ export function registerVoiceUse(pi: ExtensionAPI) {
       }
       recordingSession = undefined;
     }
+    resetSherpaRuntime();
     ctx.ui.setStatus("voice", undefined);
     ctx.ui.setWidget("voice", undefined);
   });

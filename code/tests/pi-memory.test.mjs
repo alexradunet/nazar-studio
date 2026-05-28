@@ -7,8 +7,10 @@ import { dirname, join, resolve } from "node:path";
 import { truncateUtf8 } from "../extensions/shared.ts";
 import {
   addJournalEntry,
+  buildDurableMemoryContext,
   compactMemory,
   compactSessionFile,
+  durablePinnedDigest,
   ensureMemoryIndex,
   forgetPinnedMemory,
   getRuntimePaths,
@@ -342,6 +344,41 @@ test("successful compaction removes its lock and active locks are refused", () =
     assert.match(blocked.text, /Memory compaction is already running/);
     assert.match(blocked.text, /"pid":123/);
     assert.equal(existsSync(lock), true, "active lock should remain for the owner");
+  } finally {
+    cleanup(ctx);
+  }
+});
+
+test("durable memory digest skips empty pinned template and includes remembered bullets", () => {
+  const ctx = makeProject();
+  try {
+    assert.equal(durablePinnedDigest(), "");
+    assert.equal(buildDurableMemoryContext(), "");
+
+    const remembered = rememberPinnedMemory(["fact", "Prefers concise answers"]);
+    assert.equal(remembered.code, 0, remembered.text);
+    assert.match(durablePinnedDigest(), /Prefers concise answers/);
+    assert.match(buildDurableMemoryContext(), /### Pinned memory/);
+    assert.match(buildDurableMemoryContext(), /Prefers concise answers/);
+  } finally {
+    cleanup(ctx);
+  }
+});
+
+test("durable memory digest includes closed daily rollup bullets when present", () => {
+  const ctx = makeProject();
+  const session = join(ctx.tmp, "sessions", "rollup.jsonl");
+  try {
+    writeJsonl(session, [
+      message("user", "Let's update memory rollups.", "2026-05-20T10:00:00.000Z"),
+      message("assistant", "Done. Updated memory rollups.", "2026-05-20T10:01:00.000Z"),
+    ]);
+    const compacted = compactMemory({ session });
+    assert.equal(compacted.code, 0, compacted.text);
+
+    const digest = buildDurableMemoryContext();
+    assert.match(digest, /Recent daily rollup \(2026-05-20\)/);
+    assert.match(digest, /Updated memory rollups/);
   } finally {
     cleanup(ctx);
   }

@@ -7,7 +7,7 @@ Project-local Pi extensions.
 - `nazar.ts` — registers `/nazar-setup` and `/nazar-status` for post-install setup/status across memory, voice, WhatsApp, and Spotify.
 - `shared.ts` — cross-extension UI, path, string, and private-file helpers.
 - `nazar/` — setup orchestration modules and non-secret setup config helpers.
-- `memory.ts` — registers the `/memory` command plus `memory_status` and `memory_search` tools, refreshes rollups after built-in `/compact`, and contributes the `memory-janitor` Agent Skill through Pi resource discovery.
+- `memory.ts` — registers the `/memory` command plus `memory_status` and `memory_search` tools, appends pinned/rollup durable memory into the system prompt on each turn, refreshes rollups after built-in `/compact`, and contributes the `memory-janitor` Agent Skill through Pi resource discovery.
 - `memory/` — implementation modules for paths, pinned memory, rollups, QMD integration, and the integrated `memory-janitor` skill.
 - `voice.ts` — registers `/tts`, `/voice`, `tts_toggle`, and the Alt+V voice shortcut.
 - `voice-text.ts` — pure TTS text normalization and chunking helpers.
@@ -37,3 +37,14 @@ pi --no-session --offline -p "/whatsapp help"
 pi --no-session --offline -p "/whatsapp status"
 node --test
 ```
+
+## Reload behavior
+
+Pi's built-in `/reload` emits `session_shutdown` on the current extension runtime, reloads extension modules/skills, then emits `session_start` again. Nazar extensions treat shutdown as the cleanup boundary:
+
+- **memory** — clears the memory widget.
+- **voice** — kills any active recorder child, calls `resetSherpaRuntime()`, and clears voice status/widgets.
+- **tts** — clears debounce timers, speech queue/playback, resets sherpa TTS/STT caches, and clears the TTS widget.
+- **whatsapp** — stops the Baileys socket, releases the master lock, clears `ctxRef`, and closes the QR overlay.
+
+Use `/reload` after `/nazar-setup` path changes. Do not expect in-memory extension state to survive reload; re-establish it in `session_start` handlers if needed.

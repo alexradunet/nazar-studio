@@ -2,7 +2,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 
-import { showText, trim, xdgDataHome } from "../shared.ts";
+import { showText, truncateUtf8, trim, xdgDataHome } from "../shared.ts";
 import { getMemoryPaths, QMD_COLLECTION, QMD_CONTEXT, QMD_INDEX } from "./paths.ts";
 import { ensureVaultScaffold } from "./vault.ts";
 
@@ -336,6 +336,60 @@ function redactSecrets(text: string): string {
 export function pinnedMemoryText(): string {
   ensureDirs();
   return readFileSync(getMemoryPaths().PINNED_MEMORY_PAGE, "utf8");
+}
+
+const DURABLE_MEMORY_INJECT_BYTES = 8 * 1024;
+
+function pinnedMemoryBullets(markdown: string): string[] {
+  return markdown
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("- ") && line.length > 2);
+}
+
+export function durablePinnedDigest(): string {
+  ensureDirs();
+  const bullets = pinnedMemoryBullets(pinnedMemoryText());
+  return bullets.length > 0 ? bullets.join("\n") : "";
+}
+
+export function durableRollupDigest(maxBullets = 8): string {
+  ensureDirs();
+  const { DAILY_DIR, WEEKLY_DIR } = rollupDirs();
+  const today = localToday();
+
+  const weeklyFiles = markdownFiles(WEEKLY_DIR)
+    .map((path) => ({ path, week: basename(path, ".md") }))
+    .filter(({ week }) => isClosedWeek(week, today))
+    .sort((a, b) => b.week.localeCompare(a.week));
+  if (weeklyFiles.length > 0) {
+    const latest = weeklyFiles[0];
+    const bullets = extractSectionBullets(readIfExists(latest.path), "Days", maxBullets);
+    if (bullets.length > 0) {
+      return [`Recent weekly rollup (${latest.week}):`, ...bullets].join("\n");
+    }
+  }
+
+  const dailyFiles = markdownFiles(DAILY_DIR)
+    .map((path) => ({ path, day: basename(path, ".md") }))
+    .filter(({ day }) => isClosedDay(day, today))
+    .sort((a, b) => b.day.localeCompare(a.day));
+  if (dailyFiles.length === 0) return "";
+
+  const latest = dailyFiles[0];
+  const bullets = extractSectionBullets(readIfExists(latest.path), "Memory", maxBullets);
+  if (bullets.length === 0) return "";
+  return [`Recent daily rollup (${latest.day}):`, ...bullets].join("\n");
+}
+
+export function buildDurableMemoryContext(maxBytes = DURABLE_MEMORY_INJECT_BYTES): string {
+  const chunks: string[] = [];
+  const pinned = durablePinnedDigest();
+  if (pinned) chunks.push(`### Pinned memory\n${pinned}`);
+  const rollup = durableRollupDigest();
+  if (rollup) chunks.push(rollup);
+  if (chunks.length === 0) return "";
+  return truncateUtf8(chunks.join("\n\n"), maxBytes);
 }
 
 export function rememberPinnedMemory(args: string[]): CompactResult {

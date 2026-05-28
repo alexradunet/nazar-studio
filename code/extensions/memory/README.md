@@ -5,7 +5,7 @@ Implementation modules for the project-local Pi memory extension.
 ## Files
 
 - `paths.ts` — derives memory paths and QMD identifiers from the project root, optional `NAZAR_HOME`, optional Nazar setup config, and explicit `PI_MEMORY_ROOT`, `PI_MEMORY_PAGES_DIR`, `PI_AI_MEMORY_DIR`, and `PI_HUMAN_MEMORY_DIR` overrides.
-- `memory-use.ts` — implements pinned memory, generated rollups, QMD indexing/search, and `/memory` command helpers.
+- `memory-use.ts` — implements pinned memory, generated rollups, QMD indexing/search, durable-memory system-prompt injection, and `/memory` command helpers.
 - `vault.ts` — creates the portable vault scaffold and vault-local guidance files.
 - `skills/memory-janitor/` — Agent Skill contributed by the memory extension for durable memory curation workflows.
 
@@ -45,6 +45,7 @@ The public repo does not track this tree. Treat repo-local `memory/` as ignored 
 
 - Raw Pi JSONL sessions remain in Pi's default session storage.
 - Use Pi's built-in `/compact`; this extension listens for `session_compact` and refreshes rollups.
+- On each user turn, pinned memory bullets and a bounded recent closed rollup digest are appended to the system prompt when present. Empty pinned-memory templates are skipped.
 - Do not reintroduce `/memory compact`, `memory_compact`, `/context`, or a separate memory helper CLI.
 - In vault mode, QMD uses scoped collections for active personal folders, the compiled LLM wiki, optional AI/project pages, and archive. Default search excludes `04_Archive`.
 - Keep memory curation instructions in the integrated `memory-janitor` skill; keep storage/indexing behavior in extension code.

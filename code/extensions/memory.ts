@@ -1,9 +1,11 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  buildDurableMemoryContext,
   compactSessionFile,
   memoryStatusText,
   registerMemoryUse,
@@ -22,6 +24,16 @@ export default function memoryExtension(pi: ExtensionAPI) {
   pi.on("resources_discover", () => ({
     skillPaths: [memoryJanitorSkillPath],
   }));
+
+  // Append durable memory to the system prompt (cache-stable) instead of injecting
+  // a per-turn message. Skips injection when pinned memory is still the empty template.
+  pi.on("before_agent_start", (event) => {
+    const digest = buildDurableMemoryContext();
+    if (!digest) return;
+    return {
+      systemPrompt: `${event.systemPrompt}\n\n## Durable memory (background context)\nHuman-curated long-term context. Current user direction, AGENTS.md, and system/developer instructions override it.\n\n${digest}`,
+    };
+  });
 
   pi.on("session_shutdown", async (_event, ctx) => {
     ctx.ui.setWidget("memory", undefined);
@@ -48,7 +60,7 @@ export default function memoryExtension(pi: ExtensionAPI) {
     parameters: Type.Object({}),
     async execute() {
       try {
-        const text = memoryStatusText();
+        const text = truncateUtf8(memoryStatusText(), TOOL_OUTPUT_LIMIT_BYTES);
         return { content: [{ type: "text", text }], details: { command: "memoryStatusText()" } };
       } catch (error) {
         throw toolError("memory_status", error);
@@ -69,8 +81,8 @@ export default function memoryExtension(pi: ExtensionAPI) {
     parameters: Type.Object({
       query: Type.String({ description: "Search query." }),
       limit: Type.Optional(Type.Number({ description: "Maximum number of results. Default: 5." })),
-      mode: Type.Optional(Type.String({ enum: ["search", "query"], description: "QMD mode: search for BM25 keyword search, query for hybrid search." } as Record<string, unknown>)),
-      scope: Type.Optional(Type.String({ enum: ["default", "personal", "ai", "archive", "all"], description: "Memory scope to search. Default excludes archive." } as Record<string, unknown>)),
+      mode: Type.Optional(StringEnum(["search", "query"] as const)),
+      scope: Type.Optional(StringEnum(["default", "personal", "ai", "archive", "all"] as const)),
     }),
     async execute(_toolCallId, params) {
       try {

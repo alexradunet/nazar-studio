@@ -249,9 +249,8 @@ async function describeMasterLock(): Promise<string> {
   if (!existing?.pid) return "not claimed";
   const pid = Number(existing.pid);
   const state = isPidAlive(pid) ? "live" : "stale";
-  const session = existing.sessionFile ? ` session=${existing.sessionFile}` : "";
   const cwd = existing.cwd ? ` cwd=${existing.cwd}` : "";
-  return `${state} lock by pid ${pid}${cwd}${session}`;
+  return `${state} lock by pid ${pid}${cwd}`;
 }
 
 async function loadBaileys(): Promise<BaileysRuntime> {

@@ -82,8 +82,7 @@ NazarVault/
     │   ├── raw/        # AI's raw notes
     │   └── wiki/       # Karpathy-style compiled wiki
     ├── runtime/        # generated state, rollups, journals
-    ├── ai-workbench/   # proposals, drafts, scratch
-    └── operator-log/   # audit log
+    └── pinned-memory.md  # human-curated long-term facts (when using vault layout)
 ```
 
 ### 4. Verify
