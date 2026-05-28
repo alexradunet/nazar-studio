@@ -1,6 +1,9 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
+
+import { hasInteractiveUi } from "../shared.ts";
 import { sherpaModelStatus, speakWithSherpa, stopSherpaSpeech } from "./sherpa-runtime.ts";
+import { cleanForTts, splitLongText, splitSpeakableChunks } from "../voice-text.ts";
 
 type TtsState = {
   enabled: boolean;
@@ -43,10 +46,6 @@ const HELP_TEXT = `Pi local TTS commands
 
 TTS uses embedded sherpa-onnx-node local speech synthesis.`;
 
-function hasInteractiveUi(ctx: { hasUI?: boolean }): boolean {
-  return ctx.hasUI !== false;
-}
-
 function isSubagentRuntime(): boolean {
   return process.env.PI_SUBAGENT_CHILD === "1" || Boolean(process.env.PI_SUBAGENT_RUN_ID || process.env.PI_SUBAGENT_CHILD_AGENT);
 }
@@ -65,83 +64,10 @@ function extractText(message: any): string {
     .join("");
 }
 
-function stripEmojis(text: string): string {
-  return text.replace(/\p{Extended_Pictographic}/gu, "").replace(/[\uFE0E\uFE0F\u200D]/g, "");
-}
-
-function normalizeMarkdownForTts(text: string): string {
-  return text
-    .replace(/```[\s\S]*?```/g, " ")
-    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
-    .replace(/^\s*>\s?/gm, "")
-    .replace(/^\s*[-*+]\s+/gm, "")
-    .replace(/^\s*\d+\.\s+/gm, "")
-    .replace(/`([^`]+)`/g, "$1")
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1")
-    .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/__([^_]+)__/g, "$1")
-    .replace(/\*([^*]+)\*/g, "$1")
-    .replace(/_([^_]+)_/g, "$1")
-    .replace(/(^|\s)#(?=[A-Za-z][\w-]*\b)/g, "$1");
-}
-
-function addPausePunctuation(text: string): string {
-  return text.replace(/\n\s*\n+/g, ". ").replace(/\n/g, ", ");
-}
-
-function simplifyPathsForTts(text: string): string {
-  if (!CONFIG.simplifyPaths) return text;
-  return text.replace(/(?:~|\/[\w.-]+(?:\/[\w.-]+)+)/g, (fullPath) => {
-    const normalized = fullPath.replace(/^~\//, "home/");
-    if (normalized.length <= CONFIG.maxPathLength) return fullPath;
-    const segments = normalized.split("/").filter(Boolean);
-    const tail = segments.slice(-Math.max(1, CONFIG.pathTailSegments)).join("/");
-    return `…/${tail}`;
-  });
-}
-
-function cleanForTts(text: string): string {
-  return addPausePunctuation(simplifyPathsForTts(normalizeMarkdownForTts(stripEmojis(text))))
-    .replace(/\s+/g, " ")
-    .replace(/\s+([,.;!?])/g, "$1")
-    .trim();
-}
-
-function splitLongText(text: string): string[] {
-  const chunks: string[] = [];
-  let remaining = text.trim();
-
-  while (remaining.length > CONFIG.maxChunkChars) {
-    const candidate = remaining.slice(0, CONFIG.maxChunkChars);
-    const breakAt = Math.max(candidate.lastIndexOf(". "), candidate.lastIndexOf("! "), candidate.lastIndexOf("? "), candidate.lastIndexOf(", "));
-    const cut = breakAt > 80 ? breakAt + 1 : CONFIG.maxChunkChars;
-    chunks.push(remaining.slice(0, cut).trim());
-    remaining = remaining.slice(cut).trim();
-  }
-
-  if (remaining) chunks.push(remaining);
-  return chunks;
-}
-
-function splitSpeakableChunks(buffer: string): { chunks: string[]; rest: string } {
-  const chunks: string[] = [];
-  let remaining = buffer;
-
-  while (remaining.length >= CONFIG.minChars) {
-    const match = remaining.match(/^([\s\S]*?[.!?\n])\s+/);
-    if (!match) break;
-    const chunk = match[1].trim();
-    if (chunk) chunks.push(chunk);
-    remaining = remaining.slice(match[0].length);
-  }
-
-  return { chunks, rest: remaining };
-}
-
 function enqueue(text: string): void {
-  const cleaned = cleanForTts(text);
+  const cleaned = cleanForTts(text, CONFIG);
   if (!cleaned) return;
-  STATE.queue.push(...splitLongText(cleaned));
+  STATE.queue.push(...splitLongText(cleaned, CONFIG));
   void processQueue();
 }
 
@@ -190,7 +116,7 @@ function flushStreamingBuffer(forceAll = false): void {
     return;
   }
 
-  const { chunks, rest } = splitSpeakableChunks(STATE.streamBuffer);
+  const { chunks, rest } = splitSpeakableChunks(STATE.streamBuffer, CONFIG);
   for (const chunk of chunks) enqueue(chunk);
   STATE.streamBuffer = rest;
 }

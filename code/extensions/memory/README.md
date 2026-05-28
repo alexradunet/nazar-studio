@@ -5,7 +5,8 @@ Implementation modules for the project-local Pi memory extension.
 ## Files
 
 - `paths.ts` — derives memory paths and QMD identifiers from the project root, optional `NAZAR_HOME`, optional Nazar setup config, and explicit `PI_MEMORY_ROOT`, `PI_MEMORY_PAGES_DIR`, `PI_AI_MEMORY_DIR`, and `PI_HUMAN_MEMORY_DIR` overrides.
-- `memory-use.ts` — implements pinned memory, generated rollups, QMD indexing/search, vault scaffolding, and `/memory` command helpers.
+- `memory-use.ts` — implements pinned memory, generated rollups, QMD indexing/search, and `/memory` command helpers.
+- `vault.ts` — creates the portable vault scaffold and vault-local guidance files.
 - `skills/memory-janitor/` — Agent Skill contributed by the memory extension for durable memory curation workflows.
 
 ## Portable vault ownership

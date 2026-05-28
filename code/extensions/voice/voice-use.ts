@@ -1,4 +1,5 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { hasInteractiveUi, trim } from "../shared.ts";
 import {
   type RecordingProcess,
   recordingByteLength,
@@ -38,14 +39,6 @@ TUI shortcut
 - Alt+V — push-to-talk toggle: press once to record, press again to send
 
 This path records until you stop it. There is no silence threshold or continuous auto-listening loop.`;
-
-function trim(value: string | undefined): string {
-  return (value ?? "").trim();
-}
-
-function hasInteractiveUi(ctx: { hasUI?: boolean }): boolean {
-  return ctx.hasUI !== false;
-}
 
 function setVoiceStatus(ctx: ExtensionContext, text: string | undefined): void {
   ctx.ui.setStatus("voice", text);

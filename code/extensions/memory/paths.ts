@@ -52,6 +52,9 @@ export function getMemoryPaths(root = projectRoot()): MemoryPaths {
   const setupMemory = readNazarSetupConfig().memory;
   const ENV_VAULT_DIR = configuredPath(PROJECT_ROOT, process.env.NAZAR_HOME);
   const VAULT_DIR = ENV_VAULT_DIR || configuredPath(PROJECT_ROOT, setupMemory?.vaultDir);
+  // NAZAR_HOME is a portable vault override: when present, derive all default
+  // memory paths from that vault and ignore setup-config custom subpaths unless
+  // explicit PI_* path env vars override them below.
   const configuredUnlessEnvVault = (value: string | undefined): string | undefined => (ENV_VAULT_DIR ? undefined : value);
   const NAZAR_DIR = VAULT_DIR ? join(VAULT_DIR, "05_Nazar") : join(PROJECT_ROOT, "memory");
   const LLM_WIKI_DIR = join(NAZAR_DIR, "llm-wiki");

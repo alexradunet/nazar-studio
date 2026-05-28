@@ -1,9 +1,9 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { matchesKey, truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
 import { mkdir, open, readFile, rm, type FileHandle } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { dirname } from "node:path";
 import { clearRemoteTurnOrigin, setRemoteTurnOrigin } from "../remote-origin.ts";
+import { hasInteractiveUi } from "../shared.ts";
 import { transcribeSherpaPcm16 } from "../voice/sherpa-runtime.ts";
 import {
   assistantText,
@@ -24,6 +24,7 @@ import {
   whatsappConfigPath,
   whatsappMasterLockPath,
 } from "./whatsapp-utils.ts";
+import { closeQrOverlay, showQrOverlay } from "./qr-overlay.ts";
 
 type WhatsAppStatus = "disconnected" | "connecting" | "pairing" | "connected" | "stopping" | "locked" | "error";
 
@@ -92,9 +93,6 @@ let masterLockNote = "not claimed";
 let qrPairingWaiter: { resolve: (message: string) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> } | undefined;
 let lastQrLines: string[] | undefined;
 let lastQrShownAt = 0;
-let qrOverlayClose: (() => void) | undefined;
-let qrOverlayHandle: { hide?: () => void } | undefined;
-let qrOverlaySerial = 0;
 
 function positiveIntEnv(name: string, fallback: number): number {
   const value = Number(process.env[name]);
@@ -106,10 +104,6 @@ const MAX_IMAGE_BYTES = positiveIntEnv("PI_WHATSAPP_MAX_IMAGE_BYTES", 8 * 1024 *
 const MAX_AUDIO_BYTES = positiveIntEnv("PI_WHATSAPP_MAX_AUDIO_BYTES", 12 * 1024 * 1024);
 const MAX_PCM_BYTES = positiveIntEnv("PI_WHATSAPP_MAX_PCM_BYTES", 20 * 1024 * 1024);
 const MAX_RECONNECT_ATTEMPTS = positiveIntEnv("PI_WHATSAPP_MAX_RECONNECT_ATTEMPTS", 12);
-
-function hasInteractiveUi(ctx: { hasUI?: boolean } | undefined): boolean {
-  return ctx?.hasUI !== false;
-}
 
 function setStatus(next: WhatsAppStatus, detail?: string): void {
   status = next;
@@ -157,110 +151,10 @@ function waitForQrPairing(timeoutMs = 60_000): Promise<string> {
   });
 }
 
-function closeQrOverlay(): void {
-  const close = qrOverlayClose;
-  const handle = qrOverlayHandle;
-  qrOverlaySerial += 1;
-  qrOverlayClose = undefined;
-  qrOverlayHandle = undefined;
-  try {
-    close?.();
-  } catch {
-    // Best-effort UI cleanup.
-  }
-  try {
-    handle?.hide?.();
-  } catch {
-    // Best-effort UI cleanup.
-  }
-}
-
-function showQrOverlay(lines: string[]): void {
-  if (!hasInteractiveUi(ctxRef)) return;
-  const ctx = ctxRef;
-  if (!ctx) return;
-  closeQrOverlay();
-
-  const qrWidth = Math.max(...lines.map((line) => visibleWidth(line)), 0);
-  const requestedWidth = Math.min(Math.max(qrWidth + 8, 72), 120);
-
-  const overlaySerial = ++qrOverlaySerial;
-  void ctx.ui.custom<void>((tui, theme, _keybindings, done) => {
-    let closed = false;
-    const close = () => {
-      if (closed) return;
-      closed = true;
-      if (qrOverlaySerial === overlaySerial) {
-        qrOverlayClose = undefined;
-        qrOverlayHandle = undefined;
-      }
-      done();
-    };
-    qrOverlayClose = close;
-
-    const component: Component = {
-      render(width: number): string[] {
-        const title = theme.fg("accent", theme.bold("WhatsApp pairing QR"));
-        const help = theme.fg("dim", "Esc/Enter closes • terminal fallback also printed");
-        const availableRows = Math.max(1, Math.floor(tui.terminal.rows));
-        if (width < qrWidth + 2) {
-          return [
-            truncateToWidth(title, width),
-            "",
-            truncateToWidth(theme.fg("warning", `Terminal too narrow for QR: needs ${qrWidth + 2} columns, has ${width}.`), width),
-            truncateToWidth("Enlarge the terminal or use /whatsapp pair +<pi-whatsapp-account-phone>.", width),
-            "",
-            truncateToWidth(help, width),
-          ];
-        }
-        if (availableRows < lines.length) {
-          return [
-            truncateToWidth(title, width),
-            "",
-            truncateToWidth(theme.fg("warning", `Terminal too short for QR: needs ${lines.length} rows, has ${availableRows}.`), width),
-            truncateToWidth("Enlarge the terminal or use /whatsapp pair +<pi-whatsapp-account-phone>.", width),
-            truncateToWidth("The full QR was also printed to the terminal as fallback.", width),
-            "",
-            truncateToWidth(help, width),
-          ];
-        }
-
-        const centeredQr = lines.map((line) => `${" ".repeat(Math.max(0, Math.floor((width - visibleWidth(line)) / 2)))}${line}`);
-        if (availableRows < lines.length + 5) return centeredQr;
-
-        return [
-          truncateToWidth(title, width),
-          truncateToWidth("Scan with WhatsApp → Linked devices → Link a device.", width),
-          "",
-          ...centeredQr,
-          "",
-          truncateToWidth(help, width),
-        ];
-      },
-      handleInput(data: string): void {
-        if (matchesKey(data, "escape") || matchesKey(data, "enter") || matchesKey(data, "ctrl+c")) close();
-      },
-      invalidate(): void {},
-    };
-    return component;
-  }, {
-    overlay: true,
-    overlayOptions: { anchor: "center", width: requestedWidth, maxHeight: "100%", margin: 0 },
-    onHandle: (handle) => {
-      if (qrOverlaySerial === overlaySerial) qrOverlayHandle = handle;
-    },
-  }).finally(() => {
-    if (qrOverlaySerial === overlaySerial) {
-      qrOverlayClose = undefined;
-      qrOverlayHandle = undefined;
-    }
-  });
-}
-
 function reshowRecentQr(ctx: ExtensionContext): boolean {
   if (!lastQrLines || Date.now() - lastQrShownAt > 120_000) return false;
   ctxRef = ctx;
-  showQrOverlay(lastQrLines);
+  showQrOverlay(ctxRef, lastQrLines);
   ctx.ui.notify("WhatsApp QR re-shown. Scan it with the Pi phone.", "info");
   return true;
 }
@@ -672,7 +566,7 @@ async function startWhatsApp(pi: ExtensionAPI, pairingPhone?: string): Promise<s
           lastQrLines = lines;
           lastQrShownAt = Date.now();
           console.log(lines.join("\n"));
-          showQrOverlay(lines);
+          showQrOverlay(ctxRef, lines);
           if (hasInteractiveUi(ctxRef)) ctxRef?.ui.notify("WhatsApp QR ready. Scan it with the Pi phone.", "info");
           finishQrPairingWait("WhatsApp QR shown in a Pi popup and printed to the terminal. Scan it with the Pi phone.");
         } catch (error) {

@@ -37,7 +37,7 @@
     "code/skills/**"
   ],
   "scripts": {
-    "test": "node code/tests/pi-memory.test.mjs && node code/tests/pi-spotify.test.mjs && node code/tests/pi-whatsapp.test.mjs",
+    "test": "node --test",
     "pack:dry": "npm pack --dry-run"
   },
   "peerDependencies": {

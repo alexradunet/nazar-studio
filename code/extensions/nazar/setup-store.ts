@@ -1,6 +1,8 @@
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir, platform } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
+
+import { writePrivateJsonSync, xdgConfigHome, xdgDataHome, xdgStateHome } from "../shared.ts";
 
 export type SetupProfile = "laptop" | "desktop" | "remote" | "headless" | "custom" | "unknown";
 
@@ -43,27 +45,11 @@ function envPath(name: string): string | undefined {
   return value ? resolve(value) : undefined;
 }
 
-function windowsAppData(): string {
-  return process.env.APPDATA || join(homedir(), "AppData", "Roaming");
-}
-
-function windowsLocalAppData(): string {
-  return process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local");
-}
-
 export function getNazarDirs(): NazarDirs {
-  if (platform() === "win32") {
-    return {
-      configDir: envPath("NAZAR_CONFIG_DIR") || join(windowsAppData(), "nazar"),
-      stateDir: envPath("NAZAR_STATE_DIR") || join(windowsLocalAppData(), "nazar", "state"),
-      dataDir: envPath("NAZAR_DATA_DIR") || join(windowsLocalAppData(), "nazar", "data"),
-    };
-  }
-
   return {
-    configDir: envPath("NAZAR_CONFIG_DIR") || join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "nazar"),
-    stateDir: envPath("NAZAR_STATE_DIR") || join(process.env.XDG_STATE_HOME || join(homedir(), ".local", "state"), "nazar"),
-    dataDir: envPath("NAZAR_DATA_DIR") || join(process.env.XDG_DATA_HOME || join(homedir(), ".local", "share"), "nazar"),
+    configDir: envPath("NAZAR_CONFIG_DIR") || join(xdgConfigHome(), "nazar"),
+    stateDir: envPath("NAZAR_STATE_DIR") || join(xdgStateHome(), "nazar", "state"),
+    dataDir: envPath("NAZAR_DATA_DIR") || join(xdgDataHome(), "nazar", "data"),
   };
 }
 
@@ -127,20 +113,14 @@ export function writeNazarSetupConfig(update: Partial<NazarSetupConfig>): NazarS
     spotify: { ...current.spotify, ...update.spotify },
     updatedAt: new Date().toISOString(),
   };
-  const path = nazarSetupConfigPath();
-  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-  writeFileSync(path, `${JSON.stringify(next, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
-  try {
-    chmodSync(path, 0o600);
-  } catch {
-    // Best effort on platforms that do not support POSIX modes.
-  }
+  writePrivateJsonSync(nazarSetupConfigPath(), next);
   return next;
 }
 
 export function ensureSetupDirectories(config = readNazarSetupConfig()): void {
+  const dirs = getNazarDirs();
   const memory = { ...defaultMemoryConfig(), ...config.memory };
-  for (const dir of [getNazarDirs().configDir, getNazarDirs().stateDir, getNazarDirs().dataDir, memory.vaultDir, memory.rootDir, memory.pagesDir, memory.aiPagesDir, memory.humanPagesDir]) {
+  for (const dir of [dirs.configDir, dirs.stateDir, dirs.dataDir, memory.vaultDir, memory.rootDir, memory.pagesDir, memory.aiPagesDir, memory.humanPagesDir]) {
     mkdirSync(dir, { recursive: true, mode: 0o700 });
   }
 }

@@ -1,6 +1,7 @@
-import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+
+import { xdgConfigHome, xdgStateHome } from "../shared.ts";
 
 export type WhatsAppConfig = {
   allowedPhone?: string;
@@ -17,14 +18,6 @@ export type FilterInput = {
 export type FilterResult =
   | { allowed: true; jid: string }
   | { allowed: false; reason: string };
-
-function xdgConfigHome(): string {
-  return process.env.XDG_CONFIG_HOME || join(homedir(), ".config");
-}
-
-function xdgStateHome(): string {
-  return process.env.XDG_STATE_HOME || join(homedir(), ".local", "state");
-}
 
 export function whatsappConfigPath(): string {
   return process.env.PI_WHATSAPP_CONFIG || join(xdgConfigHome(), "pi", "whatsapp.json");

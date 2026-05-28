@@ -11,9 +11,7 @@ Standalone regression tests for project-local code.
 ## Run
 
 ```sh
-node code/tests/pi-memory.test.mjs
-node code/tests/pi-spotify.test.mjs
-node code/tests/pi-whatsapp.test.mjs
+node --test
 ```
 
 ## Rules

@@ -22,4 +22,4 @@ Project-local Pi discovery/configuration directory.
 
 ## Operational note
 
-After editing project extensions or skills, run `/reload` in Pi or restart Pi from `/home/nazar/nazar`.
+After editing project extensions or skills, run `/reload` in Pi or restart Pi from the repository root.

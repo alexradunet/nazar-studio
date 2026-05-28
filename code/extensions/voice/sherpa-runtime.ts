@@ -26,15 +26,11 @@ function loadSherpa(): any {
   }
 }
 
-const SETUP_CONFIG = readNazarSetupConfig();
-const MODEL_ROOT = process.env.PI_VOICE_MODEL_DIR || SETUP_CONFIG.voice?.modelDir || defaultVoiceModelDir(SETUP_CONFIG);
 const TTS_MODEL_NAME = process.env.PI_TTS_MODEL_NAME || "kokoro-en-v0_19";
-const TTS_MODEL_DIR = resolve(MODEL_ROOT, TTS_MODEL_NAME);
 const TTS_MODEL_FILE = TTS_MODEL_NAME.includes("int8") ? "model.int8.onnx" : "model.onnx";
 const TTS_SPEAKER_ID = Math.max(0, Number(process.env.PI_TTS_SPEAKER_ID ?? "0") || 0);
 const ASR_MODEL_NAME = process.env.PI_STT_MODEL_NAME || "sherpa-onnx-whisper-medium.en";
 const ASR_MODEL_ID = ASR_MODEL_NAME.replace(/^sherpa-onnx-whisper-/, "");
-const ASR_MODEL_DIR = resolve(MODEL_ROOT, ASR_MODEL_NAME);
 const ASR_ENCODER_FILE = process.env.PI_STT_ENCODER_FILE || `${ASR_MODEL_ID}-encoder.int8.onnx`;
 const ASR_DECODER_FILE = process.env.PI_STT_DECODER_FILE || `${ASR_MODEL_ID}-decoder.int8.onnx`;
 const ASR_TOKENS_FILE = process.env.PI_STT_TOKENS_FILE || `${ASR_MODEL_ID}-tokens.txt`;
@@ -44,6 +40,19 @@ const MIC_VOLUME = process.env.PI_MIC_VOLUME || "0.08";
 const XRDP_MIC_VOLUME = process.env.PI_XRDP_MIC_VOLUME || "1.0";
 const TTS_PREROLL_MS = Math.max(0, Number(process.env.PI_TTS_PREROLL_MS ?? "220") || 0);
 const PULSE_DEFAULT_DEVICE = "default";
+
+function modelRoot(): string {
+  const setupConfig = readNazarSetupConfig();
+  return process.env.PI_VOICE_MODEL_DIR || setupConfig.voice?.modelDir || defaultVoiceModelDir(setupConfig);
+}
+
+function ttsModelDir(): string {
+  return resolve(modelRoot(), TTS_MODEL_NAME);
+}
+
+function asrModelDir(): string {
+  return resolve(modelRoot(), ASR_MODEL_NAME);
+}
 
 type AudioTarget = {
   backend: "pulse" | "alsa" | "custom" | "powershell" | "native";
@@ -295,15 +304,15 @@ function required(paths: string[]): string[] {
 
 export function sherpaModelStatus(): string {
   const missingTts = required([
-    join(TTS_MODEL_DIR, TTS_MODEL_FILE),
-    join(TTS_MODEL_DIR, "voices.bin"),
-    join(TTS_MODEL_DIR, "tokens.txt"),
-    join(TTS_MODEL_DIR, "espeak-ng-data"),
+    join(ttsModelDir(), TTS_MODEL_FILE),
+    join(ttsModelDir(), "voices.bin"),
+    join(ttsModelDir(), "tokens.txt"),
+    join(ttsModelDir(), "espeak-ng-data"),
   ]);
   const missingAsr = required([
-    join(ASR_MODEL_DIR, ASR_ENCODER_FILE),
-    join(ASR_MODEL_DIR, ASR_DECODER_FILE),
-    join(ASR_MODEL_DIR, ASR_TOKENS_FILE),
+    join(asrModelDir(), ASR_ENCODER_FILE),
+    join(asrModelDir(), ASR_DECODER_FILE),
+    join(asrModelDir(), ASR_TOKENS_FILE),
   ]);
 
   let engine = "sherpa-onnx-node: not loaded";
@@ -317,7 +326,7 @@ export function sherpaModelStatus(): string {
   return [
     `Engine: ${engine}`,
     `Setup: ${SHERPA_SETUP_HINT}`,
-    `Model root: ${MODEL_ROOT}`,
+    `Model root: ${modelRoot()}`,
     `TTS model: ${TTS_MODEL_NAME} (${missingTts.length === 0 ? "ready" : `missing ${missingTts.length} file(s)`}), speaker ID ${TTS_SPEAKER_ID}`,
     `STT model: ${ASR_MODEL_NAME} (${missingAsr.length === 0 ? "ready" : `missing ${missingAsr.length} file(s)`}), language ${ASR_LANGUAGE || "auto"}`,
     `Mic volume target: ${micVolumeTarget()}`,
@@ -331,21 +340,21 @@ export function sherpaModelStatus(): string {
 
 function ensureTtsModel(): void {
   const missing = required([
-    join(TTS_MODEL_DIR, TTS_MODEL_FILE),
-    join(TTS_MODEL_DIR, "voices.bin"),
-    join(TTS_MODEL_DIR, "tokens.txt"),
-    join(TTS_MODEL_DIR, "espeak-ng-data"),
+    join(ttsModelDir(), TTS_MODEL_FILE),
+    join(ttsModelDir(), "voices.bin"),
+    join(ttsModelDir(), "tokens.txt"),
+    join(ttsModelDir(), "espeak-ng-data"),
   ]);
-  if (missing.length > 0) throw new Error(`Missing TTS model files under ${TTS_MODEL_DIR}`);
+  if (missing.length > 0) throw new Error(`Missing TTS model files under ${ttsModelDir()}`);
 }
 
 function ensureAsrModel(): void {
   const missing = required([
-    join(ASR_MODEL_DIR, ASR_ENCODER_FILE),
-    join(ASR_MODEL_DIR, ASR_DECODER_FILE),
-    join(ASR_MODEL_DIR, ASR_TOKENS_FILE),
+    join(asrModelDir(), ASR_ENCODER_FILE),
+    join(asrModelDir(), ASR_DECODER_FILE),
+    join(asrModelDir(), ASR_TOKENS_FILE),
   ]);
-  if (missing.length > 0) throw new Error(`Missing STT model files under ${ASR_MODEL_DIR}`);
+  if (missing.length > 0) throw new Error(`Missing STT model files under ${asrModelDir()}`);
 }
 
 async function getTts(): Promise<any> {
@@ -355,10 +364,10 @@ async function getTts(): Promise<any> {
   tts = await sherpa.OfflineTts.createAsync({
     model: {
       kokoro: {
-        model: join(TTS_MODEL_DIR, TTS_MODEL_FILE),
-        voices: join(TTS_MODEL_DIR, "voices.bin"),
-        tokens: join(TTS_MODEL_DIR, "tokens.txt"),
-        dataDir: join(TTS_MODEL_DIR, "espeak-ng-data"),
+        model: join(ttsModelDir(), TTS_MODEL_FILE),
+        voices: join(ttsModelDir(), "voices.bin"),
+        tokens: join(ttsModelDir(), "tokens.txt"),
+        dataDir: join(ttsModelDir(), "espeak-ng-data"),
       },
       debug: false,
       numThreads: 2,
@@ -380,13 +389,13 @@ async function getRecognizer(): Promise<any> {
     },
     modelConfig: {
       whisper: {
-        encoder: join(ASR_MODEL_DIR, ASR_ENCODER_FILE),
-        decoder: join(ASR_MODEL_DIR, ASR_DECODER_FILE),
+        encoder: join(asrModelDir(), ASR_ENCODER_FILE),
+        decoder: join(asrModelDir(), ASR_DECODER_FILE),
         language: ASR_LANGUAGE,
         task: ASR_TASK,
         tailPaddings: -1,
       },
-      tokens: join(ASR_MODEL_DIR, ASR_TOKENS_FILE),
+      tokens: join(asrModelDir(), ASR_TOKENS_FILE),
       numThreads: 2,
       provider: "cpu",
       debug: 0,

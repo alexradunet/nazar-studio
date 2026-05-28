@@ -9,7 +9,8 @@ import { getMemoryPaths } from "../memory/paths.ts";
 import { sherpaModelStatus } from "../voice/sherpa-runtime.ts";
 import { saveSpotifySetupConfig, spotifyLoginWithLocalCallback, spotifySetupStatusText } from "../spotify/spotify-use.ts";
 import { startWhatsAppQrPairing } from "../whatsapp/whatsapp-use.ts";
-import { loadWhatsAppConfig, phoneToPersonalJid, saveWhatsAppConfig, whatsappAuthDir, whatsappConfigPath } from "../whatsapp/whatsapp-utils.ts";
+import { loadWhatsAppConfig, maskPhone, phoneToPersonalJid, saveWhatsAppConfig, whatsappAuthDir, whatsappConfigPath } from "../whatsapp/whatsapp-utils.ts";
+import { showText } from "../shared.ts";
 import {
   defaultMemoryConfig,
   defaultVoiceModelDir,
@@ -24,23 +25,8 @@ import {
 const EXTENSION_DIR = dirname(fileURLToPath(import.meta.url));
 const VOICE_SETUP_SCRIPT = resolve(EXTENSION_DIR, "../voice/setup-sherpa.mjs");
 
-function hasInteractiveUi(ctx: { hasUI?: boolean }): boolean {
-  return ctx.hasUI !== false;
-}
-
 async function show(ctx: ExtensionContext, title: string, text: string, level: "info" | "warning" | "error" = "info"): Promise<void> {
-  if (!hasInteractiveUi(ctx)) {
-    console.log(text);
-    return;
-  }
-  ctx.ui.setWidget("nazar-setup", text.split("\n"));
-  ctx.ui.notify(title, level);
-}
-
-function maskPhone(phone?: string): string {
-  const digits = (phone || "").replace(/\D/g, "");
-  if (digits.length < 4) return phone ? "configured" : "not configured";
-  return `+${"*".repeat(Math.max(0, digits.length - 4))}${digits.slice(-4)}`;
+  await showText(ctx, "nazar-setup", text, title, level);
 }
 
 async function statusText(): Promise<string> {

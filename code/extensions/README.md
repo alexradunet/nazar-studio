@@ -5,15 +5,17 @@ Project-local Pi extensions.
 ## Current extensions
 
 - `nazar.ts` — registers `/nazar-setup` and `/nazar-status` for post-install setup/status across memory, voice, WhatsApp, and Spotify.
+- `shared.ts` — cross-extension UI, path, string, and private-file helpers.
 - `nazar/` — setup orchestration modules and non-secret setup config helpers.
 - `memory.ts` — registers the `/memory` command plus `memory_status` and `memory_search` tools, refreshes rollups after built-in `/compact`, and contributes the `memory-janitor` Agent Skill through Pi resource discovery.
 - `memory/` — implementation modules for paths, pinned memory, rollups, QMD integration, and the integrated `memory-janitor` skill.
 - `voice.ts` — registers `/tts`, `/voice`, `tts_toggle`, and the Alt+V voice shortcut.
+- `voice-text.ts` — pure TTS text normalization and chunking helpers.
 - `voice/` — implementation modules for assistant TTS and Pi TUI voice dictation.
 - `spotify.ts` — registers `/spotify` and the `spotify_control` tool backed by the Spotify Web API.
 - `spotify/` — implementation modules for Spotify PKCE auth, token refresh, search, devices, and playback control.
 - `whatsapp.ts` — registers `/whatsapp` for the minimal personal WhatsApp bridge.
-- `whatsapp/` — implementation modules for one whitelisted 1:1 Baileys connection, single-master locking/autostart, image forwarding to Pi vision input, and audio-message STT through the voice runtime.
+- `whatsapp/` — implementation modules for one whitelisted 1:1 Baileys connection, QR overlay pairing, single-master locking/autostart, image forwarding to Pi vision input, and audio-message STT through the voice runtime.
 
 ## Rules
 
@@ -33,6 +35,5 @@ pi --no-session --offline -p "/voice help"
 pi --no-session --offline -p "/spotify help"
 pi --no-session --offline -p "/whatsapp help"
 pi --no-session --offline -p "/whatsapp status"
-node code/tests/pi-memory.test.mjs
-node code/tests/pi-whatsapp.test.mjs
+node --test
 ```

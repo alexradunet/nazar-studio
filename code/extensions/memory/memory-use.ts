@@ -1,15 +1,15 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 
+import { showText, trim, xdgDataHome } from "../shared.ts";
 import { getMemoryPaths, QMD_COLLECTION, QMD_CONTEXT, QMD_INDEX } from "./paths.ts";
+import { ensureVaultScaffold } from "./vault.ts";
 
 const MAX_BULLET_CHARS = 360;
 const MAX_DAILY_BULLETS = 45;
 const MAX_WEEKLY_DAY_BULLETS = 8;
 const MAX_MONTHLY_WEEK_BULLETS = 10;
-const VAULT_MEMORY_DIRS = ["00_Inbox", "01_Projects", "02_Areas", "03_Resources", "04_Archive", "05_Nazar"];
 const COMPACT_LOCK_STALE_MS = 10 * 60_000;
 
 const PINNED_SECTION_USER = "User preferences";
@@ -62,9 +62,9 @@ const LOW_SIGNAL_MESSAGES = new Set([
   "fast mode is on",
 ]);
 
-const USER_DECISION_RE = /\b(canonical|remember|source of truth|prefer|rule|main language|home appliance)\b/i;
+const USER_DECISION_RE = /\b(canonical|remember|source of truth|prefer|rule|main language)\b/i;
 const USER_ACTION_RE = /\b(i want|we want|we will|let'?s|lets|install|add|remove|switch|move|create|implement|update|compact)\b/i;
-const USER_FEATURE_RE = /\b(memory|conversation|wiki|qmd|voice|tts|stt|whisper|piper|xfce|gnome|wayland|kitty|chromium|browser|remote|ssh|zellij|vscode|vscodium|code|pi extension|pi package|typescript|os[- ]agnostic|cross[- ]platform|computer-use|desktop automation)\b/i;
+const USER_FEATURE_RE = /\b(memory|conversation|wiki|qmd|voice|tts|stt|whisper|piper|spotify|whatsapp|nazar|pi extension|pi package|typescript)\b/i;
 const ASSISTANT_MEMORY_RE = /^(done|implemented|created|updated|added|fixed|changed|installed|configured|switched|removed|validated|verified|opened|compacted|tested|web search works|test succeeded|code review|good\.|yes[ —-])\b/i;
 
 const NOISY_SUBSTRINGS = [
@@ -121,12 +121,8 @@ function now(): Date {
   return new Date();
 }
 
-function dataHome(): string {
-  return process.env.XDG_DATA_HOME || join(homedir(), ".local", "share");
-}
-
 export function getRuntimePaths(): { RUNTIME_DIR: string; COMPACT_LOCK_DIR: string } {
-  const RUNTIME_DIR = process.env.XDG_RUNTIME_DIR ? join(process.env.XDG_RUNTIME_DIR, "pi-rollups") : join(dataHome(), "pi-rollups", "run");
+  const RUNTIME_DIR = process.env.XDG_RUNTIME_DIR ? join(process.env.XDG_RUNTIME_DIR, "pi-rollups") : join(xdgDataHome(), "pi-rollups", "run");
   return { RUNTIME_DIR, COMPACT_LOCK_DIR: join(RUNTIME_DIR, "memory-compact.lock") };
 }
 
@@ -195,38 +191,6 @@ function isClosedWeek(week: string, today = localToday()): boolean {
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
   return dayString(sunday) < today;
-}
-
-function ensureVaultScaffold(paths = getMemoryPaths()): void {
-  if (!paths.VAULT_DIR) return;
-  for (const name of VAULT_MEMORY_DIRS) mkdirSync(join(paths.VAULT_DIR, name), { recursive: true });
-  for (const path of [
-    paths.LLM_WIKI_RAW_DIR,
-    paths.LLM_WIKI_PAGES_DIR,
-    join(paths.NAZAR_DIR, "ai-workbench", "proposals"),
-    join(paths.NAZAR_DIR, "ai-workbench", "drafts"),
-    join(paths.NAZAR_DIR, "ai-workbench", "scratch"),
-    join(paths.NAZAR_DIR, "operator-log"),
-    join(paths.NAZAR_DIR, "templates"),
-    join(paths.NAZAR_DIR, "attachments"),
-    join(paths.NAZAR_DIR, "dashboards"),
-    join(paths.NAZAR_DIR, "maintenance"),
-  ]) mkdirSync(path, { recursive: true });
-
-  const vaultAgents = join(paths.NAZAR_DIR, "AGENTS.md");
-  if (!existsSync(vaultAgents)) {
-    writeFileSync(vaultAgents, `# Nazar vault operator rules\n\n- \`00_Inbox/\` is shared capture. Human and AI may append quick notes; process later.\n- \`01_Projects/\`, \`02_Areas/\`, and \`03_Resources/\` are human-owned. AI should propose edits unless explicitly asked to update them.\n- \`04_Archive/\` is cold storage and excluded from default memory search unless explicitly requested.\n- \`05_Nazar/\` is the AI/system control plane. Runtime state, rollups, llm-wiki outputs, drafts, templates, and operator logs live here.\n- Keep secrets, auth tokens, private keys, and machine-specific credentials out of markdown memory.\n`, "utf8");
-  }
-
-  const wikiAgents = join(paths.LLM_WIKI_DIR, "AGENTS.md");
-  if (!existsSync(wikiAgents)) {
-    writeFileSync(wikiAgents, `# LLM wiki rules\n\n- \`raw/\` contains immutable source snapshots. Do not edit a raw source after ingest; add a corrected source instead.\n- \`wiki/\` contains AI-maintained compiled knowledge pages. Keep pages concise, cross-linked, and citation-friendly.\n- Maintain \`wiki/index.md\` as a content catalog and \`wiki/log.md\` as an append-only operation log.\n- Prefer ingesting from reviewed inbox items or explicit human-provided sources.\n- When a source contradicts existing wiki claims, update the relevant page and note the contradiction rather than silently overwriting history.\n`, "utf8");
-  }
-
-  const wikiIndex = join(paths.LLM_WIKI_PAGES_DIR, "index.md");
-  if (!existsSync(wikiIndex)) writeFileSync(wikiIndex, "# LLM wiki index\n\n", "utf8");
-  const wikiLog = join(paths.LLM_WIKI_PAGES_DIR, "log.md");
-  if (!existsSync(wikiLog)) writeFileSync(wikiLog, "# LLM wiki log\n\n", "utf8");
 }
 
 function ensureDirs(): void {
@@ -573,8 +537,8 @@ function isMemoryWorthy(message: MemoryMessage): boolean {
 
 function debrandMemoryText(text: string): string {
   // Legacy migration shim for old pre-2026-05-25 raw session wording.
-  // Remove after old session compaction is no longer needed.
-  const legacy = "naz" + "ar";
+  // TODO: remove after 2026-08-01 once old session compaction is no longer needed.
+  const legacy = "nazar";
   return text
     .replace(new RegExp(`\\b${legacy}-memory\\b`, "g"), "Pi memory")
     .replace(new RegExp(`\\b${legacy}-wiki\\b`, "g"), "memory_search")
@@ -606,35 +570,10 @@ function dedupeBullets(bullets: Iterable<string>): string[] {
   return unique;
 }
 
-function topicMemory(messages: MemoryMessage[]): string[] {
-  const text = messages.map((message) => compactText(message.text)).join("\n").toLowerCase();
-  const bullets: string[] = [];
-  const has = (...needles: string[]) => needles.some((needle) => text.includes(needle));
-
-  if (has("source of truth", "os-agnostic", "cross-platform", "typescript pi", "pi package")) {
-    bullets.push("- Product boundary: the repository remains the source of truth for Nazar's OS-agnostic TypeScript Pi extension product; keep host-specific setup outside the product runtime.");
-  }
-  if (has("project-local pi extension", "pi default", "pi runtime", "/reload", "launcher wrapper")) {
-    bullets.push("- Runtime: Pi is the default CLI/runtime; project-specific continuity lives in the project-local memory extension, not a separate launcher wrapper.");
-  }
-  if (has("one conversation", "subconversation", "llm-wiki", "qmd", "karpathy", "memory", "rollups", "context mode")) {
-    bullets.push("- Unified memory: durable knowledge pages live under scoped QMD collections; generated rollups live under the configured memory runtime root; raw Pi sessions stay in Pi's default session storage unless explicitly selected; `/memory search` searches durable pages through QMD; no memory context is prompt-injected automatically.");
-  }
-  if (has("openssh", "zellij", "lan", "ssh")) {
-    bullets.push("- Remote access: keep SSH LAN-only; use Zellij for persistent remote terminal sessions and do not expose SSH beyond the LAN.");
-  }
-  if (has("closed daily", "closed weekly", "tool calls/results omitted", "tool calls, tool outputs", "native typescript pi extension", "compact")) {
-    bullets.push("- Memory compaction: implemented as a native TypeScript Pi extension module; built-in Pi `/compact` refreshes configured rollups; daily notes omit tool calls/timestamps/transcripts; weekly/monthly rollups summarize closed notes with links.");
-  }
-
-  return bullets;
-}
-
 function dailyMarkdown(day: string, messages: MemoryMessage[]): string {
   const status = isClosedDay(day) ? "closed" : "open";
   const compactableMessages = messages.filter((message) => !isJournalPrivateMessage(message));
-  const extractedBullets = dedupeBullets(compactableMessages.filter(isMemoryWorthy).map(memoryBullet));
-  const bullets = dedupeBullets([...extractedBullets, ...topicMemory(compactableMessages)]).slice(0, MAX_DAILY_BULLETS);
+  const bullets = dedupeBullets(compactableMessages.filter(isMemoryWorthy).map(memoryBullet)).slice(0, MAX_DAILY_BULLETS);
   if (bullets.length === 0) {
     bullets.push("- No durable memory extracted. Raw Pi session history remains in Pi's default session storage or the explicit source path used for this refresh.");
   }
@@ -918,10 +857,6 @@ export function memoryStatusText(): string {
   ].join("\n");
 }
 
-function trim(value: string | undefined): string {
-  return (value ?? "").trim();
-}
-
 function unquoteWhole(value: string): string {
   const text = value.trim();
   if (text.length >= 2) {
@@ -1089,19 +1024,6 @@ export async function getMemoryIndexText(pi: ExtensionAPI, target: string): Prom
 function memoryUsage(): string {
   const paths = getMemoryPaths();
   return `/memory - manage Pi memory\n\nUsage:\n  /memory status\n  /memory search [--scope default|personal|ai|archive|all] <query>\n  /memory query [--scope default|personal|ai|archive|all] <query>\n  /memory update\n  /memory index\n  /memory list [path]\n  /memory ls [path]\n  /memory get <path-or-docid>\n  /memory pinned\n  /memory remember [user|fact|project|never] <text>\n  /memory forget <unique substring>\n\nUse Pi's built-in /compact command to compact the current chat. After successful built-in compaction, this extension refreshes generated rollups in ${paths.ROLLUPS_DIR}.\nPinned memory: ${paths.PINNED_MEMORY_PAGE}\nDurable/search root: ${paths.PAGES_DIR}\nQMD index: ${QMD_INDEX}, collections: ${memoryCollectionSpecs(paths).map((spec) => spec.name).join(", ")}\n`;
-}
-
-function hasInteractiveUi(ctx: { hasUI?: boolean }): boolean {
-  return ctx.hasUI !== false;
-}
-
-async function showText(ctx: ExtensionContext, widget: string, text: string, title: string, level: "info" | "warning" | "error" = "info"): Promise<void> {
-  if (!hasInteractiveUi(ctx)) {
-    console.log(text);
-    return;
-  }
-  ctx.ui.setWidget(widget, text.split("\n"));
-  ctx.ui.notify(title, level);
 }
 
 function parseSearchCommandArgs(args: string[]): { query: string; scope: MemorySearchScope; invalidScope?: string } {

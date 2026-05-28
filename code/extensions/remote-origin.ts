@@ -5,6 +5,9 @@ export type RemoteTurnOrigin = {
   kind: string;
 };
 
+// Tiny process-local coupling channel: WhatsApp marks the active remote-originated
+// Pi turn here so other extensions (currently Spotify playback replies) can decide
+// whether a side effect should be attributed back to the WhatsApp bridge.
 let activeRemoteTurnOrigin: RemoteTurnOrigin | undefined;
 
 export function setRemoteTurnOrigin(origin: RemoteTurnOrigin): void {

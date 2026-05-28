@@ -269,8 +269,8 @@ test("explicit session compaction writes rollups and omits tool results", () => 
     assert.doesNotMatch(result.text, /context/i);
 
     const daily = readFileSync(join(ctx.root, "memory", "rollups", "daily", `${DAY}.md`), "utf8");
+    assert.match(daily, /User direction: Let's update memory and llm-wiki\./);
     assert.match(daily, /Outcome: Done\. Added a compaction lock for generated memory writes\./);
-    assert.match(daily, /scoped QMD collections/);
     assert.doesNotMatch(daily, /secret tool output/);
     assert.equal(existsSync(join(ctx.root, "memory", "rollups", "active.md")), false);
     assert.equal(existsSync(join(ctx.root, "memory", "pages", "personal", "pinned-memory.md")), true);
