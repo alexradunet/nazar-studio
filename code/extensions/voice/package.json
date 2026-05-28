@@ -1,0 +1,11 @@
+{
+  "name": "pi-voice-extension-runtime",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "setup": "node setup-sherpa.mjs"
+  },
+  "dependencies": {
+    "sherpa-onnx-node": "1.13.2"
+  }
+}

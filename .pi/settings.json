@@ -1,0 +1,15 @@
+{
+  "extensions": [
+    "../code/extensions/nazar.ts",
+    "../code/extensions/memory.ts",
+    "../code/extensions/voice.ts",
+    "../code/extensions/spotify.ts",
+    "../code/extensions/whatsapp.ts"
+  ],
+  "skills": [
+    "../code/skills"
+  ],
+  "packages": [
+    "npm:pi-subagents"
+  ]
+}

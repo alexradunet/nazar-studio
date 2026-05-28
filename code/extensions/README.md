@@ -1,0 +1,38 @@
+# `code/extensions/`
+
+Project-local Pi extensions.
+
+## Current extensions
+
+- `nazar.ts` — registers `/nazar-setup` and `/nazar-status` for post-install setup/status across memory, voice, WhatsApp, and Spotify.
+- `nazar/` — setup orchestration modules and non-secret setup config helpers.
+- `memory.ts` — registers the `/memory` command plus `memory_status` and `memory_search` tools, refreshes rollups after built-in `/compact`, and contributes the `memory-janitor` Agent Skill through Pi resource discovery.
+- `memory/` — implementation modules for paths, pinned memory, rollups, QMD integration, and the integrated `memory-janitor` skill.
+- `voice.ts` — registers `/tts`, `/voice`, `tts_toggle`, and the Alt+V voice shortcut.
+- `voice/` — implementation modules for assistant TTS and Pi TUI voice dictation.
+- `spotify.ts` — registers `/spotify` and the `spotify_control` tool backed by the Spotify Web API.
+- `spotify/` — implementation modules for Spotify PKCE auth, token refresh, search, devices, and playback control.
+- `whatsapp.ts` — registers `/whatsapp` for the minimal personal WhatsApp bridge.
+- `whatsapp/` — implementation modules for one whitelisted 1:1 Baileys connection, single-master locking/autostart, image forwarding to Pi vision input, and audio-message STT through the voice runtime.
+
+## Rules
+
+- Prefer KISS and minimal developed extension APIs.
+- Keep extension entrypoints thin; move implementation into small modules.
+- Do not add separate launcher/status command layers.
+- Keep memory storage paths centralized in `memory/paths.ts`; repo-local defaults remain for development, while real use should set `NAZAR_HOME` to a private portable Obsidian vault. Explicit `PI_MEMORY_ROOT`, `PI_MEMORY_PAGES_DIR`, `PI_AI_MEMORY_DIR`, and `PI_HUMAN_MEMORY_DIR` remain supported overrides.
+- Store OAuth tokens outside the repo; never commit client secrets or refresh tokens.
+
+## Validation
+
+```sh
+pi --no-session --offline -p "/nazar-status"
+pi --no-session --offline -p "/memory status"
+pi --no-session --offline -p "/tts status"
+pi --no-session --offline -p "/voice help"
+pi --no-session --offline -p "/spotify help"
+pi --no-session --offline -p "/whatsapp help"
+pi --no-session --offline -p "/whatsapp status"
+node code/tests/pi-memory.test.mjs
+node code/tests/pi-whatsapp.test.mjs
+```

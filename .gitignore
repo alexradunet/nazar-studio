@@ -1,0 +1,31 @@
+# Local Pi agent runtime/auth/session state
+.pi/agent/**
+.pi/npm/node_modules/**
+.pi/npm/package.json
+.pi/npm/package-lock.json
+.pi/git/github.com/**
+
+# Extension-local npm dependencies are reproducible from package-lock.json
+code/extensions/voice/node_modules/**
+code/extensions/websearch/node_modules/**
+code/extensions/whatsapp/node_modules/**
+
+# Private/generated Pi memory
+memory/journal/log.md
+memory/journal/entries/*.md
+!memory/journal/entries/README.md
+memory/rollups/daily/**
+memory/rollups/weekly/**
+memory/rollups/monthly/**
+memory/sources/**
+!memory/sources/README.md
+memory/pages/personal/**
+!memory/pages/personal/README.md
+memory/state/voice-models/**
+!memory/state/voice-models/README.md
+memory/sessions/**
+
+# Local review/handoff artifacts
+handoff/
+publish-audit/
+audit/

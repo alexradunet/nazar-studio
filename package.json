@@ -1,0 +1,62 @@
+{
+  "name": "@nazar/nazar-pi",
+  "version": "0.1.0",
+  "description": "Nazar OS-agnostic Pi extension product for local-first memory, voice, Spotify, and WhatsApp.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "nazar",
+    "local-first",
+    "memory"
+  ],
+  "pi": {
+    "extensions": [
+      "./code/extensions/nazar.ts",
+      "./code/extensions/memory.ts",
+      "./code/extensions/voice.ts",
+      "./code/extensions/spotify.ts",
+      "./code/extensions/whatsapp.ts"
+    ],
+    "skills": [
+      "./code/skills"
+    ]
+  },
+  "files": [
+    "AGENTS.md",
+    "README.md",
+    "code/extensions/**/*.ts",
+    "!code/extensions/**/node_modules/**",
+    "code/extensions/voice/package.json",
+    "code/extensions/voice/package-lock.json",
+    "code/extensions/voice/setup-sherpa.mjs",
+    "code/extensions/whatsapp/package.json",
+    "code/extensions/whatsapp/package-lock.json",
+    "code/extensions/memory/skills/**",
+    "code/skills/**",
+    "memory/README.md",
+    "memory/AGENTS.md",
+    "memory/pages/README.md",
+    "memory/pages/index.md",
+    "memory/pages/ai/**",
+    "memory/pages/personal/README.md",
+    "memory/state/voice-models/README.md"
+  ],
+  "scripts": {
+    "test": "node code/tests/pi-memory.test.mjs && node code/tests/pi-spotify.test.mjs && node code/tests/pi-whatsapp.test.mjs",
+    "pack:dry": "npm pack --dry-run"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "7.0.0-rc13",
+    "pino": "10.3.1",
+    "qrcode-terminal": "0.12.0",
+    "sherpa-onnx-node": "1.13.2"
+  }
+}
