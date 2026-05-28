@@ -11,10 +11,12 @@ Project-local Pi discovery/configuration directory.
 
 ## Current resources
 
-- Project extensions are loaded from:
+- Project extensions are loaded from `.pi/settings.json`:
+  - `../code/extensions/nazar.ts`
   - `../code/extensions/memory.ts`
   - `../code/extensions/voice.ts`
   - `../code/extensions/spotify.ts`
+  - `../code/extensions/whatsapp.ts`
 - The memory extension contributes the `memory-janitor` Agent Skill through Pi resource discovery.
 - Installed package resources are listed in `.pi/settings.json`.
 

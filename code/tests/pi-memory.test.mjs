@@ -17,6 +17,7 @@ import {
   searchMemoryText,
 } from "../extensions/memory/memory-use.ts";
 import { getMemoryPaths, QMD_COLLECTION, QMD_CONTEXT, QMD_INDEX } from "../extensions/memory/paths.ts";
+import { defaultVoiceModelDir, writeNazarSetupConfig } from "../extensions/nazar/setup-store.ts";
 
 const DAY = "2026-05-24";
 const ENV_KEYS = [
@@ -133,6 +134,9 @@ test("root package exposes Nazar Pi package resources", () => {
   ]);
   assert.deepEqual(pkg.pi.skills, ["./code/skills"]);
   assert.equal(pkg.files.includes("!code/extensions/**/node_modules/**"), true);
+  assert.equal(Object.hasOwn(pkg, "dependencies"), false);
+  assert.equal(pkg.optionalDependencies["@whiskeysockets/baileys"], "7.0.0-rc13");
+  assert.equal(pkg.optionalDependencies["sherpa-onnx-node"], "1.13.2");
 });
 
 test("path derivation uses only repo root and ignores stale PI_MEMORY env vars", () => {
@@ -184,6 +188,26 @@ test("configurable memory roots can split ai and human durable memory", () => {
     assert.equal(paths.AI_PAGES_DIR, join(ctx.tmp, "durable-pages", "ai-memory"));
     assert.equal(paths.PERSONAL_PAGES_DIR, join(ctx.tmp, "durable-pages", "human-memory"));
     assert.equal(paths.PINNED_MEMORY_PAGE, join(ctx.tmp, "durable-pages", "human-memory", "pinned-memory.md"));
+  } finally {
+    cleanup(ctx);
+  }
+});
+
+test("voice model defaults follow saved memory config", () => {
+  const ctx = makeProject();
+  try {
+    const vault = join(ctx.tmp, "ConfiguredVault");
+    writeNazarSetupConfig({
+      memory: {
+        vaultDir: vault,
+        rootDir: join(vault, "05_Nazar", "runtime"),
+        pagesDir: vault,
+        aiPagesDir: join(vault, "05_Nazar", "llm-wiki", "wiki"),
+        humanPagesDir: vault,
+      },
+    });
+
+    assert.equal(defaultVoiceModelDir(), join(vault, "05_Nazar", "runtime", "state", "voice-models"));
   } finally {
     cleanup(ctx);
   }
@@ -478,8 +502,46 @@ test("NAZAR_HOME memory search uses scoped vault collections", async () => {
       .filter((args) => args[0] === "collection" && args[1] === "add")
       .map((args) => args[4])
       .sort();
-    assert.deepEqual(addedCollections, ["memory-archive", "memory-areas", "memory-inbox", "memory-llm-wiki", "memory-projects", "memory-resources"]);
+    assert.deepEqual(addedCollections, ["memory-archive", "memory-areas", "memory-inbox", "memory-llm-wiki", "memory-pinned", "memory-projects", "memory-resources"]);
     assert.deepEqual(qmdCalls.at(-1), ["search", "old note", "-c", "memory-archive", "--md", "-n", "2"]);
+  } finally {
+    cleanup(ctx);
+  }
+});
+
+test("vault memory search indexes pinned memory and advanced page overrides", async () => {
+  const ctx = makeProject();
+  const calls = [];
+  try {
+    const vault = join(ctx.tmp, "NazarVault");
+    const pages = join(ctx.tmp, "search-root");
+    const human = join(ctx.tmp, "human-root");
+    const ai = join(ctx.tmp, "ai-root");
+    process.env.NAZAR_HOME = vault;
+    process.env.PI_MEMORY_PAGES_DIR = pages;
+    process.env.PI_HUMAN_MEMORY_DIR = human;
+    process.env.PI_AI_MEMORY_DIR = ai;
+    const fakePi = {
+      async exec(command, args) {
+        calls.push([command, args]);
+        assert.equal(command, "qmd");
+        assert.deepEqual(args.slice(0, 2), ["--index", QMD_INDEX]);
+        if (args.slice(2).join(" ") === "collection list") return { code: 0, stdout: "" };
+        return { code: 0, stdout: "ok\n" };
+      },
+    };
+
+    await searchMemoryText(fakePi, "standing fact", 2, "search", "default");
+
+    const qmdCalls = calls.map(([, args]) => args.slice(2));
+    const collectionAdds = qmdCalls.filter((args) => args[0] === "collection" && args[1] === "add");
+    assert.ok(collectionAdds.some((args) => args[2] === pages && args[4] === QMD_COLLECTION));
+    assert.ok(collectionAdds.some((args) => args[2] === human && args[4] === "memory-personal"));
+    assert.ok(collectionAdds.some((args) => args[2] === ai && args[4] === "memory-ai"));
+    const searchedCollections = qmdCalls.filter((args) => args[0] === "search").map((args) => args[3]);
+    assert.equal(searchedCollections.includes(QMD_COLLECTION), true);
+    assert.equal(searchedCollections.includes("memory-personal"), true);
+    assert.equal(searchedCollections.includes("memory-ai"), true);
   } finally {
     cleanup(ctx);
   }

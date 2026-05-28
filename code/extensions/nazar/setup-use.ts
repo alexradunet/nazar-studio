@@ -1,7 +1,7 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { DynamicBorder } from "@earendil-works/pi-coding-agent";
 import { Container, type SelectItem, SelectList, Text } from "@earendil-works/pi-tui";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -9,7 +9,7 @@ import { getMemoryPaths } from "../memory/paths.ts";
 import { sherpaModelStatus } from "../voice/sherpa-runtime.ts";
 import { saveSpotifySetupConfig, spotifyLoginWithLocalCallback, spotifySetupStatusText } from "../spotify/spotify-use.ts";
 import { startWhatsAppQrPairing } from "../whatsapp/whatsapp-use.ts";
-import { loadWhatsAppConfig, saveWhatsAppConfig, whatsappAuthDir, whatsappConfigPath } from "../whatsapp/whatsapp-utils.ts";
+import { loadWhatsAppConfig, phoneToPersonalJid, saveWhatsAppConfig, whatsappAuthDir, whatsappConfigPath } from "../whatsapp/whatsapp-utils.ts";
 import {
   defaultMemoryConfig,
   defaultVoiceModelDir,
@@ -43,7 +43,7 @@ function maskPhone(phone?: string): string {
   return `+${"*".repeat(Math.max(0, digits.length - 4))}${digits.slice(-4)}`;
 }
 
-function statusText(): string {
+async function statusText(): Promise<string> {
   const config = readNazarSetupConfig();
   const dirs = getNazarDirs();
   const paths = getMemoryPaths();
@@ -51,10 +51,16 @@ function statusText(): string {
   const whatsappAuthDirText = whatsappAuthDir();
   let whatsappAllowed = "not configured";
   try {
-    const parsed = JSON.parse(readFileSync(whatsappConfigPathText, "utf8"));
-    whatsappAllowed = maskPhone(parsed.allowedPhone);
-  } catch {
-    // Status remains not configured.
+    whatsappAllowed = maskPhone((await loadWhatsAppConfig()).allowedPhone);
+  } catch (error) {
+    whatsappAllowed = `config error: ${error instanceof Error ? error.message : String(error)}`;
+  }
+
+  let spotifyStatus = "";
+  try {
+    spotifyStatus = spotifySetupStatusText();
+  } catch (error) {
+    spotifyStatus = `Spotify config error: ${error instanceof Error ? error.message : String(error)}`;
   }
 
   return [
@@ -82,7 +88,7 @@ function statusText(): string {
     `- Auth dir: ${whatsappAuthDirText} (${existsSync(whatsappAuthDirText) ? "present" : "missing"})`,
     "",
     "Spotify:",
-    ...spotifySetupStatusText().split("\n").map((line) => `- ${line}`),
+    ...spotifyStatus.split("\n").map((line) => `- ${line}`),
   ].join("\n");
 }
 
@@ -225,15 +231,21 @@ async function configureVoice(pi: ExtensionAPI, ctx: ExtensionContext): Promise<
 async function configureWhatsApp(pi: ExtensionAPI, ctx: ExtensionContext): Promise<void> {
   const current = await loadWhatsAppConfig();
   const phone = await input(ctx, "Allowed WhatsApp phone", current.allowedPhone || "+15551234567");
+  const allowedPhone = phone?.trim() || current.allowedPhone;
+  if (!phoneToPersonalJid(allowedPhone)) {
+    await show(ctx, "WhatsApp setup needs a valid phone", "Enter a single personal phone number with country code, e.g. +15551234567.", "warning");
+    return;
+  }
   const autoStart = await confirm(ctx, "WhatsApp autostart", "Connect WhatsApp automatically when Pi starts after pairing?");
-  await saveWhatsAppConfig({ allowedPhone: phone?.trim() || current.allowedPhone, autoStart });
-  writeNazarSetupConfig({ whatsapp: { configured: true } });
+  await saveWhatsAppConfig({ allowedPhone, autoStart });
+  writeNazarSetupConfig({ whatsapp: { configured: true, paired: false } });
 
   const showQr = await confirm(ctx, "WhatsApp QR pairing", "Start WhatsApp now and show the linked-device QR code in Pi? Scan it from WhatsApp → Linked devices → Link a device.");
   if (!showQr) return;
 
   try {
     const result = await startWhatsAppQrPairing(pi, ctx);
+    writeNazarSetupConfig({ whatsapp: { configured: true, paired: result.includes("connected") } });
     const qrHint = result.startsWith("WhatsApp connection started")
       ? "\n\nA WhatsApp QR popup will appear when WhatsApp returns a pairing code. Keep Pi open while scanning."
       : "";
@@ -248,7 +260,7 @@ async function configureSpotify(pi: ExtensionAPI, ctx: ExtensionContext): Promis
   const redirectUri = await input(ctx, "Spotify redirect URI", "http://127.0.0.1:53682/callback");
   if (clientId?.trim() || redirectUri?.trim()) {
     saveSpotifySetupConfig({ clientId: clientId?.trim() || undefined, redirectUri: redirectUri?.trim() || undefined });
-    writeNazarSetupConfig({ spotify: { configured: true } });
+    writeNazarSetupConfig({ spotify: { configured: Boolean(clientId?.trim()), loggedIn: false } });
   }
 
   const startLogin = await confirm(ctx, "Spotify login", "Start Spotify OAuth login now? This opens your browser and stores the token outside the repository.");
@@ -256,7 +268,7 @@ async function configureSpotify(pi: ExtensionAPI, ctx: ExtensionContext): Promis
 
   try {
     const result = await spotifyLoginWithLocalCallback(pi, ctx);
-    writeNazarSetupConfig({ spotify: { configured: true } });
+    writeNazarSetupConfig({ spotify: { configured: true, loggedIn: true } });
     await show(ctx, "Spotify login complete", result);
   } catch (error) {
     await show(ctx, "Spotify login failed", error instanceof Error ? error.message : String(error), "error");
@@ -336,7 +348,7 @@ async function showSetupMenu(ctx: ExtensionContext): Promise<SetupAction | undef
 
 async function runSetup(pi: ExtensionAPI, ctx: ExtensionContext, section?: string): Promise<void> {
   if (!hasInteractiveUi(ctx)) {
-    await show(ctx, "Nazar setup", `${statusText()}\n\nInteractive setup requires Pi interactive mode. Run /nazar-setup in the TUI.`);
+    await show(ctx, "Nazar setup", `${await statusText()}\n\nInteractive setup requires Pi interactive mode. Run /nazar-setup in the TUI.`);
     return;
   }
 
@@ -350,7 +362,7 @@ async function runSetup(pi: ExtensionAPI, ctx: ExtensionContext, section?: strin
     }
   }
 
-  await show(ctx, "Nazar setup complete", `${statusText()}\n\nNext: run /reload or restart Pi so all setup config is active. Then run /voice status, /whatsapp start or /whatsapp pair, and /spotify status as needed.`);
+  await show(ctx, "Nazar setup complete", `${await statusText()}\n\nNext: run /reload or restart Pi so all setup config is active. Then run /voice status, /whatsapp start or /whatsapp pair, and /spotify status as needed.`);
 }
 
 export function registerNazarSetupUse(pi: ExtensionAPI): void {
@@ -368,7 +380,7 @@ export function registerNazarSetupUse(pi: ExtensionAPI): void {
       }
 
       if (["status", "doctor"].includes(section)) {
-        await show(ctx, "Nazar setup status", `${statusText()}\n\nDoctor notes:\n- Reload/restart Pi after setup changes.\n- OAuth and WhatsApp auth are never stored in Nazar setup config.\n- On Windows, use winget for host dependencies when available.`);
+        await show(ctx, "Nazar setup status", `${await statusText()}\n\nDoctor notes:\n- Reload/restart Pi after setup changes.\n- OAuth and WhatsApp auth are never stored in Nazar setup config.\n- On Windows, use winget for host dependencies when available.`);
         return;
       }
       if (section && !validSetupSections().includes(section)) {
@@ -381,6 +393,6 @@ export function registerNazarSetupUse(pi: ExtensionAPI): void {
 
   pi.registerCommand("nazar-status", {
     description: "Show Nazar setup status",
-    handler: async (_args, ctx) => show(ctx, "Nazar setup status", statusText()),
+    handler: async (_args, ctx) => show(ctx, "Nazar setup status", await statusText()),
   });
 }

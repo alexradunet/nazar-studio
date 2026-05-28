@@ -23,9 +23,11 @@ export type NazarSetupConfig = {
   };
   whatsapp?: {
     configured?: boolean;
+    paired?: boolean;
   };
   spotify?: {
     configured?: boolean;
+    loggedIn?: boolean;
   };
   updatedAt?: string;
 };
@@ -84,23 +86,29 @@ export function defaultMemoryConfig(): Required<NonNullable<NazarSetupConfig["me
   };
 }
 
-export function defaultVoiceModelDir(): string {
-  return join(defaultMemoryConfig().rootDir, "state", "voice-models");
+export function defaultVoiceModelDir(config = readNazarSetupConfig()): string {
+  const memory = { ...defaultMemoryConfig(), ...config.memory };
+  return join(memory.rootDir, "state", "voice-models");
 }
 
-export function readNazarSetupConfig(): NazarSetupConfig {
+function parseNazarSetupConfig(strict: boolean): NazarSetupConfig {
   const path = nazarSetupConfigPath();
   try {
     if (!existsSync(path)) return { version: 1 };
     const parsed = JSON.parse(readFileSync(path, "utf8")) as NazarSetupConfig;
     return { version: 1, ...parsed };
-  } catch {
+  } catch (error) {
+    if (strict) throw new Error(`Nazar setup config is unreadable or malformed at ${path}: ${error instanceof Error ? error.message : String(error)}`);
     return { version: 1 };
   }
 }
 
+export function readNazarSetupConfig(): NazarSetupConfig {
+  return parseNazarSetupConfig(false);
+}
+
 export function writeNazarSetupConfig(update: Partial<NazarSetupConfig>): NazarSetupConfig {
-  const current = readNazarSetupConfig();
+  const current = parseNazarSetupConfig(true);
   const mergedMemory = { ...current.memory, ...update.memory };
   const memory = {
     vaultDir: mergedMemory.vaultDir,

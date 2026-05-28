@@ -151,14 +151,16 @@ export function assistantText(message: any): string {
 
 export async function loadWhatsAppConfig(): Promise<WhatsAppConfig> {
   let fileConfig: WhatsAppConfig = {};
+  const path = whatsappConfigPath();
   try {
-    const raw = await readFile(whatsappConfigPath(), "utf8");
+    const raw = await readFile(path, "utf8");
     const parsed = JSON.parse(raw) as WhatsAppConfig;
     fileConfig = {
       allowedPhone: typeof parsed.allowedPhone === "string" ? parsed.allowedPhone : undefined,
       autoStart: parsed.autoStart === true,
     };
-  } catch {
+  } catch (error: any) {
+    if (error?.code !== "ENOENT") throw new Error(`WhatsApp config is unreadable or malformed at ${path}: ${error instanceof Error ? error.message : String(error)}`);
     fileConfig = {};
   }
 

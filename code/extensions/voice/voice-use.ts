@@ -100,6 +100,7 @@ function stopRecording(ctx: ExtensionContext, cancel = false): string {
 
 function startRecording(pi: ExtensionAPI, ctx: ExtensionContext, action: VoiceAction): string {
   if (recordingSession) return stopRecording(ctx);
+  if (!hasInteractiveUi(ctx)) return "Voice recording requires Pi interactive mode.";
 
   let child: RecordingProcess;
   try {

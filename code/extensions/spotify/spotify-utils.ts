@@ -23,7 +23,7 @@ export function callbackParts(input: string): { code: string; state: string } {
 export function spotifyUrlToUri(input: string): string | undefined {
   try {
     const url = new URL(input);
-    if (!url.hostname.endsWith("open.spotify.com")) return undefined;
+    if (url.hostname !== "open.spotify.com") return undefined;
     const segments = url.pathname.split("/").filter(Boolean);
     const [kind, id] = segments[0]?.startsWith("intl-") ? segments.slice(1, 3) : segments.slice(0, 2);
     if (!kind || !id) return undefined;

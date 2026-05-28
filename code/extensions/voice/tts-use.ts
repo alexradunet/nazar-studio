@@ -253,6 +253,8 @@ export function registerTtsUse(pi: ExtensionAPI) {
 
       if (command === "test" || command === "test en") {
         const testText = "Hello. Local sherpa text to speech is active.";
+        clearSpeech();
+        STATE.speaking = true;
         try {
           await speakText(testText);
           STATE.lastError = "";
@@ -262,6 +264,9 @@ export function registerTtsUse(pi: ExtensionAPI) {
           STATE.lastError = error instanceof Error ? error.message : String(error);
           if (hasInteractiveUi(ctx)) ctx.ui.notify(`TTS test failed: ${STATE.lastError}`, "error");
           else console.log(`TTS test failed: ${STATE.lastError}`);
+        } finally {
+          STATE.speaking = false;
+          if (STATE.queue.length > 0) void processQueue();
         }
         return;
       }

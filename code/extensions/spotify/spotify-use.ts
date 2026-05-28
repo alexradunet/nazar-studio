@@ -9,6 +9,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { homedir, platform } from "node:os";
 import { dirname, join } from "node:path";
 
+import { getRemoteTurnOrigin } from "../remote-origin.ts";
 import { callbackParts, normalizeSpotifyUri } from "./spotify-utils.ts";
 
 const API_BASE = "https://api.spotify.com";
@@ -162,16 +163,18 @@ function authSessionPath(): string {
 }
 
 function readJson<T>(path: string): T | undefined {
+  if (!existsSync(path)) return undefined;
   try {
-    if (!existsSync(path)) return undefined;
     return JSON.parse(readFileSync(path, "utf8")) as T;
-  } catch {
-    return undefined;
+  } catch (error) {
+    throw new Error(`Spotify JSON state is unreadable or malformed at ${path}: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
 function writeJson(path: string, value: unknown, mode = 0o600): void {
-  mkdirSync(dirname(path), { recursive: true });
+  const dir = dirname(path);
+  mkdirSync(dir, { recursive: true, mode: 0o700 });
+  try { chmodSync(dir, 0o700); } catch { /* Best effort on platforms without POSIX modes. */ }
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, { encoding: "utf8", mode });
   try {
     chmodSync(path, mode);
@@ -670,6 +673,13 @@ async function transferText(deviceId: string): Promise<string> {
   return `Transferred playback to device ${id}.`;
 }
 
+function assertLocalPlaybackAction(action: string): void {
+  if (!["play", "pause", "resume", "toggle", "next", "previous", "volume", "transfer"].includes(action)) return;
+  const origin = getRemoteTurnOrigin();
+  if (!origin) return;
+  throw new Error(`Refusing Spotify playback action '${action}' from ${origin.source} turn ${origin.id}. Use the local Pi session for side-effectful playback controls.`);
+}
+
 async function spotifyAction(params: {
   action: "status" | "current" | "devices" | "search" | "play" | "pause" | "resume" | "toggle" | "next" | "previous" | "volume" | "transfer";
   query?: string;
@@ -678,6 +688,7 @@ async function spotifyAction(params: {
   volumePercent?: number;
   limit?: number;
 }): Promise<string> {
+  assertLocalPlaybackAction(params.action);
   switch (params.action) {
     case "status":
       return spotifyStatusText();

@@ -33,13 +33,19 @@ const downloads = [
     name: "kokoro-en-v0_19",
     url: "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-en-v0_19.tar.bz2",
     dir: join(modelRoot, "kokoro-en-v0_19"),
+    required: ["model.onnx", "voices.bin", "tokens.txt", "espeak-ng-data"],
   },
   {
     name: "sherpa-onnx-whisper-medium.en",
     url: "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-medium.en.tar.bz2",
     dir: join(modelRoot, "sherpa-onnx-whisper-medium.en"),
+    required: ["medium.en-encoder.int8.onnx", "medium.en-decoder.int8.onnx", "medium.en-tokens.txt"],
   },
 ];
+
+function modelComplete(item) {
+  return existsSync(item.dir) && item.required.every((name) => existsSync(join(item.dir, name)));
+}
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, { stdio: "inherit", ...options });
@@ -69,10 +75,14 @@ try {
 
 for (const item of downloads) {
   const archive = join(modelRoot, `${item.name}.tar.bz2`);
-  if (existsSync(item.dir)) {
+  if (modelComplete(item)) {
     console.log(`${item.name}: already present`);
     rmSync(archive, { force: true });
     continue;
+  }
+  if (existsSync(item.dir)) {
+    console.log(`${item.name}: incomplete model directory found; removing before reinstall`);
+    rmSync(item.dir, { recursive: true, force: true });
   }
 
   if (!existsSync(archive)) {
@@ -83,6 +93,9 @@ for (const item of downloads) {
   }
   console.log(`Extracting ${item.name}...`);
   run("tar", ["xf", cliPath(archive), "-C", cliPath(modelRoot)]);
+  if (!modelComplete(item)) {
+    throw new Error(`${item.name} extraction completed but required files are missing: ${item.required.filter((name) => !existsSync(join(item.dir, name))).join(", ")}`);
+  }
   rmSync(archive, { force: true });
 }
 

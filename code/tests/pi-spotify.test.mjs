@@ -14,7 +14,9 @@ test("Spotify callback parsing requires code and state", () => {
 test("Spotify URL normalization supports normal and locale-prefixed open.spotify.com URLs", () => {
   assert.equal(spotifyUrlToUri("https://open.spotify.com/track/123?si=abc"), "spotify:track:123");
   assert.equal(spotifyUrlToUri("https://open.spotify.com/intl-de/track/456?si=abc"), "spotify:track:456");
+  assert.equal(spotifyUrlToUri("https://evilopen.spotify.com/track/456?si=abc"), undefined);
   assert.equal(normalizeSpotifyUri("spotify:playlist:789"), "spotify:playlist:789");
   assert.equal(normalizeSpotifyUri("https://open.spotify.com/album/abc"), "spotify:album:abc");
   assert.throws(() => normalizeSpotifyUri("https://example.com/track/123"), /Expected a spotify:/);
+  assert.throws(() => normalizeSpotifyUri("https://evilopen.spotify.com/track/123"), /Expected a spotify:/);
 });

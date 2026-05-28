@@ -3,6 +3,7 @@ import { matchesKey, truncateToWidth, visibleWidth, type Component } from "@eare
 import { mkdir, open, readFile, rm, type FileHandle } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { dirname } from "node:path";
+import { clearRemoteTurnOrigin, setRemoteTurnOrigin } from "../remote-origin.ts";
 import { transcribeSherpaPcm16 } from "../voice/sherpa-runtime.ts";
 import {
   assistantText,
@@ -83,6 +84,7 @@ let lastReplyMatch = "none";
 let lastSkippedReply = "none";
 let allowedLids: string[] = [];
 let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+let reconnectAttempts = 0;
 let intentionalStop = false;
 let logger: any | undefined;
 let masterLockHandle: FileHandle | undefined;
@@ -93,6 +95,17 @@ let lastQrShownAt = 0;
 let qrOverlayClose: (() => void) | undefined;
 let qrOverlayHandle: { hide?: () => void } | undefined;
 let qrOverlaySerial = 0;
+
+function positiveIntEnv(name: string, fallback: number): number {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : fallback;
+}
+
+const MAX_INBOUND_QUEUE = positiveIntEnv("PI_WHATSAPP_MAX_QUEUE", 5);
+const MAX_IMAGE_BYTES = positiveIntEnv("PI_WHATSAPP_MAX_IMAGE_BYTES", 8 * 1024 * 1024);
+const MAX_AUDIO_BYTES = positiveIntEnv("PI_WHATSAPP_MAX_AUDIO_BYTES", 12 * 1024 * 1024);
+const MAX_PCM_BYTES = positiveIntEnv("PI_WHATSAPP_MAX_PCM_BYTES", 20 * 1024 * 1024);
+const MAX_RECONNECT_ATTEMPTS = positiveIntEnv("PI_WHATSAPP_MAX_RECONNECT_ATTEMPTS", 12);
 
 function hasInteractiveUi(ctx: { hasUI?: boolean } | undefined): boolean {
   return ctx?.hasUI !== false;
@@ -113,7 +126,7 @@ function whatsappDependencyError(error: unknown): Error {
   return new Error([
     `WhatsApp runtime dependency failed to load: ${detail}`,
     "Repo-local setup: run `npm ci --prefix code/extensions/whatsapp` from the Nazar checkout.",
-    "Installed package setup: reinstall or update `@nazar/nazar-pi` so npm installs package dependencies.",
+    "Installed package setup: install optional WhatsApp dependencies for the package or reinstall `@nazar/nazar-pi` with optional dependencies enabled.",
   ].join("\n"));
 }
 
@@ -452,11 +465,17 @@ function maybeInjectNext(pi: ExtensionAPI, force = false): void {
   const next = inboundQueue.shift();
   if (!next) return;
   activeWhatsAppTurn = { ...next, injectedAt: Date.now() };
+  setRemoteTurnOrigin({ source: "whatsapp", id: next.id, jid: next.jid, kind: next.kind });
   lastInjection = `${new Date().toISOString()} injected ${next.id} kind=${next.kind} jid=${next.jid}; queue=${inboundQueue.length}`;
   sendUserMessage(pi, next.content);
 }
 
 function enqueueWhatsAppTurn(pi: ExtensionAPI, jid: string, kind: QueuedTurn["kind"], content: WhatsAppInputContent): void {
+  if (inboundQueue.length >= MAX_INBOUND_QUEUE) {
+    lastIgnored = `${new Date().toISOString()} queue full; jid=${jid} kind=${kind}; queue=${inboundQueue.length}`;
+    void socket?.sendMessage(jid, { text: "Pi is still processing earlier WhatsApp messages. Please wait and try again." });
+    return;
+  }
   const turn: QueuedTurn = {
     id: `wa-${++turnSerial}`,
     jid,
@@ -507,6 +526,11 @@ async function handleIncoming(pi: ExtensionAPI, baileys: BaileysRuntime, payload
     try {
       if (imageMessage) {
         const image = await downloadMedia(baileys, message);
+        if (image.length > MAX_IMAGE_BYTES) {
+          await socket?.sendMessage(filter.jid, { text: `That image is too large for Pi to process (${Math.ceil(image.length / 1024 / 1024)} MiB).` });
+          await markReadBestEffort(message);
+          continue;
+        }
         const rawMime = String(imageMessage.mimetype || "image/jpeg").toLowerCase().split(";")[0].trim();
         const mimeType = rawMime === "image/jpg" ? "image/jpeg" : rawMime;
         enqueueWhatsAppTurn(pi, filter.jid, "image", [
@@ -519,10 +543,21 @@ async function handleIncoming(pi: ExtensionAPI, baileys: BaileysRuntime, payload
 
       if (audioMessage) {
         const audio = await downloadMedia(baileys, message);
+        if (audio.length > MAX_AUDIO_BYTES) {
+          await socket?.sendMessage(filter.jid, { text: `That audio message is too large for Pi to process (${Math.ceil(audio.length / 1024 / 1024)} MiB).` });
+          await markReadBestEffort(message);
+          continue;
+        }
         const pcm = await convertAudioToPcm16(audio);
+        if (pcm.length > MAX_PCM_BYTES) {
+          await socket?.sendMessage(filter.jid, { text: "That audio message is too long for local transcription." });
+          await markReadBestEffort(message);
+          continue;
+        }
         const transcript = (await transcribeSherpaPcm16(pcm)).trim();
         if (!transcript) {
           await socket?.sendMessage(filter.jid, { text: "I could not transcribe that audio message." });
+          await markReadBestEffort(message);
           continue;
         }
         enqueueWhatsAppTurn(pi, filter.jid, "audio", transcript);
@@ -656,6 +691,7 @@ async function startWhatsApp(pi: ExtensionAPI, pairingPhone?: string): Promise<s
       if (connection === "open") {
         await resolveAllowedLids();
         closeQrOverlay();
+        reconnectAttempts = 0;
         setStatus("connected", maskPhone(config.allowedPhone));
         finishQrPairingWait("WhatsApp connected. Existing linked-device auth was reused, so no QR was needed.");
         if (hasInteractiveUi(ctxRef)) ctxRef?.ui.notify("WhatsApp connected", "info");
@@ -688,9 +724,16 @@ async function startWhatsApp(pi: ExtensionAPI, pairingPhone?: string): Promise<s
           setStatus("disconnected", "connection closed before QR");
           return;
         }
-        setStatus("connecting", "reconnecting");
+        reconnectAttempts += 1;
+        if (reconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
+          await releaseMasterLock();
+          setStatus("error", "reconnect limit reached");
+          return;
+        }
+        const delayMs = Math.min(60_000, 5000 * reconnectAttempts);
+        setStatus("connecting", `reconnecting in ${Math.round(delayMs / 1000)}s`);
         if (reconnectTimer) clearTimeout(reconnectTimer);
-        reconnectTimer = setTimeout(() => { void startWhatsApp(pi).catch((error) => { lastError = error.message; setStatus("error"); }); }, 5000);
+        reconnectTimer = setTimeout(() => { void startWhatsApp(pi).catch((error) => { lastError = error.message; setStatus("error"); }); }, delayMs);
       }
       } catch (error) {
         lastError = error instanceof Error ? error.message : String(error);
@@ -711,6 +754,7 @@ async function startWhatsApp(pi: ExtensionAPI, pairingPhone?: string): Promise<s
     const detail = error instanceof Error ? error.message : String(error);
     lastError = detail;
     socket = undefined;
+    clearRemoteTurnOrigin(activeWhatsAppTurn?.id);
     activeWhatsAppTurn = undefined;
     inboundQueue = [];
     failQrPairingWait(error);
@@ -757,7 +801,11 @@ async function stopWhatsApp(): Promise<string> {
     clearTimeout(reconnectTimer);
     reconnectTimer = undefined;
   }
+  reconnectAttempts = 0;
   if (!socket) {
+    clearRemoteTurnOrigin(activeWhatsAppTurn?.id);
+    activeWhatsAppTurn = undefined;
+    inboundQueue = [];
     await releaseMasterLock();
     setStatus("disconnected");
     return "WhatsApp is not connected.";
@@ -772,6 +820,7 @@ async function stopWhatsApp(): Promise<string> {
     // Best effort shutdown.
   }
   socket = undefined;
+  clearRemoteTurnOrigin(activeWhatsAppTurn?.id);
   activeWhatsAppTurn = undefined;
   inboundQueue = [];
   await releaseMasterLock();
@@ -832,6 +881,7 @@ export function registerWhatsAppUse(pi: ExtensionAPI) {
     const messages = Array.isArray(event?.messages) ? event.messages : [];
 
     if (!activeWhatsAppTurn) {
+      clearRemoteTurnOrigin();
       lastSkippedReply = `${new Date().toISOString()} agent_end without active WhatsApp turn; messages=${messages.length}`;
       maybeInjectNext(pi, true);
       return;
@@ -841,6 +891,7 @@ export function registerWhatsAppUse(pi: ExtensionAPI) {
     const reply = messages.slice().reverse().map(assistantText).find(Boolean) || "";
     lastReplyMatch = `${new Date().toISOString()} agent_end matched ${target.id}; messages=${messages.length}; replyChars=${reply.length}`;
     activeWhatsAppTurn = undefined;
+    clearRemoteTurnOrigin(target.id);
 
     if (!reply) {
       lastSkippedReply = `${new Date().toISOString()} no assistant text for ${target.id}`;

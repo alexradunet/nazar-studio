@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   assistantText,
   extractText,
@@ -6,6 +9,7 @@ import {
   getAudioMessage,
   getImageMessage,
   isNonPersonalJid,
+  loadWhatsAppConfig,
   maskPhone,
   normalizeLidJid,
   normalizePersonalJid,
@@ -41,5 +45,17 @@ assert.ok(getAudioMessage({ audioMessage: { mimetype: 'audio/ogg' } }));
 assert.equal(assistantText({ role: 'assistant', content: ' hi ' }), 'hi');
 assert.equal(assistantText({ role: 'assistant', content: [{ type: 'thinking', thinking: 'x' }, { type: 'text', text: 'a' }, { type: 'text', text: 'b' }] }), 'a\nb');
 assert.equal(assistantText({ role: 'user', content: 'nope' }), '');
+
+const tmp = mkdtempSync(join(tmpdir(), 'pi-whatsapp-test-'));
+const previousConfig = process.env.PI_WHATSAPP_CONFIG;
+try {
+  process.env.PI_WHATSAPP_CONFIG = join(tmp, 'whatsapp.json');
+  writeFileSync(process.env.PI_WHATSAPP_CONFIG, '{not json', 'utf8');
+  await assert.rejects(() => loadWhatsAppConfig(), /malformed/);
+} finally {
+  if (previousConfig === undefined) delete process.env.PI_WHATSAPP_CONFIG;
+  else process.env.PI_WHATSAPP_CONFIG = previousConfig;
+  rmSync(tmp, { recursive: true, force: true });
+}
 
 console.log('pi-whatsapp tests passed');
