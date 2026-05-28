@@ -34,14 +34,7 @@
     "code/extensions/whatsapp/package.json",
     "code/extensions/whatsapp/package-lock.json",
     "code/extensions/memory/skills/**",
-    "code/skills/**",
-    "memory/README.md",
-    "memory/AGENTS.md",
-    "memory/pages/README.md",
-    "memory/pages/index.md",
-    "memory/pages/ai/**",
-    "memory/pages/personal/README.md",
-    "memory/state/voice-models/README.md"
+    "code/skills/**"
   ],
   "scripts": {
     "test": "node code/tests/pi-memory.test.mjs && node code/tests/pi-spotify.test.mjs && node code/tests/pi-whatsapp.test.mjs",

@@ -28,7 +28,7 @@ Five core extensions and two starter Agent Skills:
 | Extension | Commands | What it does |
 | --- | --- | --- |
 | **`nazar`** | `/nazar-setup`, `/nazar-status` | Post-install setup and status across memory, voice, WhatsApp, and Spotify. |
-| **`memory`** | `/memory`, `memory_status`, `memory_search` | Durable memory, generated context, searchable project knowledge. Ships with the integrated `memory-janitor` Agent Skill. |
+| **`memory`** | `/memory`, `memory_status`, `memory_search` | Durable memory, generated rollups, searchable project knowledge. Ships with the integrated `memory-janitor` Agent Skill. |
 | **`voice`** | `/tts`, `/voice`, `tts_toggle` | Text-to-speech and push-to-talk voice input. Local Sherpa-ONNX models, no cloud dependency. |
 | **`spotify`** | `/spotify`, `spotify_control` | Spotify Web API control — play, queue, search, playlist management. |
 | **`whatsapp`** | (bridge) | A minimal one-whitelisted-contact WhatsApp bridge via Baileys. |
@@ -52,7 +52,7 @@ Nazar runs as a set of extensions inside the [Pi.Dev coding agent](https://githu
 pi install @nazar/nazar-pi
 ```
 
-This registers the five extensions in your Pi settings and pulls dependencies (Baileys for WhatsApp, sherpa-onnx-node for voice models, etc.).
+This registers the five extensions in your Pi settings. WhatsApp and local voice use optional adapter dependencies; install them only on machines that need those features.
 
 ### 3. Point Nazar at your memory vault
 
@@ -102,7 +102,7 @@ Nazar is opinionated about *where things live* but agnostic about *how the host 
 
 **The Pi.Dev agent is the runtime.** Nazar registers commands and skills with the Pi extension API. There is no separate daemon, no service to install, no OS layer to provision.
 
-**Your Obsidian vault is the database.** Personal memory (Projects, Areas, Resources) is yours and lives in your vault. The `05_Nazar/` directory is the AI/system control plane — generated context, rollups, the compiled "llm-wiki" knowledge layer.
+**Your Obsidian vault is the database.** Personal memory (Projects, Areas, Resources) is yours and lives in your vault. The `05_Nazar/` directory is the AI/system control plane — generated runtime state, rollups, and the compiled "llm-wiki" knowledge layer.
 
 **Extensions are TypeScript modules.** Each extension is a single `.ts` file plus an optional sub-directory for assets. Add or remove extensions by editing `.pi/settings.json`.
 
@@ -116,13 +116,13 @@ Common environment variables (set in your shell profile):
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `NAZAR_HOME` | (none) | Root of the Obsidian vault |
+| `NAZAR_HOME` | (none) | Root of the private Obsidian vault |
 | `PI_MEMORY_ROOT` | `$NAZAR_HOME/05_Nazar/runtime` | Generated runtime state |
-| `PI_MEMORY_PAGES_DIR` | `$NAZAR_HOME` | Personal memory pages root |
+| `PI_MEMORY_PAGES_DIR` | `$NAZAR_HOME` | Searchable vault/pages root |
 | `PI_AI_MEMORY_DIR` | `$NAZAR_HOME/05_Nazar/llm-wiki/wiki` | AI-maintained compiled wiki |
 | `PI_HUMAN_MEMORY_DIR` | `$NAZAR_HOME` | Human-authored memory pages |
 
-If `NAZAR_HOME` is unset, Nazar falls back to a repo-local `memory/` skeleton for development.
+If `NAZAR_HOME` and setup/env overrides are unset in a source checkout, Nazar may create a local `memory/` development fallback. That folder is ignored by git and is not part of the public package.
 
 Extension-specific configuration (Spotify OAuth, WhatsApp pairing, voice model paths) is set through the respective `/spotify`, `/whatsapp`, `/voice` setup flows. No secrets are stored in git.
 
@@ -132,8 +132,8 @@ Extension-specific configuration (Spotify OAuth, WhatsApp pairing, voice model p
 
 Nazar is built around a strict public-private boundary:
 
-- **In git:** code, tests, docs, templates, public AI/infrastructure memory.
-- **Out of git (always):** private memory pages, generated rollups, journals, source reports, OAuth tokens, WhatsApp auth state, local voice models, personal Obsidian vaults.
+- **In git:** code, tests, docs, templates, and public product documentation.
+- **Out of git (always):** memory pages, generated rollups, journals, source reports, OAuth tokens, WhatsApp auth state, local voice models, and personal Obsidian vaults.
 
 Do not commit secrets. Do not commit raw session transcripts. Do not expose SSH/RDP services to the internet without an explicit VPN/tunnel plan.
 

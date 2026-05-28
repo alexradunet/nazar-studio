@@ -618,13 +618,13 @@ function topicMemory(messages: MemoryMessage[]): string[] {
     bullets.push("- Runtime: Pi is the default CLI/runtime; project-specific continuity lives in the project-local memory extension, not a separate launcher wrapper.");
   }
   if (has("one conversation", "subconversation", "llm-wiki", "qmd", "karpathy", "memory", "rollups", "context mode")) {
-    bullets.push("- Unified memory: durable knowledge pages live under scoped QMD collections; generated rollups live under `memory/rollups`; raw Pi sessions stay in Pi's default session storage unless explicitly selected; `/memory search` searches durable pages through QMD; no memory context is prompt-injected automatically.");
+    bullets.push("- Unified memory: durable knowledge pages live under scoped QMD collections; generated rollups live under the configured memory runtime root; raw Pi sessions stay in Pi's default session storage unless explicitly selected; `/memory search` searches durable pages through QMD; no memory context is prompt-injected automatically.");
   }
   if (has("openssh", "zellij", "lan", "ssh")) {
     bullets.push("- Remote access: keep SSH LAN-only; use Zellij for persistent remote terminal sessions and do not expose SSH beyond the LAN.");
   }
   if (has("closed daily", "closed weekly", "tool calls/results omitted", "tool calls, tool outputs", "native typescript pi extension", "compact")) {
-    bullets.push("- Memory compaction: implemented as a native TypeScript Pi extension module; built-in Pi `/compact` refreshes `memory/rollups`; daily notes omit tool calls/timestamps/transcripts; weekly/monthly rollups summarize closed notes with links.");
+    bullets.push("- Memory compaction: implemented as a native TypeScript Pi extension module; built-in Pi `/compact` refreshes configured rollups; daily notes omit tool calls/timestamps/transcripts; weekly/monthly rollups summarize closed notes with links.");
   }
 
   return bullets;
@@ -892,7 +892,7 @@ export function memoryStatusText(): string {
     "Optional memory status",
     `Project root: ${paths.PROJECT_ROOT}`,
     `Code root: ${paths.CODE_ROOT}`,
-    `Nazar vault: ${paths.VAULT_DIR || "(not configured; using repo-local fallback)"}`,
+    `Nazar vault: ${paths.VAULT_DIR || "(not configured; using ignored local dev fallback)"}`,
     `Nazar control dir: ${paths.NAZAR_DIR}`,
     `LLM wiki raw dir: ${paths.LLM_WIKI_RAW_DIR}`,
     `LLM wiki pages dir: ${paths.LLM_WIKI_PAGES_DIR}`,

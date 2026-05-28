@@ -7,7 +7,6 @@ import { homedir, platform } from "node:os";
 import { createRequire } from "node:module";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
-const projectRoot = resolve(scriptDir, "../../..");
 const require = createRequire(import.meta.url);
 
 function setupConfigPath() {
@@ -16,17 +15,23 @@ function setupConfigPath() {
   return join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "nazar", "setup.json");
 }
 
+function defaultNazarHomeDir() {
+  return process.env.NAZAR_HOME?.trim() ? resolve(process.env.NAZAR_HOME.trim()) : join(homedir(), "NazarVault");
+}
+
 function setupVoiceModelDir() {
   try {
-    if (!existsSync(setupConfigPath())) return undefined;
-    const config = JSON.parse(readFileSync(setupConfigPath(), "utf8"));
-    return typeof config?.voice?.modelDir === "string" ? config.voice.modelDir : undefined;
+    const config = existsSync(setupConfigPath()) ? JSON.parse(readFileSync(setupConfigPath(), "utf8")) : {};
+    if (typeof config?.voice?.modelDir === "string" && config.voice.modelDir.trim()) return resolve(config.voice.modelDir);
+    const vaultDir = typeof config?.memory?.vaultDir === "string" && config.memory.vaultDir.trim() ? resolve(config.memory.vaultDir) : defaultNazarHomeDir();
+    const rootDir = typeof config?.memory?.rootDir === "string" && config.memory.rootDir.trim() ? resolve(config.memory.rootDir) : join(vaultDir, "05_Nazar", "runtime");
+    return join(rootDir, "state", "voice-models");
   } catch {
-    return undefined;
+    return join(defaultNazarHomeDir(), "05_Nazar", "runtime", "state", "voice-models");
   }
 }
 
-const modelRoot = process.env.PI_VOICE_MODEL_DIR || setupVoiceModelDir() || resolve(projectRoot, "memory/state/voice-models");
+const modelRoot = process.env.PI_VOICE_MODEL_DIR || setupVoiceModelDir();
 
 const downloads = [
   {

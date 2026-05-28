@@ -134,6 +134,7 @@ test("root package exposes Nazar Pi package resources", () => {
   ]);
   assert.deepEqual(pkg.pi.skills, ["./code/skills"]);
   assert.equal(pkg.files.includes("!code/extensions/**/node_modules/**"), true);
+  assert.equal(pkg.files.some((entry) => entry.startsWith("memory/")), false);
   assert.equal(Object.hasOwn(pkg, "dependencies"), false);
   assert.equal(pkg.optionalDependencies["@whiskeysockets/baileys"], "7.0.0-rc13");
   assert.equal(pkg.optionalDependencies["sherpa-onnx-node"], "1.13.2");

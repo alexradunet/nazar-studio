@@ -16,4 +16,4 @@ This directory is the active **Projects** side of the repository's PARA-lite lay
 - Keep modules small and inspectable.
 - Keep shell glue minimal and portable when possible.
 - Put host-specific setup in external docs or local notes, not in this public product tree.
-- Do not put durable memory pages or generated rollups here; use `../memory/`.
+- Do not put durable memory pages or generated rollups in git; use the private `NAZAR_HOME` vault or ignored local runtime paths.

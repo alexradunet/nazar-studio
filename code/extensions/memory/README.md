@@ -33,12 +33,12 @@ When `NAZAR_HOME` is set, defaults are derived from it:
 
 ## Repository fallback
 
-If no vault/setup/env path is configured, data defaults remain repository-local for development compatibility:
+If no vault/setup/env path is configured in a source checkout, data defaults remain repository-local for development compatibility:
 
 - durable pages: `memory/pages/`
 - generated rollups/state: `memory/`
 
-The public repo tracks only public AI/infrastructure pages and skeleton README files. Human/private memory, journals, rollups, source reports, and local model/state files must remain out of git.
+The public repo does not track this tree. Treat repo-local `memory/` as ignored local runtime state only; real human/private memory, journals, rollups, source reports, and local model/state files belong in `NAZAR_HOME` or explicit external `PI_*` paths.
 
 ## Rules
 

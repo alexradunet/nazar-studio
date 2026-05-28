@@ -73,7 +73,7 @@ async function statusText(): Promise<string> {
     `Data dir: ${dirs.dataDir}`,
     "",
     "Memory:",
-    `- Vault: ${paths.VAULT_DIR || "(not configured; repo-local fallback)"}`,
+    `- Vault: ${paths.VAULT_DIR || "(not configured; local dev fallback)"}`,
     `- Runtime root: ${paths.MEMORY_ROOT}`,
     `- Search/pages root: ${paths.PAGES_DIR}`,
     `- AI/wiki pages: ${paths.AI_PAGES_DIR}`,

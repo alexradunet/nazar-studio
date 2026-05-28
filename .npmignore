@@ -1,10 +1,2 @@
 code/extensions/*/node_modules/
-memory/context/
-memory/journal/
-memory/rollups/
-memory/sources/
-memory/sessions/
-memory/pages/personal/*.md
-!memory/pages/personal/README.md
-memory/state/voice-models/*
-!memory/state/voice-models/README.md
+memory/

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { delimiter, isAbsolute, join, resolve } from "node:path";
 import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from "node:child_process";
 
-import { readNazarSetupConfig } from "../nazar/setup-store.ts";
+import { defaultVoiceModelDir, readNazarSetupConfig } from "../nazar/setup-store.ts";
 
 const SHERPA_SETUP_HINT = "Run from this repository: cd code/extensions/voice && npm install && node setup-sherpa.mjs";
 
@@ -26,8 +26,8 @@ function loadSherpa(): any {
   }
 }
 
-const PROJECT_ROOT = process.env.PI_PROJECT_ROOT || process.cwd();
-const MODEL_ROOT = process.env.PI_VOICE_MODEL_DIR || readNazarSetupConfig().voice?.modelDir || resolve(PROJECT_ROOT, "memory/state/voice-models");
+const SETUP_CONFIG = readNazarSetupConfig();
+const MODEL_ROOT = process.env.PI_VOICE_MODEL_DIR || SETUP_CONFIG.voice?.modelDir || defaultVoiceModelDir(SETUP_CONFIG);
 const TTS_MODEL_NAME = process.env.PI_TTS_MODEL_NAME || "kokoro-en-v0_19";
 const TTS_MODEL_DIR = resolve(MODEL_ROOT, TTS_MODEL_NAME);
 const TTS_MODEL_FILE = TTS_MODEL_NAME.includes("int8") ? "model.int8.onnx" : "model.onnx";
