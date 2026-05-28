@@ -79,9 +79,8 @@ NazarVault/
 ├── 04_Archive/         # cold storage (excluded from search)
 └── 05_Nazar/           # AI/system control plane
     ├── llm-wiki/
-    │   ├── raw/        # AI's raw notes
     │   └── wiki/       # Karpathy-style compiled wiki
-    ├── runtime/        # generated state, rollups, journals
+    ├── runtime/        # generated state and rollups
     └── pinned-memory.md  # human-curated long-term facts (when using vault layout)
 ```
 
@@ -115,13 +114,9 @@ Common environment variables (set in your shell profile):
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `NAZAR_HOME` | (none) | Root of the private Obsidian vault |
-| `PI_MEMORY_ROOT` | `$NAZAR_HOME/05_Nazar/runtime` | Generated runtime state |
-| `PI_MEMORY_PAGES_DIR` | `$NAZAR_HOME` | Searchable vault/pages root |
-| `PI_AI_MEMORY_DIR` | `$NAZAR_HOME/05_Nazar/llm-wiki/wiki` | AI-maintained compiled wiki |
-| `PI_HUMAN_MEMORY_DIR` | `$NAZAR_HOME` | Human-authored memory pages |
+| `NAZAR_HOME` | (none) | Root of the private Obsidian vault; memory paths derive from it |
 
-If `NAZAR_HOME` and setup/env overrides are unset in a source checkout, Nazar may create a local `memory/` development fallback. That folder is ignored by git and is not part of the public package.
+If `NAZAR_HOME` and setup config are unset in a source checkout, Nazar may create a local `memory/` development fallback. That folder is ignored by git and is not part of the public package.
 
 Extension-specific configuration (Spotify OAuth, WhatsApp pairing, voice model paths) is set through the respective `/spotify`, `/whatsapp`, `/voice` setup flows. No secrets are stored in git.
 
@@ -132,7 +127,7 @@ Extension-specific configuration (Spotify OAuth, WhatsApp pairing, voice model p
 Nazar is built around a strict public-private boundary:
 
 - **In git:** code, tests, docs, templates, and public product documentation.
-- **Out of git (always):** memory pages, generated rollups, journals, source reports, OAuth tokens, WhatsApp auth state, local voice models, and personal Obsidian vaults.
+- **Out of git (always):** memory pages, generated rollups, raw transcripts, copied reports, OAuth tokens, WhatsApp auth state, local voice models, and personal Obsidian vaults.
 
 Do not commit secrets. Do not commit raw session transcripts. Do not expose SSH/RDP services to the internet without an explicit VPN/tunnel plan.
 

@@ -1,6 +1,6 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { basename, dirname, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 
 import { showText, truncateUtf8, trim, xdgDataHome } from "../shared.ts";
 import { getMemoryPaths, QMD_COLLECTION, QMD_CONTEXT, QMD_INDEX } from "./paths.ts";
@@ -686,17 +686,6 @@ function markdownFiles(dir: string): string[] {
     .sort();
 }
 
-function sameResolvedPath(a: string | undefined, b: string | undefined): boolean {
-  return Boolean(a && b && resolve(a) === resolve(b));
-}
-
-function isWithinResolvedPath(parent: string | undefined, child: string | undefined): boolean {
-  if (!parent || !child) return false;
-  const parentPath = resolve(parent);
-  const childPath = resolve(child);
-  return childPath === parentPath || childPath.startsWith(`${parentPath}${sep}`);
-}
-
 function syncGeneratedDir(dir: string, written: string[]): void {
   const keep = new Set(written.map((path) => resolve(path)));
   for (const path of markdownFiles(dir)) {
@@ -847,7 +836,7 @@ async function qmd(pi: ExtensionAPI, args: string[], timeout = 60_000): Promise<
   return result.stdout ?? "";
 }
 
-export type MemorySearchScope = "default" | "personal" | "ai" | "archive" | "all";
+export type MemorySearchScope = "default" | "archive";
 
 type MemoryCollectionSpec = {
   name: string;
@@ -859,45 +848,22 @@ type MemoryCollectionSpec = {
 
 function memoryCollectionSpecs(paths = getMemoryPaths()): MemoryCollectionSpec[] {
   if (!paths.VAULT_DIR) {
-    return [{ name: QMD_COLLECTION, path: paths.PAGES_DIR, mask: "**/*.md", scopes: ["default", "personal", "ai", "all"], description: "durable memory pages" }];
+    return [{ name: QMD_COLLECTION, path: paths.PAGES_DIR, mask: "**/*.md", scopes: ["default"], description: "durable memory pages" }];
   }
 
-  const specs: MemoryCollectionSpec[] = [];
-  const addSpec = (spec: MemoryCollectionSpec): void => {
-    if (specs.some((existing) => existing.name === spec.name || (sameResolvedPath(existing.path, spec.path) && existing.mask === spec.mask))) return;
-    specs.push(spec);
-  };
-  const coveredByPagesRoot = (path: string): boolean => !sameResolvedPath(paths.PAGES_DIR, paths.VAULT_DIR) && isWithinResolvedPath(paths.PAGES_DIR, path);
-
-  if (sameResolvedPath(paths.PAGES_DIR, paths.VAULT_DIR)) {
-    addSpec({ name: "memory-inbox", path: join(paths.VAULT_DIR, "00_Inbox"), mask: "**/*.md", scopes: ["default", "personal", "all"], description: "shared human/AI capture inbox" });
-    addSpec({ name: "memory-projects", path: join(paths.VAULT_DIR, "01_Projects"), mask: "**/*.md", scopes: ["default", "personal", "all"], description: "active personal projects" });
-    addSpec({ name: "memory-areas", path: join(paths.VAULT_DIR, "02_Areas"), mask: "**/*.md", scopes: ["default", "personal", "all"], description: "ongoing areas and responsibilities" });
-    addSpec({ name: "memory-resources", path: join(paths.VAULT_DIR, "03_Resources"), mask: "**/*.md", scopes: ["default", "personal", "all"], description: "stable resources and references" });
-    addSpec({ name: "memory-pinned", path: paths.NAZAR_DIR, mask: "pinned-memory.md", scopes: ["default", "personal", "all"], description: "pinned durable facts/preferences" });
-  } else {
-    addSpec({ name: QMD_COLLECTION, path: paths.PAGES_DIR, mask: "**/*.md", scopes: ["default", "personal", "ai", "all"], description: "configured durable memory search root" });
-  }
-
-  if (!coveredByPagesRoot(paths.PERSONAL_PAGES_DIR) && !sameResolvedPath(paths.PERSONAL_PAGES_DIR, paths.VAULT_DIR)) {
-    addSpec({ name: "memory-personal", path: paths.PERSONAL_PAGES_DIR, mask: "**/*.md", scopes: ["default", "personal", "all"], description: "configured human durable memory pages" });
-  }
-
-  if (!coveredByPagesRoot(paths.LLM_WIKI_PAGES_DIR)) {
-    addSpec({ name: "memory-llm-wiki", path: paths.LLM_WIKI_PAGES_DIR, mask: "**/*.md", scopes: ["default", "ai", "all"], description: "AI-maintained compiled LLM wiki" });
-  }
-
-  if (!coveredByPagesRoot(paths.AI_PAGES_DIR) && !sameResolvedPath(paths.AI_PAGES_DIR, paths.LLM_WIKI_PAGES_DIR)) {
-    addSpec({ name: "memory-ai", path: paths.AI_PAGES_DIR, mask: "**/*.md", scopes: ["default", "ai", "all"], description: "AI/project durable pages" });
-  }
-
-  addSpec({ name: "memory-archive", path: join(paths.VAULT_DIR, "04_Archive"), mask: "**/*.md", scopes: ["archive", "all"], description: "cold archived memory" });
-
-  return specs;
+  return [
+    { name: "memory-inbox", path: join(paths.VAULT_DIR, "00_Inbox"), mask: "**/*.md", scopes: ["default"], description: "shared human/AI capture inbox" },
+    { name: "memory-projects", path: join(paths.VAULT_DIR, "01_Projects"), mask: "**/*.md", scopes: ["default"], description: "active personal projects" },
+    { name: "memory-areas", path: join(paths.VAULT_DIR, "02_Areas"), mask: "**/*.md", scopes: ["default"], description: "ongoing areas and responsibilities" },
+    { name: "memory-resources", path: join(paths.VAULT_DIR, "03_Resources"), mask: "**/*.md", scopes: ["default"], description: "stable resources and references" },
+    { name: "memory-pinned", path: paths.NAZAR_DIR, mask: "pinned-memory.md", scopes: ["default"], description: "pinned durable facts/preferences" },
+    { name: "memory-llm-wiki", path: paths.LLM_WIKI_PAGES_DIR, mask: "**/*.md", scopes: ["default"], description: "AI-maintained compiled LLM wiki" },
+    { name: "memory-archive", path: join(paths.VAULT_DIR, "04_Archive"), mask: "**/*.md", scopes: ["archive"], description: "cold archived memory" },
+  ];
 }
 
 function isMemorySearchScope(value: string | undefined): value is MemorySearchScope {
-  return value === "default" || value === "personal" || value === "ai" || value === "archive" || value === "all";
+  return value === "default" || value === "archive";
 }
 
 function normalizeSearchScope(value?: string): MemorySearchScope {
@@ -955,16 +921,16 @@ export async function updateMemoryIndexText(pi: ExtensionAPI): Promise<string> {
   return qmd(pi, ["update"], 120_000);
 }
 
-export async function searchMemoryText(pi: ExtensionAPI, query: string, limit = 5, mode: "search" | "query" = "search", scope: MemorySearchScope = "default"): Promise<string> {
+export async function searchMemoryText(pi: ExtensionAPI, query: string, limit = 5, scope: MemorySearchScope = "default"): Promise<string> {
   const normalizedQuery = unquoteWhole(query);
   await updateMemoryIndexText(pi);
   const specs = memoryCollectionsForScope(scope);
   if (specs.length === 0) return `No memory collections are configured for scope '${scope}'.\n`;
-  if (specs.length === 1) return qmd(pi, [mode, normalizedQuery, "-c", specs[0].name, "--md", "-n", String(limit)], 120_000);
+  if (specs.length === 1) return qmd(pi, ["search", normalizedQuery, "-c", specs[0].name, "--md", "-n", String(limit)], 120_000);
 
   const chunks: string[] = [];
   for (const spec of specs) {
-    const out = await qmd(pi, [mode, normalizedQuery, "-c", spec.name, "--md", "-n", String(limit)], 120_000);
+    const out = await qmd(pi, ["search", normalizedQuery, "-c", spec.name, "--md", "-n", String(limit)], 120_000);
     if (out.trim()) chunks.push(`## ${spec.name}\n\n${out.trim()}\n`);
   }
   return chunks.length > 0 ? chunks.join("\n") : "No memory results.\n";
@@ -995,7 +961,7 @@ export async function getMemoryIndexText(pi: ExtensionAPI, target: string): Prom
 
 function memoryUsage(): string {
   const paths = getMemoryPaths();
-  return `/memory - manage Pi memory\n\nUsage:\n  /memory status\n  /memory search [--scope default|personal|ai|archive|all] <query>\n  /memory query [--scope default|personal|ai|archive|all] <query>\n  /memory update\n  /memory index\n  /memory list [path]\n  /memory ls [path]\n  /memory get <path-or-docid>\n  /memory pinned\n  /memory remember [user|fact|project|never] <text>\n  /memory forget <unique substring>\n\nUse Pi's built-in /compact command to compact the current chat. After successful built-in compaction, this extension refreshes generated rollups in ${paths.ROLLUPS_DIR}.\nPinned memory: ${paths.PINNED_MEMORY_PAGE}\nDurable/search root: ${paths.PAGES_DIR}\nQMD index: ${QMD_INDEX}, collections: ${memoryCollectionSpecs(paths).map((spec) => spec.name).join(", ")}\n`;
+  return `/memory - manage Pi memory\n\nUsage:\n  /memory status\n  /memory search [--scope default|archive] <query>\n  /memory update\n  /memory index\n  /memory list [path]\n  /memory ls [path]\n  /memory get <path-or-docid>\n  /memory pinned\n  /memory remember [user|fact|project|never] <text>\n  /memory forget <unique substring>\n\nUse Pi's built-in /compact command to compact the current chat. After successful built-in compaction, this extension refreshes generated rollups in ${paths.ROLLUPS_DIR}.\nPinned memory: ${paths.PINNED_MEMORY_PAGE}\nDurable/search root: ${paths.PAGES_DIR}\nQMD index: ${QMD_INDEX}, collections: ${memoryCollectionSpecs(paths).map((spec) => spec.name).join(", ")}\n`;
 }
 
 function parseSearchCommandArgs(args: string[]): { query: string; scope: MemorySearchScope; invalidScope?: string } {
@@ -1022,7 +988,7 @@ function parseSearchCommandArgs(args: string[]): { query: string; scope: MemoryS
 
 export function registerMemoryUse(pi: ExtensionAPI): void {
   pi.registerCommand("memory", {
-    description: "Manage Pi memory: /memory status|search|query|update|index|list|ls|get|pinned|remember|forget",
+    description: "Manage Pi memory: /memory status|search|update|index|list|ls|get|pinned|remember|forget",
     handler: async (args, ctx) => {
       const parts = args.trim().split(/\s+/).filter(Boolean);
       const command = parts[0] || "status";
@@ -1036,20 +1002,10 @@ export function registerMemoryUse(pi: ExtensionAPI): void {
       if (command === "search") {
         const { query, scope, invalidScope } = parseSearchCommandArgs(rest);
         if (invalidScope) {
-          await showText(ctx, "memory", `Unknown memory scope '${invalidScope}'. Use one of: default, personal, ai, archive, all.`, "Memory search needs a valid scope", "warning");
+          await showText(ctx, "memory", `Unknown memory scope '${invalidScope}'. Use one of: default, archive.`, "Memory search needs a valid scope", "warning");
           return;
         }
-        await showText(ctx, "memory", query ? await searchMemoryText(pi, query, 5, "search", scope) : "Usage: /memory search [--scope default|personal|ai|archive|all] <query>", query ? "Memory search complete" : "Memory search needs text");
-        return;
-      }
-
-      if (command === "query") {
-        const { query, scope, invalidScope } = parseSearchCommandArgs(rest);
-        if (invalidScope) {
-          await showText(ctx, "memory", `Unknown memory scope '${invalidScope}'. Use one of: default, personal, ai, archive, all.`, "Memory query needs a valid scope", "warning");
-          return;
-        }
-        await showText(ctx, "memory", query ? await searchMemoryText(pi, query, 5, "query", scope) : "Usage: /memory query [--scope default|personal|ai|archive|all] <query>", query ? "Memory query complete" : "Memory query needs text");
+        await showText(ctx, "memory", query ? await searchMemoryText(pi, query, 5, scope) : "Usage: /memory search [--scope default|archive] <query>", query ? "Memory search complete" : "Memory search needs text");
         return;
       }
 

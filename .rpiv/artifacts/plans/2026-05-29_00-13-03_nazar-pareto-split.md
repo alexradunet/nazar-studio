@@ -8,7 +8,7 @@ topic: "Nazar Pareto Split"
 tags: [plan, pareto, monorepo, pi-packages, memory, voice, spotify, whatsapp]
 status: in-progress
 parent: "user-directed Pareto simplification + 5-package split"
-last_updated: 2026-05-29T00:30:35+0300
+last_updated: 2026-05-29T00:45:02+0300
 last_updated_by: Pi
 ---
 
@@ -34,7 +34,7 @@ This plan is the durable tracking pipeline across three sequential PRs. Cleanups
 | Phase | Scope | Status |
 |---|---|---|
 | A (Tier 0) | Dead / write-only code removal | completed (implemented and validated) |
-| B (Tier 1) | Collapse low-value knobs | pending |
+| B (Tier 1) | Collapse low-value knobs | completed (implemented and validated) |
 | C (Tier 2) | 5-package monorepo split | pending |
 
 ## Target architecture (after Phase C)
@@ -127,7 +127,7 @@ Remove confirmed-unread/unwired code with zero feature loss. Completed by removi
 
 ### Overview
 
-Reduce the permanent branching tax in the memory path layer and QMD layer. Each knob removed simplifies every future change to `paths.ts` and the QMD collection logic.
+Reduce the permanent branching tax in the memory path layer and QMD layer. Completed by deriving memory paths only from `PI_PROJECT_ROOT`, `NAZAR_HOME`/setup `vaultDir`, and repo-local fallback; persisting only `{ vaultDir }`; dropping `/memory query` and the `memory_search.mode` param; and collapsing QMD scopes to `default` + `archive`.
 
 ### Changes Required
 
@@ -166,13 +166,13 @@ Reduce the permanent branching tax in the memory path layer and QMD layer. Each 
 ### Success Criteria
 
 #### Automated Verification
-- [ ] `node --test code/tests/pi-memory.test.mjs` passes.
-- [ ] `npm test` passes.
-- [ ] `memory_search` tool params expose only `query`, `limit`, `scope ∈ {default, archive}` (no `mode`).
+- [x] `node --test code/tests/pi-memory.test.mjs` passes.
+- [x] `npm test` passes.
+- [x] `memory_search` tool params expose only `query`, `limit`, `scope ∈ {default, archive}` (no `mode`).
 
 #### Manual Verification
-- [ ] `/memory search` works; `/memory query` is no longer registered.
-- [ ] A `NAZAR_HOME` vault still resolves all derived paths; repo-local fallback still works with no env set.
+- [x] `/memory search` works; `/memory query` is no longer registered.
+- [x] A `NAZAR_HOME` vault still resolves all derived paths; repo-local fallback still works with no env set.
 
 ---
 

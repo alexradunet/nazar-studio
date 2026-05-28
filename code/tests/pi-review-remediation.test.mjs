@@ -28,7 +28,8 @@ test("memory_search tool truncates search output before returning", () => {
   assert.match(memoryExtension, /await truncateToolOutput\(await searchMemoryText\(/);
   assert.match(memoryExtension, /await truncateToolOutput\(memoryStatusText\(\)\)/);
   assert.match(memoryExtension, /throw toolError\("memory_search", error\)/);
-  assert.match(memoryExtension, /StringEnum\(\["search", "query"\]/);
+  assert.doesNotMatch(memoryExtension, /StringEnum\(\["search", "query"\]/);
+  assert.match(memoryExtension, /StringEnum\(\["default", "archive"\]/);
   assert.match(memoryExtension, /before_agent_start[\s\S]*buildDurableMemoryContext\(\)/);
 });
 

@@ -70,24 +70,22 @@ export default function memoryExtension(pi: ExtensionAPI) {
     name: "memory_search",
     label: "Memory Search",
     description: "Search scoped curated Pi memory pages through QMD.",
-    promptSnippet: "Search durable memory, personal-vault pages, or project knowledge pages using QMD/BM25.",
+    promptSnippet: "Search durable memory pages using QMD/BM25.",
     promptGuidelines: [
       "Use memory_search when durable project knowledge, decisions, notes, or scoped memory are likely relevant.",
-      "Infer scope from the conversation: personal for Obsidian vault notes/preferences, ai for Nazar/project/wiki memory, archive only when explicitly historical/old/inactive, all for explicit broad recall.",
+      "Use default scope for warm memory; use archive only when explicitly historical, old, or inactive memory is needed.",
       "memory_search refreshes the local QMD index before searching.",
     ],
     parameters: Type.Object({
       query: Type.String({ description: "Search query." }),
       limit: Type.Optional(Type.Number({ description: "Maximum number of results. Default: 5." })),
-      mode: Type.Optional(StringEnum(["search", "query"] as const)),
-      scope: Type.Optional(StringEnum(["default", "personal", "ai", "archive", "all"] as const)),
+      scope: Type.Optional(StringEnum(["default", "archive"] as const)),
     }),
     async execute(_toolCallId, params) {
       try {
-        const mode = params.mode === "query" ? "query" : "search";
-        const scope = ["personal", "ai", "archive", "all"].includes(params.scope || "") ? params.scope as "personal" | "ai" | "archive" | "all" : "default";
-        const text = await truncateToolOutput(await searchMemoryText(pi, params.query, params.limit ?? 5, mode, scope));
-        return { content: [{ type: "text", text }], details: { command: `qmd ${mode} ${JSON.stringify(params.query)}` } };
+        const scope = params.scope === "archive" ? "archive" : "default";
+        const text = await truncateToolOutput(await searchMemoryText(pi, params.query, params.limit ?? 5, scope));
+        return { content: [{ type: "text", text }], details: { command: `qmd search ${JSON.stringify(params.query)}` } };
       } catch (error) {
         throw toolError("memory_search", error);
       }

@@ -26,8 +26,7 @@ Use the native memory extension first:
 
 ```txt
 /memory status
-/memory search <query>
-/memory query <query>
+/memory search [--scope default|archive] <query>
 /memory update
 /memory index
 /memory list [path]

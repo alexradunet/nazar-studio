@@ -459,7 +459,7 @@ export function registerSpotifyUse(pi: ExtensionAPI): void {
     promptSnippet: "Search Spotify, check current playback, list devices, and control Spotify playback via the Spotify Web API.",
     promptGuidelines: [
       "Use spotify_control when the user asks to control Spotify playback, check the current song, search Spotify, or play a track through Spotify.",
-      "Before choosing music for a vague vibe request, use memory_search with personal/default scope for durable music preferences, then choose a specific track unless the user asks for a playlist.",
+      "Before choosing music for a vague vibe request, use memory_search with default scope for durable music preferences, then choose a specific track unless the user asks for a playlist.",
       "spotify_control requires /spotify config client-id and /spotify login once, plus an active Spotify Connect device; playback-control errors may mean Spotify Premium or an active device is missing.",
     ],
     parameters: SpotifyParams,

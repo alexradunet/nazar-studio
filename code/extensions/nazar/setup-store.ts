@@ -11,10 +11,6 @@ export type NazarSetupConfig = {
   profile?: SetupProfile;
   memory?: {
     vaultDir?: string;
-    rootDir?: string;
-    pagesDir?: string;
-    aiPagesDir?: string;
-    humanPagesDir?: string;
   };
   voice?: {
     modelDir?: string;
@@ -62,19 +58,18 @@ export function defaultNazarHomeDir(): string {
 }
 
 export function defaultMemoryConfig(): Required<NonNullable<NazarSetupConfig["memory"]>> {
-  const vaultDir = defaultNazarHomeDir();
-  return {
-    vaultDir,
-    rootDir: join(vaultDir, "05_Nazar", "runtime"),
-    pagesDir: vaultDir,
-    aiPagesDir: join(vaultDir, "05_Nazar", "llm-wiki", "wiki"),
-    humanPagesDir: vaultDir,
-  };
+  return { vaultDir: defaultNazarHomeDir() };
+}
+
+function setupVaultDir(config = readNazarSetupConfig()): string {
+  const envVault = envPath("NAZAR_HOME");
+  if (envVault) return envVault;
+  const configured = config.memory?.vaultDir?.trim();
+  return configured ? resolve(configured) : defaultNazarHomeDir();
 }
 
 export function defaultVoiceModelDir(config = readNazarSetupConfig()): string {
-  const memory = { ...defaultMemoryConfig(), ...config.memory };
-  return join(memory.rootDir, "state", "voice-models");
+  return join(setupVaultDir(config), "05_Nazar", "runtime", "state", "voice-models");
 }
 
 function parseNazarSetupConfig(strict: boolean): NazarSetupConfig {
@@ -95,14 +90,8 @@ export function readNazarSetupConfig(): NazarSetupConfig {
 
 export function writeNazarSetupConfig(update: Partial<NazarSetupConfig>): NazarSetupConfig {
   const current = parseNazarSetupConfig(true);
-  const mergedMemory = { ...current.memory, ...update.memory };
-  const memory = {
-    vaultDir: mergedMemory.vaultDir,
-    rootDir: mergedMemory.rootDir,
-    pagesDir: mergedMemory.pagesDir,
-    aiPagesDir: mergedMemory.aiPagesDir,
-    humanPagesDir: mergedMemory.humanPagesDir,
-  };
+  const vaultDir = update.memory?.vaultDir?.trim() || current.memory?.vaultDir?.trim();
+  const memory = vaultDir ? { vaultDir: resolve(vaultDir) } : undefined;
   const next: NazarSetupConfig = {
     ...current,
     ...update,
@@ -119,8 +108,8 @@ export function writeNazarSetupConfig(update: Partial<NazarSetupConfig>): NazarS
 
 export function ensureSetupDirectories(config = readNazarSetupConfig()): void {
   const dirs = getNazarDirs();
-  const memory = { ...defaultMemoryConfig(), ...config.memory };
-  for (const dir of [dirs.configDir, dirs.stateDir, dirs.dataDir, memory.vaultDir, memory.rootDir, memory.pagesDir, memory.aiPagesDir, memory.humanPagesDir]) {
+  const vaultDir = setupVaultDir(config);
+  for (const dir of [dirs.configDir, dirs.stateDir, dirs.dataDir, vaultDir, join(vaultDir, "05_Nazar", "runtime"), join(vaultDir, "05_Nazar", "llm-wiki", "wiki")]) {
     mkdirSync(dir, { recursive: true, mode: 0o700 });
   }
 }

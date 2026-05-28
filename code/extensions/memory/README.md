@@ -4,7 +4,7 @@ Implementation modules for the project-local Pi memory extension.
 
 ## Files
 
-- `paths.ts` — derives memory paths and QMD identifiers from the project root, optional `NAZAR_HOME`, optional Nazar setup config, and explicit `PI_MEMORY_ROOT`, `PI_MEMORY_PAGES_DIR`, `PI_AI_MEMORY_DIR`, and `PI_HUMAN_MEMORY_DIR` overrides.
+- `paths.ts` — derives memory paths and QMD identifiers from the project root, optional `NAZAR_HOME`, optional Nazar setup config, and repo-local development fallback.
 - `memory-use.ts` — implements pinned memory, generated rollups, QMD indexing/search, durable-memory system-prompt injection, and `/memory` command helpers.
 - `vault.ts` — creates the portable vault scaffold and vault-local guidance files.
 - `skills/memory-janitor/` — Agent Skill contributed by the memory extension for durable memory curation workflows.
@@ -23,12 +23,12 @@ NazarVault/
   05_Nazar/       # AI/system control plane
 ```
 
-When `NAZAR_HOME` is set, defaults are derived from it:
+When `NAZAR_HOME` is set, memory paths are derived from it:
 
-- `PI_MEMORY_ROOT` → `$NAZAR_HOME/05_Nazar/runtime`
-- `PI_MEMORY_PAGES_DIR` → `$NAZAR_HOME`
-- `PI_AI_MEMORY_DIR` → `$NAZAR_HOME/05_Nazar/llm-wiki/wiki`
-- `PI_HUMAN_MEMORY_DIR` → `$NAZAR_HOME`
+- runtime/state → `$NAZAR_HOME/05_Nazar/runtime`
+- searchable vault/pages root → `$NAZAR_HOME`
+- AI-maintained compiled wiki → `$NAZAR_HOME/05_Nazar/llm-wiki/wiki`
+- human-authored memory pages → `$NAZAR_HOME`
 
 `05_Nazar/llm-wiki/wiki` stores AI-maintained compiled wiki pages with `index.md` and `log.md`. `05_Nazar/runtime` stores generated transferable state (`rollups` and `state`).
 
@@ -39,7 +39,7 @@ If no vault/setup/env path is configured in a source checkout, data defaults rem
 - durable pages: `memory/pages/`
 - generated rollups/state: `memory/`
 
-The public repo does not track this tree. Treat repo-local `memory/` as ignored local runtime state only; real human/private memory, rollups, copied reports, and local model/state files belong in `NAZAR_HOME` or explicit external `PI_*` paths.
+The public repo does not track this tree. Treat repo-local `memory/` as ignored local runtime state only; real human/private memory, rollups, copied reports, and local model/state files belong in `NAZAR_HOME` or extension-specific external paths.
 
 ## Rules
 
@@ -47,5 +47,5 @@ The public repo does not track this tree. Treat repo-local `memory/` as ignored 
 - Use Pi's built-in `/compact`; this extension listens for `session_compact` and refreshes rollups.
 - On each user turn, pinned memory bullets and a bounded recent closed rollup digest are appended to the system prompt when present. Empty pinned-memory templates are skipped.
 - Do not reintroduce `/memory compact`, `memory_compact`, `/context`, or a separate memory helper CLI.
-- In vault mode, QMD uses scoped collections for active personal folders, the compiled LLM wiki, optional AI/project pages, and archive. Default search excludes `04_Archive`.
+- In vault mode, QMD uses scoped collections for active folders, pinned memory, the compiled LLM wiki, and archive. Default search excludes `04_Archive`; use `--scope archive` for cold storage.
 - Keep memory curation instructions in the integrated `memory-janitor` skill; keep storage/indexing behavior in extension code.

@@ -23,9 +23,12 @@ function setupVoiceModelDir() {
   try {
     const config = existsSync(setupConfigPath()) ? JSON.parse(readFileSync(setupConfigPath(), "utf8")) : {};
     if (typeof config?.voice?.modelDir === "string" && config.voice.modelDir.trim()) return resolve(config.voice.modelDir);
-    const vaultDir = typeof config?.memory?.vaultDir === "string" && config.memory.vaultDir.trim() ? resolve(config.memory.vaultDir) : defaultNazarHomeDir();
-    const rootDir = typeof config?.memory?.rootDir === "string" && config.memory.rootDir.trim() ? resolve(config.memory.rootDir) : join(vaultDir, "05_Nazar", "runtime");
-    return join(rootDir, "state", "voice-models");
+    const vaultDir = process.env.NAZAR_HOME?.trim()
+      ? resolve(process.env.NAZAR_HOME.trim())
+      : typeof config?.memory?.vaultDir === "string" && config.memory.vaultDir.trim()
+        ? resolve(config.memory.vaultDir)
+        : defaultNazarHomeDir();
+    return join(vaultDir, "05_Nazar", "runtime", "state", "voice-models");
   } catch {
     return join(defaultNazarHomeDir(), "05_Nazar", "runtime", "state", "voice-models");
   }

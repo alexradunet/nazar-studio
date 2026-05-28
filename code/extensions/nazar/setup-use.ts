@@ -102,13 +102,7 @@ async function configureProfile(ctx: ExtensionContext): Promise<SetupProfile | u
 }
 
 function memoryConfigFromVault(vaultDir: string) {
-  return {
-    vaultDir,
-    rootDir: join(vaultDir, "05_Nazar", "runtime"),
-    pagesDir: vaultDir,
-    aiPagesDir: join(vaultDir, "05_Nazar", "llm-wiki", "wiki"),
-    humanPagesDir: vaultDir,
-  };
+  return { vaultDir: resolve(vaultDir) };
 }
 
 function memoryConfigSummary(memory: ReturnType<typeof memoryConfigFromVault>): string {
@@ -116,10 +110,10 @@ function memoryConfigSummary(memory: ReturnType<typeof memoryConfigFromVault>): 
     `Vault root: ${memory.vaultDir}`,
     "",
     "Derived paths:",
-    `- Runtime/state: ${memory.rootDir}`,
-    `- QMD/search root: ${memory.pagesDir}`,
-    `- AI/LLM wiki: ${memory.aiPagesDir}`,
-    `- Human Obsidian vault: ${memory.humanPagesDir}`,
+    `- Runtime/state: ${join(memory.vaultDir, "05_Nazar", "runtime")}`,
+    `- QMD/search root: ${memory.vaultDir}`,
+    `- AI/LLM wiki: ${join(memory.vaultDir, "05_Nazar", "llm-wiki", "wiki")}`,
+    `- Human Obsidian vault: ${memory.vaultDir}`,
   ].join("\n");
 }
 
@@ -133,24 +127,7 @@ async function configureMemory(ctx: ExtensionContext): Promise<void> {
     return;
   }
 
-  let memory = memoryConfigFromVault(vaultDir);
-  const useDerived = await confirm(ctx, "Use derived memory paths?", `${memoryConfigSummary(memory)}\n\nRecommended: Yes. Choose No only if you need advanced path overrides.`);
-  if (!useDerived) {
-    const customize = await confirm(ctx, "Advanced memory paths", "Customize individual runtime/search/wiki/human paths? Choose No to cancel memory setup without changes.");
-    if (!customize) {
-      await show(ctx, "Memory setup cancelled", "Memory configuration was left unchanged.", "warning");
-      return;
-    }
-
-    memory = {
-      vaultDir,
-      rootDir: await input(ctx, "Runtime/state root", current.rootDir || memory.rootDir) || current.rootDir || memory.rootDir,
-      pagesDir: await input(ctx, "QMD/search root", current.pagesDir || memory.pagesDir) || current.pagesDir || memory.pagesDir,
-      aiPagesDir: await input(ctx, "AI/LLM wiki pages dir", current.aiPagesDir || memory.aiPagesDir) || current.aiPagesDir || memory.aiPagesDir,
-      humanPagesDir: await input(ctx, "Human Obsidian vault dir", current.humanPagesDir || memory.humanPagesDir) || current.humanPagesDir || memory.humanPagesDir,
-    };
-  }
-
+  const memory = memoryConfigFromVault(vaultDir);
   writeNazarSetupConfig({ memory });
   ensureSetupDirectories(readNazarSetupConfig());
   await show(ctx, "Memory configured", `${memoryConfigSummary(memory)}\n\nRun /reload or restart Pi so all extensions see the updated vault paths.`);

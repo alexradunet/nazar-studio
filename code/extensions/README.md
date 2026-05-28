@@ -22,7 +22,7 @@ Project-local Pi extensions.
 - Prefer KISS and minimal developed extension APIs.
 - Keep extension entrypoints thin; move implementation into small modules.
 - Do not add separate launcher/status command layers.
-- Keep memory storage paths centralized in `memory/paths.ts`; real use should set `NAZAR_HOME` to a private portable Obsidian vault. Repo-local `memory/` is an ignored development fallback only. Explicit `PI_MEMORY_ROOT`, `PI_MEMORY_PAGES_DIR`, `PI_AI_MEMORY_DIR`, and `PI_HUMAN_MEMORY_DIR` remain supported overrides.
+- Keep memory storage paths centralized in `memory/paths.ts`; real use should set `NAZAR_HOME` to a private portable Obsidian vault. Repo-local `memory/` is an ignored development fallback only.
 - Store OAuth tokens outside the repo; never commit client secrets or refresh tokens.
 
 ## Validation

@@ -24,20 +24,6 @@ import { defaultVoiceModelDir, writeNazarSetupConfig } from "../extensions/nazar
 const DAY = "2026-05-24";
 const ENV_KEYS = [
   "PI_PROJECT_ROOT",
-  "PI_MEMORY_LLM_WIKI",
-  "PI_MEMORY_DAILY_SESSIONS_DIR",
-  "PI_MEMORY_MAIN_SESSION_DIR",
-  "PI_MEMORY_SUB_SESSION_DIR",
-  "PI_MEMORY_DIR",
-  "PI_MEMORY_WIKI_DIR",
-  "PI_MEMORY_ACTIVE_FILE",
-  "PI_MEMORY_LOCK_DIR",
-  "PI_MEMORY_ARCHIVE_DIR",
-  "PI_MEMORY_ROOT",
-  "PI_MEMORY_PAGES_DIR",
-  "PI_AI_MEMORY_DIR",
-  "PI_HUMAN_MEMORY_DIR",
-  "PI_PERSONAL_MEMORY_DIR",
   "NAZAR_HOME",
   "NAZAR_CONFIG_DIR",
   "NAZAR_STATE_DIR",
@@ -46,7 +32,7 @@ const ENV_KEYS = [
   "XDG_DATA_HOME",
 ];
 
-function makeProject(staleEnv = false) {
+function makeProject() {
   const tmp = mkdtempSync(join(tmpdir(), "pi-memory-test-"));
   const root = join(tmp, "repo");
   mkdirSync(root, { recursive: true });
@@ -61,14 +47,6 @@ function makeProject(staleEnv = false) {
 
   for (const key of ENV_KEYS) {
     if (!["PI_PROJECT_ROOT", "XDG_RUNTIME_DIR", "XDG_DATA_HOME", "NAZAR_CONFIG_DIR", "NAZAR_STATE_DIR", "NAZAR_DATA_DIR"].includes(key)) delete process.env[key];
-  }
-
-  if (staleEnv) {
-    process.env.PI_MEMORY_LLM_WIKI = join(tmp, "stale-llm-wiki");
-    process.env.PI_MEMORY_DAILY_SESSIONS_DIR = join(tmp, "stale-daily");
-    process.env.PI_MEMORY_DIR = join(tmp, "stale-memory");
-    process.env.PI_MEMORY_WIKI_DIR = join(tmp, "stale-pages");
-    process.env.PI_MEMORY_ACTIVE_FILE = join(tmp, "stale-active.md");
   }
 
   const restore = () => {
@@ -157,8 +135,8 @@ test("memory tool output truncation caps text at 50KB", async () => {
   assert.match(byteCapped, /\[Output truncated\]$/);
 });
 
-test("path derivation uses only repo root and ignores stale PI_MEMORY env vars", () => {
-  const ctx = makeProject(true);
+test("path derivation uses repo-local fallback when no vault is configured", () => {
+  const ctx = makeProject();
   try {
     const paths = getMemoryPaths();
     assert.equal(paths.PROJECT_ROOT, ctx.root);
@@ -178,28 +156,8 @@ test("path derivation uses only repo root and ignores stale PI_MEMORY env vars",
     const status = memoryStatusText();
     assert.match(status, new RegExp(`Memory root: ${join(ctx.root, "memory").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
     assert.doesNotMatch(status, /Context:/);
-    assert.doesNotMatch(status, /stale-llm-wiki/);
-    assert.doesNotMatch(status, /Historical daily sessions dir|Subconversation dir|PI_MEMORY|Active memory:/);
+    assert.doesNotMatch(status, /Historical daily sessions dir|Subconversation dir|Active memory:/);
     assert.equal(existsSync(join(ctx.root, "memory", "sessions")), false);
-  } finally {
-    cleanup(ctx);
-  }
-});
-
-test("configurable memory roots can split ai and human durable memory", () => {
-  const ctx = makeProject();
-  try {
-    process.env.PI_MEMORY_ROOT = join(ctx.tmp, "private-memory");
-    process.env.PI_MEMORY_PAGES_DIR = join(ctx.tmp, "durable-pages");
-    process.env.PI_AI_MEMORY_DIR = join(ctx.tmp, "durable-pages", "ai-memory");
-    process.env.PI_HUMAN_MEMORY_DIR = join(ctx.tmp, "durable-pages", "human-memory");
-
-    const paths = getMemoryPaths();
-    assert.equal(paths.MEMORY_ROOT, join(ctx.tmp, "private-memory"));
-    assert.equal(paths.PAGES_DIR, join(ctx.tmp, "durable-pages"));
-    assert.equal(paths.AI_PAGES_DIR, join(ctx.tmp, "durable-pages", "ai-memory"));
-    assert.equal(paths.PERSONAL_PAGES_DIR, join(ctx.tmp, "durable-pages", "human-memory"));
-    assert.equal(paths.PINNED_MEMORY_PAGE, join(ctx.tmp, "durable-pages", "human-memory", "pinned-memory.md"));
   } finally {
     cleanup(ctx);
   }
@@ -210,13 +168,7 @@ test("voice model defaults follow saved memory config", () => {
   try {
     const vault = join(ctx.tmp, "ConfiguredVault");
     writeNazarSetupConfig({
-      memory: {
-        vaultDir: vault,
-        rootDir: join(vault, "05_Nazar", "runtime"),
-        pagesDir: vault,
-        aiPagesDir: join(vault, "05_Nazar", "llm-wiki", "wiki"),
-        humanPagesDir: vault,
-      },
+      memory: { vaultDir: vault },
     });
 
     assert.equal(defaultVoiceModelDir(), join(vault, "05_Nazar", "runtime", "state", "voice-models"));
@@ -543,7 +495,7 @@ test("NAZAR_HOME memory search uses scoped vault collections", async () => {
       },
     };
 
-    const out = await searchMemoryText(fakePi, "old note", 2, "search", "archive");
+    const out = await searchMemoryText(fakePi, "old note", 2, "archive");
     assert.equal(out, "ok\n");
 
     const qmdCalls = calls.map(([, args]) => args.slice(2));
@@ -558,18 +510,12 @@ test("NAZAR_HOME memory search uses scoped vault collections", async () => {
   }
 });
 
-test("vault memory search indexes pinned memory and advanced page overrides", async () => {
+test("vault memory search uses warm default collections", async () => {
   const ctx = makeProject();
   const calls = [];
   try {
     const vault = join(ctx.tmp, "NazarVault");
-    const pages = join(ctx.tmp, "search-root");
-    const human = join(ctx.tmp, "human-root");
-    const ai = join(ctx.tmp, "ai-root");
     process.env.NAZAR_HOME = vault;
-    process.env.PI_MEMORY_PAGES_DIR = pages;
-    process.env.PI_HUMAN_MEMORY_DIR = human;
-    process.env.PI_AI_MEMORY_DIR = ai;
     const fakePi = {
       async exec(command, args) {
         calls.push([command, args]);
@@ -580,17 +526,12 @@ test("vault memory search indexes pinned memory and advanced page overrides", as
       },
     };
 
-    await searchMemoryText(fakePi, "standing fact", 2, "search", "default");
+    await searchMemoryText(fakePi, "standing fact", 2, "default");
 
     const qmdCalls = calls.map(([, args]) => args.slice(2));
-    const collectionAdds = qmdCalls.filter((args) => args[0] === "collection" && args[1] === "add");
-    assert.ok(collectionAdds.some((args) => args[2] === pages && args[4] === QMD_COLLECTION));
-    assert.ok(collectionAdds.some((args) => args[2] === human && args[4] === "memory-personal"));
-    assert.ok(collectionAdds.some((args) => args[2] === ai && args[4] === "memory-ai"));
-    const searchedCollections = qmdCalls.filter((args) => args[0] === "search").map((args) => args[3]);
-    assert.equal(searchedCollections.includes(QMD_COLLECTION), true);
-    assert.equal(searchedCollections.includes("memory-personal"), true);
-    assert.equal(searchedCollections.includes("memory-ai"), true);
+    const searchedCollections = qmdCalls.filter((args) => args[0] === "search").map((args) => args[3]).sort();
+    assert.deepEqual(searchedCollections, ["memory-areas", "memory-inbox", "memory-llm-wiki", "memory-pinned", "memory-projects", "memory-resources"]);
+    assert.equal(searchedCollections.includes("memory-archive"), false);
   } finally {
     cleanup(ctx);
   }
@@ -610,7 +551,8 @@ test("command descriptions/help list memory surfaces without /context, /journal,
   assert.ok(memory, "memory command should be registered");
   assert.equal(commands.has("context"), false, "context command should not be registered");
   assert.equal(commands.has("journal"), false, "journal command should not be registered");
-  assert.match(memory.description, /status\|search\|query\|update\|index\|list\|ls\|get/);
+  assert.match(memory.description, /status\|search\|update\|index\|list\|ls\|get/);
+  assert.doesNotMatch(memory.description, /query/);
   assert.doesNotMatch(memory.description, /\|compact|compact\|/);
 
   let helpText = "";
@@ -627,5 +569,6 @@ test("command descriptions/help list memory surfaces without /context, /journal,
   assert.match(helpText, /\/memory ls \[path\]/);
   assert.doesNotMatch(helpText, /\/context/);
   assert.doesNotMatch(helpText, /\/journal/);
+  assert.doesNotMatch(helpText, /\/memory query/);
   assert.doesNotMatch(helpText, /\/memory compact/);
 });
