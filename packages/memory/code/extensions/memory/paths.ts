@@ -17,10 +17,6 @@ export type MemoryPaths = {
   PINNED_MEMORY_PAGE: string;
 };
 
-export const QMD_INDEX = "memory-wiki";
-export const QMD_COLLECTION = "memory-pages";
-export const QMD_CONTEXT = "Pi memory: curated durable pages under the configured Nazar vault or repo-local fallback.";
-
 function optionalPath(root: string, value?: string): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? resolve(root, trimmed) : undefined;

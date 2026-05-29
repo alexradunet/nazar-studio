@@ -48,9 +48,9 @@ export default function memoryExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "memory_status",
     label: "Memory Status",
-    description: "Inspect optional Pi memory state, durable pages, rollups, and QMD index paths.",
-    promptSnippet: "Report memory rollup status, pinned memory path, durable page paths, and QMD index status.",
-    promptGuidelines: ["Use memory_status when the user asks about generated memory, pinned memory, durable pages, or memory/index status."],
+    description: "Inspect optional Pi memory state, durable pages, rollups, and local search roots.",
+    promptSnippet: "Report memory rollup status, pinned memory path, durable page paths, and local search roots.",
+    promptGuidelines: ["Use memory_status when the user asks about generated memory, pinned memory, durable pages, or memory/search status."],
     parameters: Type.Object({}),
     async execute() {
       try {
@@ -65,12 +65,12 @@ export default function memoryExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "memory_search",
     label: "Memory Search",
-    description: "Search scoped curated Pi memory pages through QMD.",
-    promptSnippet: "Search durable memory pages using QMD/BM25.",
+    description: "Search scoped curated Pi memory pages with local markdown scanning.",
+    promptSnippet: "Search durable memory pages with dependency-free local markdown scanning.",
     promptGuidelines: [
       "Use memory_search when durable project knowledge, decisions, notes, or scoped memory are likely relevant.",
       "Use default scope for warm memory; use archive only when explicitly historical, old, or inactive memory is needed.",
-      "memory_search refreshes the local QMD index before searching.",
+      "memory_search scans local markdown directly; no external index is required.",
     ],
     parameters: Type.Object({
       query: Type.String({ description: "Search query." }),
@@ -81,7 +81,7 @@ export default function memoryExtension(pi: ExtensionAPI) {
       try {
         const scope = params.scope === "archive" ? "archive" : "default";
         const text = await truncateToolOutput(await searchMemoryText(pi, params.query, params.limit ?? 5, scope));
-        return { content: [{ type: "text", text }], details: { command: `qmd search ${JSON.stringify(params.query)}` } };
+        return { content: [{ type: "text", text }], details: { command: `local memory search ${JSON.stringify(params.query)}` } };
       } catch (error) {
         throw toolError("memory_search", error);
       }

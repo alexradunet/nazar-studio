@@ -11,7 +11,6 @@ import {
   compactMemory,
   compactSessionFile,
   durablePinnedDigest,
-  ensureMemoryIndex,
   forgetPinnedMemory,
   getRuntimePaths,
   memoryStatusText,
@@ -31,7 +30,7 @@ import {
 import { lifeReadoutText, lifeStatusText } from "../extensions/memory/life-text.ts";
 import { registerLifeTools } from "../extensions/memory/life-tools.ts";
 import { registerMemorySetupProvider } from "../extensions/memory/memory-setup.ts";
-import { getMemoryPaths, QMD_COLLECTION, QMD_CONTEXT, QMD_INDEX } from "../extensions/memory/paths.ts";
+import { getMemoryPaths } from "../extensions/memory/paths.ts";
 import { setupProviders } from "@nazar/core/setup-registry";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
@@ -285,7 +284,7 @@ test("explicit session-dir compaction recurses without any default session scan"
   const nested = join(sessionDir, "branch", "run-0", "session.jsonl");
   try {
     writeJsonl(main, [message("user", "Remember canonical memory path."), message("assistant", "Done. Updated memory path docs.")]);
-    writeJsonl(nested, [message("user", "Let's update qmd memory search."), message("assistant", "Done. Updated QMD search.")]);
+    writeJsonl(nested, [message("user", "Let's update memory search."), message("assistant", "Done. Updated memory search.")]);
 
     const dryRun = compactMemory({ sessionDir, dryRun: true });
     assert.equal(dryRun.code, 0, dryRun.text);
@@ -487,153 +486,48 @@ test("legacy memory debranding emits package-era paths", () => {
   }
 });
 
-test("QMD collection self-heals when memory-pages points at old llm-wiki/pages", async () => {
+test("memory search scans repo-local markdown without external commands", async () => {
   const ctx = makeProject();
-  const calls = [];
+  let execCalled = false;
   try {
-    const fakePi = {
-      async exec(command, args) {
-        calls.push([command, args]);
-        assert.equal(command, "qmd");
-        assert.deepEqual(args.slice(0, 2), ["--index", QMD_INDEX]);
-        const rest = args.slice(2);
-        if (rest.join(" ") === "collection list") return { code: 0, stdout: `${QMD_COLLECTION}  /home/nazar/nazar/llm-wiki/pages\n` };
-        if (rest.join(" ") === `collection show ${QMD_COLLECTION}`) {
-          return { code: 0, stdout: `Collection: ${QMD_COLLECTION}\n  Path:     /home/nazar/nazar/llm-wiki/pages\n  Pattern:  **/*.md\n` };
-        }
-        return { code: 0, stdout: "ok\n" };
-      },
-    };
-
-    await ensureMemoryIndex(fakePi);
-
-    const qmdCalls = calls.map(([, args]) => args.slice(2));
-    assert.deepEqual(qmdCalls[0], ["collection", "list"]);
-    assert.deepEqual(qmdCalls[1], ["collection", "show", QMD_COLLECTION]);
-    assert.deepEqual(qmdCalls[2], ["collection", "remove", QMD_COLLECTION]);
-    assert.deepEqual(qmdCalls[3], ["collection", "add", join(ctx.root, "memory", "pages"), "--name", QMD_COLLECTION, "--mask", "**/*.md"]);
-    assert.deepEqual(qmdCalls[4], ["context", "add", `qmd://${QMD_COLLECTION}`, QMD_CONTEXT]);
-  } finally {
-    cleanup(ctx);
-  }
-});
-
-test("QMD collection add tolerates already-existing collection race", async () => {
-  const ctx = makeProject();
-  const calls = [];
-  try {
-    const fakePi = {
-      async exec(command, args) {
-        calls.push([command, args]);
-        assert.equal(command, "qmd");
-        assert.deepEqual(args.slice(0, 2), ["--index", QMD_INDEX]);
-        const rest = args.slice(2);
-        if (rest.join(" ") === "collection list") return { code: 0, stdout: "" };
-        if (rest.join(" ") === `collection add ${join(ctx.root, "memory", "pages")} --name ${QMD_COLLECTION} --mask **/*.md`) {
-          return { code: 1, stderr: `Collection '${QMD_COLLECTION}' already exists.\nUse a different name with --name <name>\n` };
-        }
-        return { code: 0, stdout: "ok\n" };
-      },
-    };
-
-    await ensureMemoryIndex(fakePi);
-
-    const qmdCalls = calls.map(([, args]) => args.slice(2));
-    assert.deepEqual(qmdCalls[0], ["collection", "list"]);
-    assert.deepEqual(qmdCalls[1], ["collection", "add", join(ctx.root, "memory", "pages"), "--name", QMD_COLLECTION, "--mask", "**/*.md"]);
-    assert.deepEqual(qmdCalls[2], ["context", "add", `qmd://${QMD_COLLECTION}`, QMD_CONTEXT]);
-  } finally {
-    cleanup(ctx);
-  }
-});
-
-test("memory search uses the memory-pages collection only", async () => {
-  const ctx = makeProject();
-  const calls = [];
-  try {
-    const fakePi = {
-      async exec(command, args) {
-        calls.push([command, args]);
-        assert.equal(command, "qmd");
-        assert.deepEqual(args.slice(0, 2), ["--index", QMD_INDEX]);
-        const rest = args.slice(2);
-        if (rest.join(" ") === "collection list") return { code: 0, stdout: `${QMD_COLLECTION}  ${join(ctx.root, "memory", "pages")}\n` };
-        if (rest.join(" ") === `collection show ${QMD_COLLECTION}`) {
-          return { code: 0, stdout: `Collection: ${QMD_COLLECTION}\n  Path:     ${join(ctx.root, "memory", "pages")}\n  Pattern:  **/*.md\n` };
-        }
-        return { code: 0, stdout: "ok\n" };
-      },
-    };
+    const note = join(ctx.root, "memory", "pages", "personal", "remote.md");
+    mkdirSync(dirname(note), { recursive: true });
+    writeFileSync(note, "# Remote Access\n\nCanonical remote access path uses the local tunnel.\n", "utf8");
+    const fakePi = { async exec() { execCalled = true; throw new Error("should not call external search"); } };
 
     const out = await searchMemoryText(fakePi, '"remote access"', 3);
-    assert.equal(out, "ok\n");
 
-    const qmdCalls = calls.map(([, args]) => args.slice(2));
-    assert.deepEqual(qmdCalls.at(-1), ["search", "remote access", "-c", QMD_COLLECTION, "--md", "-n", "3"]);
-    for (const [, args] of calls) {
-      assert.equal(args.includes(join(ctx.root, "memory", "rollups")), false);
-      assert.equal(args.includes(join(ctx.root, "memory", "sources")), false);
-      assert.equal(args.includes(join(ctx.root, "memory", "state")), false);
-      assert.equal(args.includes(join(ctx.root, "memory", "journal")), false);
-    }
+    assert.equal(execCalled, false);
+    assert.match(out, /Backend: local markdown scan/);
+    assert.match(out, /memory\/pages\/personal\/remote\.md:1/);
+    assert.match(out, /Canonical remote access path/);
   } finally {
     cleanup(ctx);
   }
 });
 
-test("NAZAR_HOME memory search uses scoped vault collections", async () => {
+test("vault memory search keeps archive out of default scope", async () => {
   const ctx = makeProject();
-  const calls = [];
   try {
     const vault = join(ctx.tmp, "NazarVault");
     process.env.NAZAR_HOME = vault;
-    const fakePi = {
-      async exec(command, args) {
-        calls.push([command, args]);
-        assert.equal(command, "qmd");
-        assert.deepEqual(args.slice(0, 2), ["--index", QMD_INDEX]);
-        if (args.slice(2).join(" ") === "collection list") return { code: 0, stdout: "" };
-        return { code: 0, stdout: "ok\n" };
-      },
-    };
+    const warm = join(vault, "01_Projects", "warm.md");
+    const cold = join(vault, "04_Archive", "cold.md");
+    mkdirSync(dirname(warm), { recursive: true });
+    mkdirSync(dirname(cold), { recursive: true });
+    writeFileSync(warm, "# Warm\n\nCurrent standing fact for active work.\n", "utf8");
+    writeFileSync(cold, "# Cold\n\nArchived-only migration note.\n", "utf8");
 
-    const out = await searchMemoryText(fakePi, "old note", 2, "archive");
-    assert.equal(out, "ok\n");
+    const warmOut = await searchMemoryText(undefined, "standing fact", 5, "default");
+    assert.match(warmOut, /NAZAR_HOME\/01_Projects\/warm\.md/);
+    assert.doesNotMatch(warmOut, /04_Archive/);
 
-    const qmdCalls = calls.map(([, args]) => args.slice(2));
-    const addedCollections = qmdCalls
-      .filter((args) => args[0] === "collection" && args[1] === "add")
-      .map((args) => args[4])
-      .sort();
-    assert.deepEqual(addedCollections, ["memory-archive", "memory-areas", "memory-inbox", "memory-llm-wiki", "memory-pinned", "memory-projects", "memory-resources"]);
-    assert.deepEqual(qmdCalls.at(-1), ["search", "old note", "-c", "memory-archive", "--md", "-n", "2"]);
-  } finally {
-    cleanup(ctx);
-  }
-});
+    const coldDefault = await searchMemoryText(undefined, "Archived-only", 5, "default");
+    assert.match(coldDefault, /No memory results/);
+    assert.doesNotMatch(coldDefault, /cold\.md/);
 
-test("vault memory search uses warm default collections", async () => {
-  const ctx = makeProject();
-  const calls = [];
-  try {
-    const vault = join(ctx.tmp, "NazarVault");
-    process.env.NAZAR_HOME = vault;
-    const fakePi = {
-      async exec(command, args) {
-        calls.push([command, args]);
-        assert.equal(command, "qmd");
-        assert.deepEqual(args.slice(0, 2), ["--index", QMD_INDEX]);
-        if (args.slice(2).join(" ") === "collection list") return { code: 0, stdout: "" };
-        return { code: 0, stdout: "ok\n" };
-      },
-    };
-
-    await searchMemoryText(fakePi, "standing fact", 2, "default");
-
-    const qmdCalls = calls.map(([, args]) => args.slice(2));
-    const searchedCollections = qmdCalls.filter((args) => args[0] === "search").map((args) => args[3]).sort();
-    assert.deepEqual(searchedCollections, ["memory-areas", "memory-inbox", "memory-llm-wiki", "memory-pinned", "memory-projects", "memory-resources"]);
-    assert.equal(searchedCollections.includes("memory-archive"), false);
+    const coldArchive = await searchMemoryText(undefined, "Archived-only", 5, "archive");
+    assert.match(coldArchive, /NAZAR_HOME\/04_Archive\/cold\.md/);
   } finally {
     cleanup(ctx);
   }
@@ -731,7 +625,7 @@ test("command descriptions/help list memory surfaces without /context, /journal,
   assert.equal(commands.has("context"), false, "context command should not be registered");
   assert.equal(commands.has("journal"), false, "journal command should not be registered");
   assert.equal(commands.has("life"), false, "life command should not be registered separately");
-  assert.match(memory.description, /status\|search\|update\|index\|list\|ls\|get/);
+  assert.match(memory.description, /status\|search\|life\|pinned\|remember\|forget/);
   assert.match(memory.description, /\|life\|/);
   assert.doesNotMatch(memory.description, /query/);
   assert.doesNotMatch(memory.description, /\|compact|compact\|/);
@@ -746,13 +640,15 @@ test("command descriptions/help list memory surfaces without /context, /journal,
       notify() {},
     },
   });
-  assert.match(helpText, /\/memory index/);
-  assert.match(helpText, /\/memory ls \[path\]/);
+  assert.match(helpText, /\/memory search \[--scope default\|archive\]/);
+  assert.doesNotMatch(helpText, /\/memory index/);
+  assert.doesNotMatch(helpText, /\/memory ls/);
   assert.match(helpText, /\/memory life status\|readout\|profile\|goals\|goal\|reflect\|reflections/);
   assert.doesNotMatch(helpText, /^\/life/m);
   assert.doesNotMatch(helpText, /\/context/);
   assert.doesNotMatch(helpText, /\/journal/);
   assert.doesNotMatch(helpText, /\/memory query/);
+  assert.doesNotMatch(helpText, /qmd/i);
   assert.doesNotMatch(helpText, /\/memory compact/);
 });
 

@@ -9,9 +9,9 @@ Use this Agent Skill to maintain the configured Nazar memory vault and conversat
 
 ## Core rules
 
-- Treat the configured `NAZAR_HOME` vault (or explicit `PI_*` memory paths) as the durable knowledge base.
+- Treat the configured `NAZAR_HOME` vault or Nazar setup memory path as the durable knowledge base.
 - Start with `memory_status` to inspect current paths before editing files directly.
-- Prefer `/memory remember`, `/memory forget`, `/memory search`, and `/memory update` over hard-coded paths.
+- Prefer `/memory remember`, `/memory forget`, and `/memory search` over hard-coded paths.
 - Keep generated rollups generated. Do not manually edit generated rollups except for repair.
 - Put human-curated long-term facts in pinned memory, preferably through `/memory remember` inside Pi when practical.
 - Put synthesized durable knowledge in the configured durable pages/wiki locations shown by `memory_status`.
@@ -27,10 +27,6 @@ Use the native memory extension first:
 ```txt
 /memory status
 /memory search [--scope default|archive] <query>
-/memory update
-/memory index
-/memory list [path]
-/memory get <path-or-docid>
 /memory pinned
 /memory remember [user|fact|project|never] <text>
 /memory forget <unique substring>
@@ -38,8 +34,8 @@ Use the native memory extension first:
 
 Tools available to agents:
 
-- `memory_status` — inspect memory paths, rollups, pinned memory, and QMD index status.
-- `memory_search` — refresh and search durable pages through scoped QMD collections.
+- `memory_status` — inspect memory paths, rollups, pinned memory, and local search roots.
+- `memory_search` — search durable pages through dependency-free local markdown scanning.
 
 ## Janitorial workflow
 
@@ -52,10 +48,10 @@ Tools available to agents:
 3. **Preserve source context** by copying important transient reports into dated durable source notes under the configured pages/wiki directory.
 4. **Synthesize pages** in the configured durable pages/wiki area with decisions, current state, validation, open questions, and links to source notes.
 5. **Update maps/logs** if the configured vault has an index/log page.
-6. **Refresh search** after meaningful changes:
+6. **Use search** after meaningful changes to confirm pages are discoverable:
 
 ```txt
-/memory update
+/memory search <distinctive term>
 ```
 
 7. **Refresh generated rollups** only by using built-in Pi compaction when appropriate:
@@ -96,7 +92,7 @@ Before finishing memory janitorial work:
 
 - New pages and source notes are under configured external memory paths, not public repo paths.
 - Important new pages are discoverable from the vault's index/log convention when present.
-- `/memory update` has run after large page changes.
+- `/memory search <distinctive term>` finds important new pages after large page changes.
 - Built-in `/compact` has run when generated rollups should reflect the current chat.
 - The final reply lists changed files and validation commands.
 

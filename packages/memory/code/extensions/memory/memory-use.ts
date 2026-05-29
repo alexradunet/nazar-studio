@@ -1,9 +1,9 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 import { showText, truncateUtf8, trim, xdgDataHome } from "@nazar/core/shared";
-import { getMemoryPaths, QMD_COLLECTION, QMD_CONTEXT, QMD_INDEX } from "./paths.ts";
+import { getMemoryPaths } from "./paths.ts";
 import { lifeMemoryCommand, lifeMemoryUsage } from "./life-use.ts";
 import { ensureVaultScaffold, VAULT_MEMORY_DIRS } from "./vault.ts";
 
@@ -64,7 +64,7 @@ const LOW_SIGNAL_MESSAGES = new Set([
 
 const USER_DECISION_RE = /\b(canonical|remember|source of truth|prefer|rule|main language)\b/i;
 const USER_ACTION_RE = /\b(i want|we want|we will|let'?s|lets|install|add|remove|switch|move|create|implement|update|compact)\b/i;
-const USER_FEATURE_RE = /\b(memory|conversation|wiki|qmd|nazar|pi extension|pi package|typescript)\b/i;
+const USER_FEATURE_RE = /\b(memory|conversation|wiki|nazar|pi extension|pi package|typescript)\b/i;
 const ASSISTANT_MEMORY_RE = /^(done|implemented|created|updated|added|fixed|changed|installed|configured|switched|removed|validated|verified|opened|compacted|tested|web search works|test succeeded|code review|good\.|yes[ —-])\b/i;
 
 const NOISY_SUBSTRINGS = [
@@ -109,12 +109,6 @@ export type CompactOptions = {
 export type CompactResult = {
   code: number;
   text: string;
-};
-
-type ExecResult = {
-  stdout?: string;
-  stderr?: string;
-  code?: number | null;
 };
 
 function now(): Date {
@@ -814,8 +808,8 @@ export function memoryStatusText(): string {
     `Durable pages dir: ${paths.PAGES_DIR}`,
     `AI pages dir: ${paths.AI_PAGES_DIR}`,
     `Personal pages dir: ${paths.PERSONAL_PAGES_DIR}`,
-    `QMD index: ${QMD_INDEX}`,
-    `QMD collections: ${memoryCollectionSpecs(paths).map((spec) => spec.name).join(", ")}`,
+    `Search backend: local markdown scan (no external index)`,
+    `Search roots: ${memorySearchRoots(paths).map((root) => `${root.name} (${root.scopes.join("+")})`).join(", ")}`,
     `Daily chunks: ${markdownFiles(DAILY_DIR).length}`,
     `Weekly chunks: ${markdownFiles(WEEKLY_DIR).length}`,
   ].join("\n");
@@ -831,37 +825,43 @@ function unquoteWhole(value: string): string {
   return text;
 }
 
-async function qmd(pi: ExtensionAPI, args: string[], timeout = 60_000): Promise<string> {
-  const result = (await pi.exec("qmd", ["--index", QMD_INDEX, ...args], { timeout })) as ExecResult;
-  if (result.code !== 0) {
-    throw new Error(`qmd ${args.join(" ")} failed: ${trim(result.stderr) || trim(result.stdout)}`);
-  }
-  return result.stdout ?? "";
-}
-
 export type MemorySearchScope = "default" | "archive";
 
-type MemoryCollectionSpec = {
+type MemorySearchRoot = {
   name: string;
   path: string;
-  mask: string;
   scopes: MemorySearchScope[];
   description: string;
 };
 
-function memoryCollectionSpecs(paths = getMemoryPaths()): MemoryCollectionSpec[] {
+type SearchFile = {
+  path: string;
+  root: MemorySearchRoot;
+};
+
+type SearchHit = {
+  displayPath: string;
+  rootName: string;
+  line: number;
+  score: number;
+  snippet: string;
+};
+
+const MAX_LOCAL_SEARCH_RESULTS = 20;
+
+function memorySearchRoots(paths = getMemoryPaths()): MemorySearchRoot[] {
   if (!paths.VAULT_DIR) {
-    return [{ name: QMD_COLLECTION, path: paths.PAGES_DIR, mask: "**/*.md", scopes: ["default"], description: "durable memory pages" }];
+    return [{ name: "memory-pages", path: paths.PAGES_DIR, scopes: ["default"], description: "durable memory pages" }];
   }
 
   return [
-    { name: "memory-inbox", path: join(paths.VAULT_DIR, "00_Inbox"), mask: "**/*.md", scopes: ["default"], description: "shared human/AI capture inbox" },
-    { name: "memory-projects", path: join(paths.VAULT_DIR, "01_Projects"), mask: "**/*.md", scopes: ["default"], description: "active personal projects" },
-    { name: "memory-areas", path: join(paths.VAULT_DIR, "02_Areas"), mask: "**/*.md", scopes: ["default"], description: "ongoing areas and responsibilities" },
-    { name: "memory-resources", path: join(paths.VAULT_DIR, "03_Resources"), mask: "**/*.md", scopes: ["default"], description: "stable resources and references" },
-    { name: "memory-pinned", path: paths.NAZAR_DIR, mask: "pinned-memory.md", scopes: ["default"], description: "pinned durable facts/preferences" },
-    { name: "memory-llm-wiki", path: paths.LLM_WIKI_PAGES_DIR, mask: "**/*.md", scopes: ["default"], description: "AI-maintained compiled LLM wiki" },
-    { name: "memory-archive", path: join(paths.VAULT_DIR, "04_Archive"), mask: "**/*.md", scopes: ["archive"], description: "cold archived memory" },
+    { name: "memory-inbox", path: join(paths.VAULT_DIR, "00_Inbox"), scopes: ["default"], description: "shared human/AI capture inbox" },
+    { name: "memory-projects", path: join(paths.VAULT_DIR, "01_Projects"), scopes: ["default"], description: "active personal projects" },
+    { name: "memory-areas", path: join(paths.VAULT_DIR, "02_Areas"), scopes: ["default"], description: "ongoing areas and responsibilities" },
+    { name: "memory-resources", path: join(paths.VAULT_DIR, "03_Resources"), scopes: ["default"], description: "stable resources and references" },
+    { name: "memory-pinned", path: paths.PINNED_MEMORY_PAGE, scopes: ["default"], description: "pinned durable facts/preferences" },
+    { name: "memory-llm-wiki", path: paths.LLM_WIKI_PAGES_DIR, scopes: ["default"], description: "AI-maintained compiled LLM wiki" },
+    { name: "memory-archive", path: join(paths.VAULT_DIR, "04_Archive"), scopes: ["archive"], description: "cold archived memory" },
   ];
 }
 
@@ -873,98 +873,149 @@ function normalizeSearchScope(value?: string): MemorySearchScope {
   return isMemorySearchScope(value) ? value : "default";
 }
 
-function memoryCollectionsForScope(scope: MemorySearchScope, paths = getMemoryPaths()): MemoryCollectionSpec[] {
+function memoryRootsForScope(scope: MemorySearchScope, paths = getMemoryPaths()): MemorySearchRoot[] {
   const normalized = normalizeSearchScope(scope);
-  return memoryCollectionSpecs(paths).filter((spec) => spec.scopes.includes(normalized));
+  return memorySearchRoots(paths).filter((root) => root.scopes.includes(normalized));
 }
 
-function hasQmdCollection(listOutput: string, name: string): boolean {
-  return listOutput.split("\n").some((line) => line.trim().startsWith(`${name} `) || line.trim() === name);
+function slashPath(path: string): string {
+  return path.replace(/\\/g, "/");
 }
 
-function collectionShowMatchesPages(showOutput: string, pagesDir: string, mask = "**/*.md"): boolean {
-  const pathMatch = showOutput.match(/^\s*Path:\s*(.+?)\s*$/m);
-  const patternMatch = showOutput.match(/^\s*Pattern:\s*(.+?)\s*$/m);
-  if (!pathMatch) return false;
-  const shownPath = pathMatch[1].trim();
-  const shownPattern = patternMatch?.[1]?.trim() || "";
-  return resolve(shownPath) === resolve(pagesDir) && shownPattern === mask;
+function pathInside(root: string, path: string): boolean {
+  const rel = relative(root, path);
+  return rel === "" || Boolean(rel && !rel.startsWith("..") && !isAbsolute(rel));
 }
 
-async function ensureQmdCollection(pi: ExtensionAPI, spec: MemoryCollectionSpec, listOutput: string): Promise<void> {
-  let hasCollection = hasQmdCollection(listOutput, spec.name);
+function displaySearchPath(path: string, paths = getMemoryPaths()): string {
+  if (paths.VAULT_DIR && pathInside(paths.VAULT_DIR, path)) return `NAZAR_HOME/${slashPath(relative(paths.VAULT_DIR, path))}`;
+  if (pathInside(paths.PROJECT_ROOT, path)) return slashPath(relative(paths.PROJECT_ROOT, path));
+  return basename(path);
+}
 
-  if (hasCollection) {
-    const show = await qmd(pi, ["collection", "show", spec.name], 30_000).catch(() => "");
-    if (!collectionShowMatchesPages(show, spec.path, spec.mask)) {
-      await qmd(pi, ["collection", "remove", spec.name], 60_000);
-      hasCollection = false;
+function markdownFilesForRoot(root: MemorySearchRoot): string[] {
+  if (!existsSync(root.path)) return [];
+  const stats = statSync(root.path);
+  if (stats.isFile()) return root.path.endsWith(".md") ? [root.path] : [];
+  if (!stats.isDirectory()) return [];
+  return walkFiles(root.path, (path) => path.endsWith(".md")).sort();
+}
+
+function collectSearchFiles(roots: MemorySearchRoot[]): SearchFile[] {
+  const byPath = new Map<string, SearchFile>();
+  for (const root of roots) {
+    for (const path of markdownFilesForRoot(root)) {
+      const resolved = resolve(path);
+      if (!byPath.has(resolved)) byPath.set(resolved, { path: resolved, root });
     }
   }
-
-  if (!hasCollection) {
-    try {
-      await qmd(pi, ["collection", "add", spec.path, "--name", spec.name, "--mask", spec.mask], 60_000);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (!message.includes(`Collection '${spec.name}' already exists`)) throw error;
-    }
-  }
-  await qmd(pi, ["context", "add", `qmd://${spec.name}`, QMD_CONTEXT], 30_000);
+  return [...byPath.values()];
 }
 
-export async function ensureMemoryIndex(pi: ExtensionAPI): Promise<void> {
+function searchTerms(query: string): string[] {
+  const normalized = query.toLowerCase();
+  const tokens = normalized.match(/[\p{L}\p{N}_'-]+/gu)?.filter((token) => token.length >= 2) ?? [];
+  return [...new Set(tokens.length > 0 ? tokens : normalized ? [normalized] : [])];
+}
+
+function countOccurrences(text: string, needle: string): number {
+  if (!needle) return 0;
+  let count = 0;
+  let index = text.indexOf(needle);
+  while (index !== -1) {
+    count += 1;
+    index = text.indexOf(needle, index + needle.length);
+  }
+  return count;
+}
+
+function lineNumberAt(text: string, index: number): number {
+  return text.slice(0, Math.max(0, index)).split(/\r?\n/).length;
+}
+
+function snippetAt(text: string, index: number): string {
+  const start = Math.max(0, index - 120);
+  const end = Math.min(text.length, index + 220);
+  const prefix = start > 0 ? "…" : "";
+  const suffix = end < text.length ? "…" : "";
+  return `${prefix}${text.slice(start, end).replace(/\s+/g, " ").trim()}${suffix}`;
+}
+
+function firstMatchIndex(lowerText: string, exact: string, terms: string[]): number {
+  const exactIndex = exact ? lowerText.indexOf(exact) : -1;
+  if (exactIndex !== -1) return exactIndex;
+  const indexes = terms.map((term) => lowerText.indexOf(term)).filter((index) => index !== -1);
+  return indexes.length > 0 ? Math.min(...indexes) : -1;
+}
+
+function scoreSearchFile(file: SearchFile, query: string, terms: string[], paths = getMemoryPaths()): SearchHit | undefined {
+  let text = "";
+  try {
+    text = readFileSync(file.path, "utf8");
+  } catch {
+    return undefined;
+  }
+
+  const exact = query.toLowerCase();
+  const lowerText = text.toLowerCase();
+  const displayPath = displaySearchPath(file.path, paths);
+  const lowerPath = displayPath.toLowerCase();
+  const headings = text.split(/\r?\n/).filter((line) => line.trim().startsWith("#")).join("\n").toLowerCase();
+  let score = exact && lowerText.includes(exact) ? 12 : 0;
+  if (exact && lowerPath.includes(exact)) score += 10;
+  if (exact && headings.includes(exact)) score += 8;
+
+  for (const term of terms) {
+    score += countOccurrences(lowerPath, term) * 8;
+    score += countOccurrences(headings, term) * 4;
+    score += Math.min(countOccurrences(lowerText, term), 20);
+  }
+  if (terms.length > 1 && terms.every((term) => lowerText.includes(term) || lowerPath.includes(term))) score += 10;
+  if (score <= 0) return undefined;
+
+  const index = firstMatchIndex(lowerText, exact, terms);
+  return {
+    displayPath,
+    rootName: file.root.name,
+    line: index >= 0 ? lineNumberAt(text, index) : 1,
+    score,
+    snippet: index >= 0 ? snippetAt(text, index) : text.split(/\r?\n/).find((line) => line.trim())?.trim() || "(empty markdown file)",
+  };
+}
+
+export async function searchMemoryText(_pi: ExtensionAPI | undefined, query: string, limit = 5, scope: MemorySearchScope = "default"): Promise<string> {
   ensureDirs();
-  const list = await qmd(pi, ["collection", "list"], 30_000).catch(() => "");
-  for (const spec of memoryCollectionSpecs()) await ensureQmdCollection(pi, spec, list);
-}
-
-export async function updateMemoryIndexText(pi: ExtensionAPI): Promise<string> {
-  await ensureMemoryIndex(pi);
-  return qmd(pi, ["update"], 120_000);
-}
-
-export async function searchMemoryText(pi: ExtensionAPI, query: string, limit = 5, scope: MemorySearchScope = "default"): Promise<string> {
   const normalizedQuery = unquoteWhole(query);
-  await updateMemoryIndexText(pi);
-  const specs = memoryCollectionsForScope(scope);
-  if (specs.length === 0) return `No memory collections are configured for scope '${scope}'.\n`;
-  if (specs.length === 1) return qmd(pi, ["search", normalizedQuery, "-c", specs[0].name, "--md", "-n", String(limit)], 120_000);
+  if (!normalizedQuery) return "Usage: memory_search query must not be empty.\n";
 
-  const chunks: string[] = [];
-  for (const spec of specs) {
-    const out = await qmd(pi, ["search", normalizedQuery, "-c", spec.name, "--md", "-n", String(limit)], 120_000);
-    if (out.trim()) chunks.push(`## ${spec.name}\n\n${out.trim()}\n`);
+  const paths = getMemoryPaths();
+  const roots = memoryRootsForScope(scope, paths);
+  const files = collectSearchFiles(roots);
+  const terms = searchTerms(normalizedQuery);
+  const maxResults = Math.max(1, Math.min(MAX_LOCAL_SEARCH_RESULTS, Math.floor(limit) || 5));
+  const hits = files
+    .map((file) => scoreSearchFile(file, normalizedQuery, terms, paths))
+    .filter((hit): hit is SearchHit => Boolean(hit))
+    .sort((a, b) => b.score - a.score || a.displayPath.localeCompare(b.displayPath))
+    .slice(0, maxResults);
+
+  const header = [`Memory search (${scope}) for "${normalizedQuery}"`, `Backend: local markdown scan; searched ${files.length} file(s) across ${roots.length} root(s).`, ""];
+  if (hits.length === 0) {
+    const searched = roots.length > 0 ? roots.map((root) => `- ${root.name}: ${root.path}`).join("\n") : "- (no roots configured)";
+    return `${header.join("\n")}No memory results.\n\nSearched roots:\n${searched}\n`;
   }
-  return chunks.length > 0 ? chunks.join("\n") : "No memory results.\n";
-}
 
-export async function memoryIndexStatusText(pi: ExtensionAPI): Promise<string> {
-  await ensureMemoryIndex(pi);
-  return qmd(pi, ["status"], 30_000);
-}
-
-export async function listMemoryIndexText(pi: ExtensionAPI, path = ""): Promise<string> {
-  await ensureMemoryIndex(pi);
-  const specs = memoryCollectionSpecs();
-  const target = unquoteWhole(path);
-  if (!target && specs.length > 1) {
-    return [`Memory QMD collections:`, ...specs.map((spec) => `- ${spec.name}: ${spec.path} (${spec.scopes.join(", ")}) — ${spec.description}`), ""].join("\n");
-  }
-  const collectionNames = new Set(specs.map((spec) => spec.name));
-  const firstPart = target.split(/[\\/]/, 1)[0];
-  const qmdTarget = collectionNames.has(firstPart) ? target : `${specs[0].name}${target ? `/${target}` : ""}`;
-  return qmd(pi, ["ls", qmdTarget], 30_000);
-}
-
-export async function getMemoryIndexText(pi: ExtensionAPI, target: string): Promise<string> {
-  await ensureMemoryIndex(pi);
-  return qmd(pi, ["get", unquoteWhole(target)], 30_000);
+  const lines = [...header];
+  hits.forEach((hit, index) => {
+    lines.push(`${index + 1}. \`${hit.displayPath}:${hit.line}\` — ${hit.rootName}, score ${hit.score}`);
+    lines.push(`   ${hit.snippet}`);
+  });
+  return `${lines.join("\n")}\n`;
 }
 
 function memoryUsage(): string {
   const paths = getMemoryPaths();
-  return `/memory - manage Pi memory\n\nUsage:\n  /memory status\n  /memory search [--scope default|archive] <query>\n  /memory update\n  /memory index\n  /memory list [path]\n  /memory ls [path]\n  /memory get <path-or-docid>\n  /memory life status|readout|profile|goals|goal|reflect|reflections\n  /memory pinned\n  /memory remember [user|fact|project|never] <text>\n  /memory forget <unique substring>\n\nUse Pi's built-in /compact command to compact the current chat. After successful built-in compaction, this extension refreshes generated rollups in ${paths.ROLLUPS_DIR}.\nPinned memory: ${paths.PINNED_MEMORY_PAGE}\nDurable/search root: ${paths.PAGES_DIR}\nQMD index: ${QMD_INDEX}, collections: ${memoryCollectionSpecs(paths).map((spec) => spec.name).join(", ")}\n\nLife OS continuity:\n${lifeMemoryUsage()}`;
+  return `/memory - manage Pi memory\n\nUsage:\n  /memory status\n  /memory search [--scope default|archive] <query>\n  /memory life status|readout|profile|goals|goal|reflect|reflections\n  /memory pinned\n  /memory remember [user|fact|project|never] <text>\n  /memory forget <unique substring>\n\nUse Pi's built-in /compact command to compact the current chat. After successful built-in compaction, this extension refreshes generated rollups in ${paths.ROLLUPS_DIR}.\nPinned memory: ${paths.PINNED_MEMORY_PAGE}\nSearch backend: local markdown scan\nSearch roots:\n${memorySearchRoots(paths).map((root) => `- ${root.name}: ${root.path} (${root.scopes.join(", ")})`).join("\n")}\n\nLife OS continuity:\n${lifeMemoryUsage()}`;
 }
 
 function parseSearchCommandArgs(args: string[]): { query: string; scope: MemorySearchScope; invalidScope?: string } {
@@ -991,7 +1042,7 @@ function parseSearchCommandArgs(args: string[]): { query: string; scope: MemoryS
 
 export function registerMemoryUse(pi: ExtensionAPI): void {
   pi.registerCommand("memory", {
-    description: "Manage Pi memory: /memory status|search|update|index|list|ls|get|life|pinned|remember|forget",
+    description: "Manage Pi memory: /memory status|search|life|pinned|remember|forget",
     handler: async (args, ctx) => {
       const parts = args.trim().split(/\s+/).filter(Boolean);
       const command = parts[0] || "status";
@@ -1012,26 +1063,6 @@ export function registerMemoryUse(pi: ExtensionAPI): void {
         return;
       }
 
-      if (command === "update" || command === "refresh") {
-        await showText(ctx, "memory", await updateMemoryIndexText(pi), "Memory index updated");
-        return;
-      }
-
-      if (command === "index" || command === "qmd-status") {
-        await showText(ctx, "memory", await memoryIndexStatusText(pi), "Memory index status updated");
-        return;
-      }
-
-      if (command === "list" || command === "ls") {
-        await showText(ctx, "memory", await listMemoryIndexText(pi, rest.join(" ").trim()), "Memory pages listed");
-        return;
-      }
-
-      if (command === "get") {
-        const target = rest.join(" ").trim();
-        await showText(ctx, "memory", target ? await getMemoryIndexText(pi, target) : "Usage: /memory get <path-or-docid>", target ? "Memory page loaded" : "Memory get needs a target");
-        return;
-      }
 
       if (command === "life") {
         const result = lifeMemoryCommand(rest);

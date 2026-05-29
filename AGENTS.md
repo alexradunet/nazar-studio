@@ -60,9 +60,9 @@ Nazar follows the design philosophy of Pi (the minimal terminal coding agent by 
 
 ## Known limitations & deferred work
 
-- `packages/memory/code/extensions/memory/memory-use.ts` is oversized; a pure decomposition into `rollups.ts`/`pinned.ts`/`sessions.ts`/`qmd.ts` is deferred — do it as a behavior-free refactor, not mixed with fixes.
+- `packages/memory/code/extensions/memory/memory-use.ts` is oversized; a pure decomposition into `rollups.ts`/`pinned.ts`/`sessions.ts`/`search.ts` is deferred — do it as a behavior-free refactor, not mixed with fixes.
 - The memory-worthiness heuristic is English/verb-prefix-bound by design (deterministic + offline). An opt-in LLM summarizer is a possible future hook, not a default.
-- Generated rollups are not QMD-indexed; monthly rollups are no longer generated (legacy files are left untouched).
+- `memory_search` uses dependency-free local markdown scanning; monthly rollups are no longer generated (legacy files are left untouched).
 - `truncateToolOutput()` uses the Pi SDK truncation helpers when present and a local byte+line fallback otherwise, because the SDK is a peer dependency not installed in this repo.
 - Legacy `debrandMemoryText()` migration shim is scheduled for removal after 2026-08-01.
 

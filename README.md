@@ -102,7 +102,7 @@ Nazar is opinionated about *where things live* but agnostic about *how the host 
 
 **Packages are TypeScript modules.** Each package ships raw `.ts` Pi extensions plus optional skills/assets. Add or remove capabilities by installing or removing the corresponding Pi package.
 
-**Host setup is your problem.** Nazar does not ship installers, container images, or OS configuration. Install Node.js, QMD, GitHub CLI, etc. through your platform's package manager (`apt`, `dnf`, `brew`, `winget`, `nix-env`). Runtime assumptions belong in extension code, settings, or environment variables.
+**Host setup is your problem.** Nazar does not ship installers, container images, or OS configuration. Install Node.js, GitHub CLI, etc. through your platform's package manager (`apt`, `dnf`, `brew`, `winget`, `nix-env`). Runtime assumptions belong in extension code, settings, or environment variables.
 
 ---
 

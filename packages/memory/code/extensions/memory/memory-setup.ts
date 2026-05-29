@@ -27,7 +27,7 @@ function memoryConfigSummary(memory: ReturnType<typeof memoryConfigFromVault>): 
     "",
     "Derived paths:",
     `- Runtime/state: ${join(memory.vaultDir, "05_Nazar", "runtime")}`,
-    `- QMD/search root: ${memory.vaultDir}`,
+    `- Local search root: ${memory.vaultDir}`,
     `- AI/LLM wiki: ${join(memory.vaultDir, "05_Nazar", "llm-wiki", "wiki")}`,
     `- Human Obsidian vault: ${memory.vaultDir}`,
   ].join("\n");
