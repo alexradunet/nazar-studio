@@ -12,6 +12,9 @@
   "pi": {
     "extensions": [
       "./code/extensions/nazar.ts"
+    ],
+    "skills": [
+      "./code/extensions/nazar/skills"
     ]
   },
   "exports": {
@@ -20,7 +23,8 @@
     "./setup-registry": "./code/extensions/nazar/setup-registry.ts"
   },
   "files": [
-    "code/extensions/**/*.ts"
+    "code/extensions/**/*.ts",
+    "code/extensions/nazar/skills/**"
   ],
   "scripts": {
     "test": "node --test code/tests/*.test.mjs",

@@ -28,6 +28,7 @@ test("core setup is registry-driven and feature-free", () => {
 
   const corePackage = JSON.parse(source("packages/core/package.json"));
   assert.equal(Object.hasOwn(corePackage.exports, "./transcriber"), false);
+  assert.deepEqual(corePackage.pi.skills, ["./code/extensions/nazar/skills"]);
 
   const setupStore = source("packages/core/code/extensions/nazar/setup-store.ts");
   assert.doesNotMatch(setupStore, /voice\?:/);

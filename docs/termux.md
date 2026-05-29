@@ -162,7 +162,23 @@ Run Syncthing from Termux if you are not using the Android app:
 syncthing
 ```
 
-## 8. Verify
+## 8. Agent-guided audit or repair
+
+If you want Pi to configure the device or check whether you missed a step, invoke the bundled `termux-setup` skill and ask for an audit or repair, for example:
+
+```txt
+/skill:termux-setup audit this Termux host
+```
+
+or:
+
+```txt
+/skill:termux-setup configure this Pixel 6a as the always-on Syncthing hub
+```
+
+The skill checks Termux packages, Pi/Nazar install state, vault/session paths, host-local `AGENTS.md` and `current_host.md`, and Syncthing readiness.
+
+## 9. Verify
 
 Inside Pi:
 

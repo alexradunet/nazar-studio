@@ -21,7 +21,7 @@ Nazar is a TypeScript Pi.Dev extension product currently shipped as two canonica
 
 ## What's in the suite
 
-Two Pi packages, with one memory-maintenance Agent Skill:
+Two Pi packages, with setup and memory-maintenance Agent Skills:
 
 ### Extensions
 
@@ -32,6 +32,7 @@ Two Pi packages, with one memory-maintenance Agent Skill:
 
 ### Skills
 
+- **`termux-setup`** — Agent Skill bundled with `@nazar/core` for agent-guided Termux setup, audit, and repair.
 - **`memory-janitor`** — Agent Skill bundled with `@nazar/memory` for memory-vault curation and durable knowledge hygiene.
 
 ---
@@ -65,7 +66,7 @@ Then run setup inside the agent:
 /nazar setup all
 ```
 
-For memory-only setup, use `/nazar setup memory`. For synced Pi conversations, use `/nazar setup sessions`; this configures Pi's `sessionDir`, adds host-local shell exports for `NAZAR_HOME` and `PI_CODING_AGENT_SESSION_DIR`, and adds a `nazar` shortcut pointing at your checkout.
+For memory-only setup, use `/nazar setup memory`. For synced Pi conversations, use `/nazar setup sessions`; this configures Pi's `sessionDir`, adds host-local shell exports for `NAZAR_HOME` and `PI_CODING_AGENT_SESSION_DIR`, and adds a `nazar` shortcut pointing at your checkout. For agent-guided Termux setup or audit, invoke the `termux-setup` skill.
 
 Nazar will scaffold a PARA-style vault structure if one doesn't exist:
 

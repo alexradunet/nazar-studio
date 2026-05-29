@@ -4,6 +4,7 @@
     "../packages/memory/code/extensions/memory.ts"
   ],
   "skills": [
+    "../packages/core/code/extensions/nazar/skills",
     "../packages/memory/code/extensions/memory/skills"
   ],
   "packages": [
