@@ -49,7 +49,7 @@ export function registerLifeTools(pi: ExtensionAPI): void {
       section: Type.Optional(StringEnum(["all", "profile", "goals", "reflections"] as const)),
       maxGoals: Type.Optional(Type.Number({ description: "Maximum goals to include. Default: 8." })),
       maxReflections: Type.Optional(Type.Number({ description: "Maximum reflections to include. Default: 8." })),
-      maxBytes: Type.Optional(Type.Number({ description: "Maximum UTF-8 bytes in the readout. Default: 12000." })),
+      maxBytes: Type.Optional(Type.Number({ description: "Maximum UTF-8 bytes in the readout. Default: 8192." })),
     }),
     async execute(_toolCallId, params) {
       try {

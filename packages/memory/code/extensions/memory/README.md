@@ -6,8 +6,8 @@ Implementation modules for the project-local Pi memory extension.
 
 - `paths.ts` — derives memory paths from the project root, optional `NAZAR_HOME`, optional Nazar setup config, and repo-local development fallback.
 - `memory-use.ts` — implements pinned memory, generated rollups, dependency-free local markdown search, durable-memory system-prompt injection, and `/memory` command helpers.
-- `life-state.ts` — owns versioned private Life OS continuity state under `getMemoryPaths().STATE_DIR/life/life.json`.
-- `life-text.ts` — renders bounded Life OS status/readouts for command and tool consumers.
+- `life-state.ts` — owns versioned private Life OS continuity state under `getMemoryPaths().STATE_DIR/life/life.json` and projects a read-only `life.md` beside the control plane on every write.
+- `life-text.ts` — renders bounded Life OS status/readouts for command and tool consumers and the vault-facing `life.md` projection.
 - `life-use.ts` — handles the `/memory life ...` command namespace without registering a top-level `/life` command.
 - `life-tools.ts` — registers focused Life OS model tools for on-demand readout and narrow profile/goal/reflection updates.
 - `vault.ts` — creates the portable vault scaffold and vault-local guidance files.
@@ -34,7 +34,7 @@ When `NAZAR_HOME` is set, memory paths are derived from it:
 - AI-maintained compiled wiki → `$NAZAR_HOME/05_Nazar/llm-wiki/wiki`
 - human-authored memory pages → `$NAZAR_HOME`
 
-`05_Nazar/llm-wiki/wiki` stores AI-maintained compiled wiki pages with `index.md` and `log.md`. `05_Nazar/runtime` stores generated transferable state (`rollups`, `state`, and private Life OS continuity JSON).
+`05_Nazar/llm-wiki/wiki` stores AI-maintained compiled wiki pages with `index.md` and `log.md`. `05_Nazar/life.md` is a generated read-only Life OS projection for Obsidian browsing; canonical Life OS state stays in `05_Nazar/runtime/state/life/life.json`. `05_Nazar/runtime` stores generated transferable state (`rollups`, `state`, and private Life OS continuity JSON).
 
 ## Repository fallback
 

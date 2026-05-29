@@ -1,8 +1,9 @@
-import { existsSync, readFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 
 import { writePrivateJsonSync } from "@nazar/core/shared";
 
+import { lifeProjectionText } from "./life-text.ts";
 import { getMemoryPaths } from "./paths.ts";
 
 export const LIFE_STATE_VERSION = 1;
@@ -195,6 +196,16 @@ export function lifeStatePath(): string {
   return join(getMemoryPaths().STATE_DIR, "life", "life.json");
 }
 
+export function lifeMarkdownPath(): string {
+  return join(getMemoryPaths().NAZAR_DIR, "life.md");
+}
+
+function writeLifeProjection(state: LifeState): void {
+  const path = lifeMarkdownPath();
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, `${lifeProjectionText(state)}\n`, "utf8");
+}
+
 export function normalizeLifeState(value: unknown): LifeState {
   const object = asObject(value, "life state");
   if (object.schemaVersion !== LIFE_STATE_VERSION) throw new Error(`unsupported schemaVersion '${String(object.schemaVersion)}'`);
@@ -220,6 +231,7 @@ export function readLifeState(): LifeState {
 export function writeLifeState(state: LifeState, now = new Date()): LifeState {
   const next = normalizeLifeState({ ...state, schemaVersion: LIFE_STATE_VERSION, updatedAt: isoNow(now) });
   writePrivateJsonSync(lifeStatePath(), next);
+  writeLifeProjection(next);
   return next;
 }
 
