@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { hasInteractiveUi, truncateToolOutput, truncateUtf8 } from "../extensions/shared.ts";
+import { nazarSetupConfigPath, writeNazarSetupConfig } from "../extensions/nazar/setup-store.ts";
 import { registerSetupProvider, setupProviders } from "../extensions/nazar/setup-registry.ts";
 
 test("interactive UI guard treats missing contexts as headless", () => {
@@ -23,6 +27,33 @@ test("setup provider cleanup does not remove newer same-id registrations", () =>
     cleanupSecond();
   }
   assert.equal(setupProviders().some((provider) => provider.id === id), false);
+});
+
+test("setup config rewrites only supported fields", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "pi-core-setup-test-"));
+  const previousConfigDir = process.env.NAZAR_CONFIG_DIR;
+  try {
+    process.env.NAZAR_CONFIG_DIR = join(tmp, "config");
+    const path = nazarSetupConfigPath();
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, JSON.stringify({
+      version: 1,
+      profile: "laptop",
+      memory: { vaultDir: join(tmp, "Vault") },
+      removedCapability: { enabled: true },
+    }), "utf8");
+
+    const next = writeNazarSetupConfig({ profile: "desktop" });
+    const saved = JSON.parse(readFileSync(path, "utf8"));
+
+    assert.equal(next.profile, "desktop");
+    assert.deepEqual(Object.keys(saved).sort(), ["memory", "profile", "updatedAt", "version"]);
+    assert.equal(saved.memory.vaultDir, join(tmp, "Vault"));
+  } finally {
+    if (previousConfigDir === undefined) delete process.env.NAZAR_CONFIG_DIR;
+    else process.env.NAZAR_CONFIG_DIR = previousConfigDir;
+    rmSync(tmp, { recursive: true, force: true });
+  }
 });
 
 test("tool output truncation caps text at 50KB", async () => {

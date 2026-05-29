@@ -69,25 +69,16 @@ export function readNazarSetupConfig(): NazarSetupConfig {
   return parseNazarSetupConfig(false);
 }
 
-function stripRemovedFeatureConfig<T extends Record<string, unknown>>(value: T): T {
-  const next = { ...value };
-  for (const key of ["spot" + "ify", "whats" + "app", "voice"]) delete next[key];
-  return next;
-}
-
 export function writeNazarSetupConfig(update: Partial<NazarSetupConfig>): NazarSetupConfig {
   const current = parseNazarSetupConfig(true);
   const vaultDir = update.memory?.vaultDir?.trim() || current.memory?.vaultDir?.trim();
-  const memory = vaultDir ? { vaultDir: resolve(vaultDir) } : undefined;
-  const currentConfig = stripRemovedFeatureConfig(current as NazarSetupConfig & Record<string, unknown>);
-  const updateConfig = stripRemovedFeatureConfig(update as Partial<NazarSetupConfig> & Record<string, unknown>);
   const next: NazarSetupConfig = {
-    ...currentConfig,
-    ...updateConfig,
     version: 1,
-    memory,
     updatedAt: new Date().toISOString(),
   };
+  const profile = update.profile || current.profile;
+  if (profile) next.profile = profile;
+  if (vaultDir) next.memory = { vaultDir: resolve(vaultDir) };
   writePrivateJsonSync(nazarSetupConfigPath(), next);
   return next;
 }
