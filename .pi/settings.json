@@ -4,7 +4,6 @@
     "../packages/memory/code/extensions/memory.ts"
   ],
   "skills": [
-    "../packages/core/code/skills",
     "../packages/memory/code/extensions/memory/skills"
   ],
   "packages": [

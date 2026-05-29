@@ -178,7 +178,7 @@
 
     <section aria-labelledby="extensions-heading">
       <h2 id="extensions-heading">What's in the suite</h2>
-      <p class="intro" style="margin-bottom: var(--space-md); max-width: 720px;">Two core extensions and two starter Agent Skills. All registered with Pi.Dev through <code>.pi/settings.json</code>.</p>
+      <p class="intro" style="margin-bottom: var(--space-md); max-width: 720px;">Two Pi packages and one memory-maintenance Agent Skill. All registered with Pi.Dev through <code>.pi/settings.json</code>.</p>
 
       <div class="card-grid">
 
@@ -187,7 +187,7 @@
             <h3 class="card-name mono">nazar</h3>
             <span class="card-status muted">Setup</span>
           </header>
-          <p>Post-install setup and status across the rest of the suite. Configures the memory vault, checks integrations, surfaces what's missing.</p>
+          <p>Post-install setup and status across the rest of the suite. Configures the memory vault and surfaces installed package status.</p>
           <ul class="card-tags">
             <li>/nazar-setup</li>
             <li>/nazar-status</li>
@@ -210,10 +210,10 @@
 
         <article class="card">
           <header class="card-head">
-            <h3 class="card-name mono">code/skills/</h3>
-            <span class="card-status muted">Skills</span>
+            <h3 class="card-name mono">memory-janitor</h3>
+            <span class="card-status muted">Skill</span>
           </header>
-          <p>Standalone Agent Skills bundled with the suite. Currently <code>github-manager</code> (repo + workflow automation) and <code>windows-setup</code> (post-install for winget-based hosts).</p>
+          <p>Agent Skill bundled with <code>@nazar/memory</code> for vault curation and durable knowledge hygiene.</p>
         </article>
 
       </div>
@@ -233,8 +233,9 @@
       <div class="step">
         <p class="step-label">Step 2</p>
         <h3>Install Nazar</h3>
-<pre>pi install @nazar/nazar-pi</pre>
-        <p>This registers the core and memory extensions in your Pi settings.</p>
+<pre>pi install npm:@nazar/core
+pi install npm:@nazar/memory</pre>
+        <p>This registers the core and memory packages in your Pi settings.</p>
       </div>
 
       <div class="step">
@@ -264,7 +265,7 @@
         <li><strong>Pi.Dev is the runtime.</strong> Extensions register with the Pi extension API. No separate daemon, no service to install.</li>
         <li><strong>Your Obsidian vault is the database.</strong> Personal memory lives in your vault. The <code>05_Nazar/</code> directory is the AI/system control plane.</li>
         <li><strong>Extensions are TypeScript modules.</strong> Each is a single <code>.ts</code> file plus an optional sub-directory. Edit <code>.pi/settings.json</code> to add or remove.</li>
-        <li><strong>Host setup is your problem.</strong> Install Node.js, GitHub CLI etc. through <code>apt</code> / <code>dnf</code> / <code>brew</code> / <code>winget</code> / <code>nix-env</code>.</li>
+        <li><strong>Host setup is your problem.</strong> Install Node.js and any optional tools you personally need through <code>apt</code> / <code>dnf</code> / <code>brew</code> / <code>winget</code> / <code>nix-env</code>.</li>
       </ul>
 
       <p class="step-label" style="margin-bottom: 6px;">Vault structure (scaffolded by /nazar-setup)</p>

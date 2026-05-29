@@ -21,7 +21,7 @@ Nazar is a TypeScript Pi.Dev extension product currently split into two installa
 
 ## What's in the suite
 
-Two Pi packages and two starter Agent Skills:
+Two Pi packages, with one memory-maintenance Agent Skill:
 
 ### Extensions
 
@@ -32,8 +32,7 @@ Two Pi packages and two starter Agent Skills:
 
 ### Skills
 
-- **`github-manager`** — Agent Skill for managing GitHub repos and workflows.
-- **`windows-setup`** — Windows-specific post-install helper for `winget`-installed dependencies.
+- **`memory-janitor`** — Agent Skill bundled with `@nazar/memory` for memory-vault curation and durable knowledge hygiene.
 
 ---
 
@@ -102,7 +101,7 @@ Nazar is opinionated about *where things live* but agnostic about *how the host 
 
 **Packages are TypeScript modules.** Each package ships raw `.ts` Pi extensions plus optional skills/assets. Add or remove capabilities by installing or removing the corresponding Pi package.
 
-**Host setup is your problem.** Nazar does not ship installers, container images, or OS configuration. Install Node.js, GitHub CLI, etc. through your platform's package manager (`apt`, `dnf`, `brew`, `winget`, `nix-env`). Runtime assumptions belong in extension code, settings, or environment variables.
+**Host setup is your problem.** Nazar does not ship installers, container images, or OS configuration. Install Node.js and any optional tools you personally need through your platform's package manager (`apt`, `dnf`, `brew`, `winget`, `nix-env`). Runtime assumptions belong in extension code, settings, or environment variables.
 
 ---
 

@@ -112,7 +112,7 @@ test("project Pi settings load workspace package resources and no repo sessionDi
     "../packages/core/code/extensions/nazar.ts",
     "../packages/memory/code/extensions/memory.ts",
   ]);
-  assert.deepEqual(settings.skills, ["../packages/core/code/skills", "../packages/memory/code/extensions/memory/skills"]);
+  assert.deepEqual(settings.skills, ["../packages/memory/code/extensions/memory/skills"]);
   assert.equal(Object.hasOwn(settings, "sessionDir"), false);
   assert.equal(settings.packages.includes("npm:pi-mcp-adapter"), false);
   assert.equal(settings.packages.includes("npm:pi-web-access"), false);
@@ -128,7 +128,7 @@ test("workspace packages expose Nazar Pi package resources", () => {
   const memory = JSON.parse(readFileSync(resolve(repoRoot, "packages", "memory", "package.json"), "utf8"));
 
   assert.deepEqual(core.pi.extensions, ["./code/extensions/nazar.ts"]);
-  assert.deepEqual(core.pi.skills, ["./code/skills"]);
+  assert.equal(Object.hasOwn(core.pi, "skills"), false);
   assert.deepEqual(memory.pi.extensions, ["./code/extensions/memory.ts"]);
   assert.deepEqual(memory.pi.skills, ["./code/extensions/memory/skills"]);
   assert.equal(existsSync(resolve(repoRoot, "packages", "voice")), false);
