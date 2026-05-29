@@ -10,12 +10,14 @@ import {
   searchMemoryText,
 } from "./memory/memory-use.ts";
 import { registerMemorySetupProvider } from "./memory/memory-setup.ts";
+import { registerLifeTools } from "./memory/life-tools.ts";
 import { hasInteractiveUi, toolError, truncateToolOutput } from "@nazar/core/shared";
 
 export default function memoryExtension(pi: ExtensionAPI) {
   const unregisterMemorySetupProvider = registerMemorySetupProvider();
   pi.on("session_shutdown", unregisterMemorySetupProvider);
   registerMemoryUse(pi);
+  registerLifeTools(pi);
 
   // Append durable memory to the system prompt (cache-stable) instead of injecting
   // a per-turn message. Skips injection when pinned memory is still the empty template.

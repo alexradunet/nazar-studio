@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import memoryExtension from "../extensions/memory.ts";
 import {
   buildDurableMemoryContext,
   compactMemory,
@@ -18,6 +19,17 @@ import {
   rememberPinnedMemory,
   searchMemoryText,
 } from "../extensions/memory/memory-use.ts";
+import {
+  addLifeReflection,
+  lifeStatePath,
+  readLifeState,
+  removeLifeGoal,
+  resetLifeState,
+  setLifeProfileField,
+  upsertLifeGoal,
+} from "../extensions/memory/life-state.ts";
+import { lifeReadoutText, lifeStatusText } from "../extensions/memory/life-text.ts";
+import { registerLifeTools } from "../extensions/memory/life-tools.ts";
 import { registerMemorySetupProvider } from "../extensions/memory/memory-setup.ts";
 import { getMemoryPaths, QMD_COLLECTION, QMD_CONTEXT, QMD_INDEX } from "../extensions/memory/paths.ts";
 import { setupProviders } from "@nazar/core/setup-registry";
@@ -152,6 +164,7 @@ test("path derivation uses repo-local fallback when no vault is configured", () 
 
     const status = memoryStatusText();
     assert.match(status, new RegExp(`Memory root: ${join(ctx.root, "memory").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+    assert.match(status, new RegExp(`State dir: ${join(ctx.root, "memory", "state").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
     assert.doesNotMatch(status, /Code root:/);
     assert.doesNotMatch(status, /Context:/);
     assert.doesNotMatch(status, /Historical daily sessions dir|Subconversation dir|Active memory:/);
@@ -346,6 +359,75 @@ test("durable memory digest includes closed daily rollup bullets when present", 
     const digest = buildDurableMemoryContext();
     assert.match(digest, /Recent daily rollup \(2026-05-20\)/);
     assert.match(digest, /Updated memory rollups/);
+  } finally {
+    cleanup(ctx);
+  }
+});
+
+test("Life OS state uses versioned private state under memory STATE_DIR", () => {
+  const ctx = makeProject();
+  try {
+    setLifeProfileField("Name", "Alex");
+    const goal = upsertLifeGoal({ name: "Ship Life OS", progress: 20, note: "MVP scoped" }).goal;
+    addLifeReflection({ text: "Win: research and design are aligned", tags: ["win", "design"] });
+
+    const path = lifeStatePath();
+    assert.equal(path, join(ctx.root, "memory", "state", "life", "life.json"));
+    assert.equal(existsSync(path), true);
+
+    const raw = JSON.parse(readFileSync(path, "utf8"));
+    assert.equal(raw.schemaVersion, 1);
+    assert.equal(raw.profile.name, "Alex");
+    assert.equal(raw.goals[0].id, goal.id);
+    assert.equal(raw.reflections.length, 1);
+
+    const state = readLifeState();
+    assert.equal(state.profile.name, "Alex");
+    assert.equal(state.goals[0].name, "Ship Life OS");
+    assert.equal(state.reflections[0].tags.includes("design"), true);
+  } finally {
+    cleanup(ctx);
+  }
+});
+
+test("Life OS state is private and excluded from durable prompt context by default", () => {
+  const ctx = makeProject();
+  try {
+    setLifeProfileField("Name", "Alex");
+    upsertLifeGoal({ name: "Ship private continuity" });
+    addLifeReflection({ text: "This reflection should stay on demand." });
+
+    const digest = buildDurableMemoryContext();
+    assert.equal(digest, "");
+  } finally {
+    cleanup(ctx);
+  }
+});
+
+test("Life OS readouts are bounded and reversible with explicit ids", () => {
+  const ctx = makeProject();
+  try {
+    setLifeProfileField("Name", "Alex");
+    const first = upsertLifeGoal({ name: "Ship Life OS", progress: 10 }).goal;
+    upsertLifeGoal({ name: "Write docs", status: "paused" });
+    addLifeReflection({ text: "First reflection" });
+    addLifeReflection({ text: "Second reflection" });
+
+    assert.match(lifeStatusText(), /Goals: 2/);
+    const readout = lifeReadoutText({ maxGoals: 1, maxReflections: 1, maxBytes: 600 });
+    assert.match(readout, /# Life OS continuity readout/);
+    assert.match(readout, new RegExp(first.id));
+    assert.doesNotMatch(readout, /First reflection/);
+    assert.ok(Buffer.byteLength(readout, "utf8") <= 600);
+
+    const removed = removeLifeGoal(first.id);
+    assert.equal(removed.goal.id, first.id);
+    assert.equal(readLifeState().goals.some((goal) => goal.id === first.id), false);
+
+    const reset = resetLifeState();
+    assert.equal(Object.keys(reset.profile).length, 0);
+    assert.equal(reset.goals.length, 0);
+    assert.equal(reset.reflections.length, 0);
   } finally {
     cleanup(ctx);
   }
@@ -567,6 +649,83 @@ test("vault memory search uses warm default collections", async () => {
   }
 });
 
+test("memory life command captures profile, goals, and reflections", async () => {
+  const ctx = makeProject();
+  const commands = new Map();
+  const outputs = [];
+  const fakePi = {
+    registerCommand(name, spec) {
+      commands.set(name, spec);
+    },
+  };
+  const fakeCtx = {
+    hasUI: true,
+    ui: {
+      setWidget(_name, lines) {
+        outputs.push(lines.join("\n"));
+      },
+      notify() {},
+    },
+  };
+
+  try {
+    registerMemoryUse(fakePi);
+    const memory = commands.get("memory");
+    assert.ok(memory, "memory command should be registered");
+    assert.equal(commands.has("life"), false, "life should stay under /memory");
+
+    await memory.handler("life profile set name Alex", fakeCtx);
+    await memory.handler("life goal add ship-life-os Ship Life OS", fakeCtx);
+    await memory.handler("life goal update ship-life-os --progress 30 --note Research design complete", fakeCtx);
+    await memory.handler("life goal add write docs", fakeCtx);
+    await memory.handler("life reflect Win: command path works", fakeCtx);
+    await memory.handler("life readout", fakeCtx);
+
+    const state = readLifeState();
+    assert.equal(state.profile.name, "Alex");
+    assert.equal(state.goals[0].id, "ship-life-os");
+    assert.equal(state.goals[0].progress, 30);
+    assert.match(state.goals[0].note || "", /Research design complete/);
+    assert.equal(state.goals[1].id, "write-docs");
+    assert.equal(state.goals[1].name, "write docs");
+    assert.match(state.reflections[0].text, /command path works/);
+    assert.match(String(outputs.at(-1)), /Life OS continuity readout/);
+    assert.match(String(outputs.at(-1)), /Alex/);
+    assert.match(String(outputs.at(-1)), /Ship Life OS/);
+  } finally {
+    cleanup(ctx);
+  }
+});
+
+test("memory life command supports explicit remove and reset operations", async () => {
+  const ctx = makeProject();
+  const commands = new Map();
+  const fakePi = {
+    registerCommand(name, spec) {
+      commands.set(name, spec);
+    },
+  };
+  const fakeCtx = { hasUI: true, ui: { setWidget() {}, notify() {} } };
+
+  try {
+    registerMemoryUse(fakePi);
+    const memory = commands.get("memory");
+    await memory.handler("life profile set name Alex", fakeCtx);
+    await memory.handler("life goal add Ship Life OS", fakeCtx);
+    const goalId = readLifeState().goals[0].id;
+    await memory.handler(`life goal done ${goalId}`, fakeCtx);
+    assert.equal(readLifeState().goals[0].status, "done");
+    await memory.handler(`life goal remove ${goalId}`, fakeCtx);
+    assert.equal(readLifeState().goals.length, 0);
+    await memory.handler("life profile remove name", fakeCtx);
+    assert.equal(Object.hasOwn(readLifeState().profile, "name"), false);
+    await memory.handler("life reset", fakeCtx);
+    assert.equal(readLifeState().reflections.length, 0);
+  } finally {
+    cleanup(ctx);
+  }
+});
+
 test("command descriptions/help list memory surfaces without /context, /journal, or /memory compact", async () => {
   const commands = new Map();
   const fakePi = {
@@ -581,7 +740,9 @@ test("command descriptions/help list memory surfaces without /context, /journal,
   assert.ok(memory, "memory command should be registered");
   assert.equal(commands.has("context"), false, "context command should not be registered");
   assert.equal(commands.has("journal"), false, "journal command should not be registered");
+  assert.equal(commands.has("life"), false, "life command should not be registered separately");
   assert.match(memory.description, /status\|search\|update\|index\|list\|ls\|get/);
+  assert.match(memory.description, /\|life\|/);
   assert.doesNotMatch(memory.description, /query/);
   assert.doesNotMatch(memory.description, /\|compact|compact\|/);
 
@@ -597,8 +758,69 @@ test("command descriptions/help list memory surfaces without /context, /journal,
   });
   assert.match(helpText, /\/memory index/);
   assert.match(helpText, /\/memory ls \[path\]/);
+  assert.match(helpText, /\/memory life status\|readout\|profile\|goals\|goal\|reflect\|reflections/);
+  assert.doesNotMatch(helpText, /^\/life/m);
   assert.doesNotMatch(helpText, /\/context/);
   assert.doesNotMatch(helpText, /\/journal/);
   assert.doesNotMatch(helpText, /\/memory query/);
   assert.doesNotMatch(helpText, /\/memory compact/);
+});
+
+test("memory extension registers focused Life OS tools without a dispatcher", () => {
+  const commands = new Map();
+  const tools = new Map();
+  const fakePi = {
+    on() {},
+    registerCommand(name, spec) {
+      commands.set(name, spec);
+    },
+    registerTool(spec) {
+      tools.set(spec.name, spec);
+    },
+  };
+
+  memoryExtension(fakePi);
+
+  assert.ok(commands.has("memory"));
+  for (const name of ["life_readout", "life_profile_set", "life_profile_remove", "life_goal_update", "life_goal_remove", "life_reflection_add", "life_reflection_remove"]) {
+    assert.ok(tools.has(name), `${name} should be registered`);
+  }
+  assert.equal(tools.has("life"), false);
+  assert.equal(tools.has("life_dispatch"), false);
+  assert.equal(tools.has("life_reset"), false);
+  assert.ok(tools.has("memory_status"));
+  assert.ok(tools.has("memory_search"));
+});
+
+test("Life OS tools read and mutate private state on demand", async () => {
+  const ctx = makeProject();
+  const tools = new Map();
+  const fakePi = {
+    registerTool(spec) {
+      tools.set(spec.name, spec);
+    },
+  };
+
+  try {
+    registerLifeTools(fakePi);
+    await tools.get("life_profile_set").execute("profile", { field: "Name", value: "Alex" });
+    await tools.get("life_goal_update").execute("goal", { id: "ship-life-os", name: "Ship Life OS", progress: 30, note: "Tools work" });
+    await tools.get("life_reflection_add").execute("reflection", { text: "Win: focused tools work", tags: ["win"] });
+
+    const readout = await tools.get("life_readout").execute("readout", { section: "all" });
+    assert.match(readout.content[0].text, /Life OS continuity readout/);
+    assert.match(readout.content[0].text, /Alex/);
+    assert.match(readout.content[0].text, /Ship Life OS/);
+    assert.equal(readLifeState().goals[0].id, "ship-life-os");
+
+    await tools.get("life_goal_remove").execute("remove-goal", { id: "ship-life-os" });
+    assert.equal(readLifeState().goals.length, 0);
+    const reflectionId = readLifeState().reflections[0].id;
+    await tools.get("life_reflection_remove").execute("remove-reflection", { id: reflectionId });
+    assert.equal(readLifeState().reflections.length, 0);
+    await tools.get("life_profile_remove").execute("remove-profile", { field: "name" });
+    assert.equal(Object.hasOwn(readLifeState().profile, "name"), false);
+  } finally {
+    cleanup(ctx);
+  }
 });

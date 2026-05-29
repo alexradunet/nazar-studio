@@ -4,6 +4,7 @@ import { basename, dirname, join, relative, resolve } from "node:path";
 
 import { showText, truncateUtf8, trim, xdgDataHome } from "@nazar/core/shared";
 import { getMemoryPaths, QMD_COLLECTION, QMD_CONTEXT, QMD_INDEX } from "./paths.ts";
+import { lifeMemoryCommand, lifeMemoryUsage } from "./life-use.ts";
 import { ensureVaultScaffold, VAULT_MEMORY_DIRS } from "./vault.ts";
 
 const MAX_BULLET_CHARS = 360;
@@ -964,7 +965,7 @@ export async function getMemoryIndexText(pi: ExtensionAPI, target: string): Prom
 
 function memoryUsage(): string {
   const paths = getMemoryPaths();
-  return `/memory - manage Pi memory\n\nUsage:\n  /memory status\n  /memory search [--scope default|archive] <query>\n  /memory update\n  /memory index\n  /memory list [path]\n  /memory ls [path]\n  /memory get <path-or-docid>\n  /memory pinned\n  /memory remember [user|fact|project|never] <text>\n  /memory forget <unique substring>\n\nUse Pi's built-in /compact command to compact the current chat. After successful built-in compaction, this extension refreshes generated rollups in ${paths.ROLLUPS_DIR}.\nPinned memory: ${paths.PINNED_MEMORY_PAGE}\nDurable/search root: ${paths.PAGES_DIR}\nQMD index: ${QMD_INDEX}, collections: ${memoryCollectionSpecs(paths).map((spec) => spec.name).join(", ")}\n`;
+  return `/memory - manage Pi memory\n\nUsage:\n  /memory status\n  /memory search [--scope default|archive] <query>\n  /memory update\n  /memory index\n  /memory list [path]\n  /memory ls [path]\n  /memory get <path-or-docid>\n  /memory life status|readout|profile|goals|goal|reflect|reflections\n  /memory pinned\n  /memory remember [user|fact|project|never] <text>\n  /memory forget <unique substring>\n\nUse Pi's built-in /compact command to compact the current chat. After successful built-in compaction, this extension refreshes generated rollups in ${paths.ROLLUPS_DIR}.\nPinned memory: ${paths.PINNED_MEMORY_PAGE}\nDurable/search root: ${paths.PAGES_DIR}\nQMD index: ${QMD_INDEX}, collections: ${memoryCollectionSpecs(paths).map((spec) => spec.name).join(", ")}\n\nLife OS continuity:\n${lifeMemoryUsage()}`;
 }
 
 function parseSearchCommandArgs(args: string[]): { query: string; scope: MemorySearchScope; invalidScope?: string } {
@@ -991,7 +992,7 @@ function parseSearchCommandArgs(args: string[]): { query: string; scope: MemoryS
 
 export function registerMemoryUse(pi: ExtensionAPI): void {
   pi.registerCommand("memory", {
-    description: "Manage Pi memory: /memory status|search|update|index|list|ls|get|pinned|remember|forget",
+    description: "Manage Pi memory: /memory status|search|update|index|list|ls|get|life|pinned|remember|forget",
     handler: async (args, ctx) => {
       const parts = args.trim().split(/\s+/).filter(Boolean);
       const command = parts[0] || "status";
@@ -1030,6 +1031,12 @@ export function registerMemoryUse(pi: ExtensionAPI): void {
       if (command === "get") {
         const target = rest.join(" ").trim();
         await showText(ctx, "memory", target ? await getMemoryIndexText(pi, target) : "Usage: /memory get <path-or-docid>", target ? "Memory page loaded" : "Memory get needs a target");
+        return;
+      }
+
+      if (command === "life") {
+        const result = lifeMemoryCommand(rest);
+        await showText(ctx, "memory", result.text, result.code === 0 ? "Life OS memory updated" : "Life OS command failed", result.code === 0 ? "info" : "warning");
         return;
       }
 
