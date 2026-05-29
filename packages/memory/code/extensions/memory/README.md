@@ -47,7 +47,7 @@ The public repo does not track this tree. Treat repo-local `memory/` as ignored 
 
 ## Rules
 
-- Raw Pi JSONL sessions remain in Pi's default session storage.
+- Raw Pi JSONL sessions remain in Pi's default session storage unless `/nazar setup sessions` configures Pi to place them under the synced vault at `05_Nazar/session`.
 - Use Pi's built-in `/compact`; this extension listens for `session_compact` and refreshes rollups.
 - On each user turn, pinned memory bullets and a bounded recent closed rollup digest are appended to the system prompt when present. Empty pinned-memory templates are skipped.
 - Life OS continuity state is private JSON and on-demand only: `/memory life ...` commands and focused `life_*` tools may read or update it, but it is not searched by `memory_search` and is not appended to the default prompt.

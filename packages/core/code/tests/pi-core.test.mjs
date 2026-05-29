@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { hasInteractiveUi, truncateToolOutput, truncateUtf8 } from "../extensions/shared.ts";
 import { registerNazarSetupUse } from "../extensions/nazar/setup-use.ts";
+import { currentHostContextText, renderNazarAgentsBlock, renderNazarShellBlock, sessionDirForVault, upsertCurrentHostFile, upsertNazarAgentsFile, upsertNazarShellProfile } from "../extensions/nazar/session-setup.ts";
 import { nazarSetupConfigPath, writeNazarSetupConfig } from "../extensions/nazar/setup-store.ts";
 import { registerSetupProvider, setupProviders } from "../extensions/nazar/setup-registry.ts";
 
@@ -41,6 +42,15 @@ test("setup config rewrites only supported fields", () => {
       version: 1,
       profile: "laptop",
       memory: { vaultDir: join(tmp, "Vault") },
+      sessions: {
+        sessionDir: join(tmp, "Vault", "05_Nazar", "session"),
+        shellProfile: join(tmp, ".bashrc"),
+        aliasWorkdir: join(tmp, "src", "nazar"),
+        agentsPath: join(tmp, ".pi", "agent", "AGENTS.md"),
+        currentHostPath: join(tmp, ".pi", "agent", "current_host.md"),
+        sync: "syncthing",
+        ignored: true,
+      },
       removedCapability: { enabled: true },
     }), "utf8");
 
@@ -48,11 +58,76 @@ test("setup config rewrites only supported fields", () => {
     const saved = JSON.parse(readFileSync(path, "utf8"));
 
     assert.equal(next.profile, "desktop");
-    assert.deepEqual(Object.keys(saved).sort(), ["memory", "profile", "updatedAt", "version"]);
+    assert.deepEqual(Object.keys(saved).sort(), ["memory", "profile", "sessions", "updatedAt", "version"]);
     assert.equal(saved.memory.vaultDir, join(tmp, "Vault"));
+    assert.deepEqual(Object.keys(saved.sessions).sort(), ["agentsPath", "aliasWorkdir", "currentHostPath", "sessionDir", "shellProfile", "sync"]);
+    assert.equal(saved.sessions.sessionDir, join(tmp, "Vault", "05_Nazar", "session"));
+    assert.equal(saved.sessions.currentHostPath, join(tmp, ".pi", "agent", "current_host.md"));
+    assert.equal(saved.sessions.sync, "syncthing");
   } finally {
     if (previousConfigDir === undefined) delete process.env.NAZAR_CONFIG_DIR;
     else process.env.NAZAR_CONFIG_DIR = previousConfigDir;
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("session setup renders and upserts a managed shell block idempotently", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "pi-core-session-setup-test-"));
+  try {
+    const vaultDir = join(tmp, "Nazar");
+    const aliasWorkdir = join(tmp, "src", "nazar");
+    const profile = join(tmp, ".bashrc");
+    writeFileSync(profile, "# existing shell config\n", "utf8");
+
+    assert.equal(sessionDirForVault(vaultDir), join(vaultDir, "05_Nazar", "session"));
+    const block = renderNazarShellBlock({ vaultDir, aliasWorkdir });
+    assert.match(block, /export NAZAR_HOME=/);
+    assert.match(block, /PI_CODING_AGENT_SESSION_DIR="\$NAZAR_HOME\/05_Nazar\/session"/);
+    assert.match(block, /alias nazar='cd .* && pi'/);
+
+    assert.equal(upsertNazarShellProfile(profile, { vaultDir, aliasWorkdir }), "updated");
+    const first = readFileSync(profile, "utf8");
+    assert.match(first, /# existing shell config/);
+    assert.match(first, /# >>> Nazar setup/);
+    assert.match(first, /# <<< Nazar setup/);
+    assert.equal(upsertNazarShellProfile(profile, { vaultDir, aliasWorkdir }), "unchanged");
+    assert.equal(readFileSync(profile, "utf8"), first);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("session setup writes standard AGENTS pointer and local current host context", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "pi-core-host-context-test-"));
+  const previousConfigDir = process.env.NAZAR_CONFIG_DIR;
+  const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
+  try {
+    process.env.NAZAR_CONFIG_DIR = join(tmp, "config");
+    process.env.PI_CODING_AGENT_DIR = join(tmp, ".pi", "agent");
+    const vaultDir = join(tmp, "Nazar");
+    const sessionDir = join(vaultDir, "05_Nazar", "session");
+    const aliasWorkdir = join(tmp, "src", "nazar");
+    const agentsPath = join(tmp, ".pi", "agent", "AGENTS.md");
+    const currentHostPath = join(tmp, ".pi", "agent", "current_host.md");
+
+    const agentsBlock = renderNazarAgentsBlock({ vaultDir, sessionDir, currentHostPath });
+    assert.match(agentsBlock, /Host-local current environment file:/);
+    assert.match(agentsBlock, /Read that file before making host-specific setup/);
+    assert.equal(upsertNazarAgentsFile(agentsPath, { vaultDir, sessionDir, currentHostPath }), "created");
+    assert.equal(upsertCurrentHostFile(currentHostPath, { vaultDir, sessionDir, aliasWorkdir }), "created");
+    writeNazarSetupConfig({ sessions: { currentHostPath } });
+
+    const agents = readFileSync(agentsPath, "utf8");
+    const currentHost = readFileSync(currentHostPath, "utf8");
+    assert.match(agents, /current_host\.md/);
+    assert.match(currentHost, /# Current Nazar host/);
+    assert.match(currentHostContextText(), /Source: /);
+    assert.match(currentHostContextText(), /# Current Nazar host/);
+  } finally {
+    if (previousConfigDir === undefined) delete process.env.NAZAR_CONFIG_DIR;
+    else process.env.NAZAR_CONFIG_DIR = previousConfigDir;
+    if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+    else process.env.PI_CODING_AGENT_DIR = previousAgentDir;
     rmSync(tmp, { recursive: true, force: true });
   }
 });

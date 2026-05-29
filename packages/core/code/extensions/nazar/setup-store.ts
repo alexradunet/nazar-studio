@@ -4,13 +4,21 @@ import { join, resolve } from "node:path";
 
 import { writePrivateJsonSync, xdgConfigHome, xdgDataHome, xdgStateHome } from "@nazar/core/shared";
 
-export type SetupProfile = "laptop" | "desktop" | "remote" | "headless" | "custom" | "unknown";
+export type SetupProfile = "laptop" | "desktop" | "termux" | "server" | "remote" | "headless" | "custom" | "unknown";
 
 export type NazarSetupConfig = {
   version: 1;
   profile?: SetupProfile;
   memory?: {
     vaultDir?: string;
+  };
+  sessions?: {
+    sessionDir?: string;
+    shellProfile?: string;
+    aliasWorkdir?: string;
+    agentsPath?: string;
+    currentHostPath?: string;
+    sync?: "syncthing";
   };
   updatedAt?: string;
 };
@@ -72,6 +80,7 @@ export function readNazarSetupConfig(): NazarSetupConfig {
 export function writeNazarSetupConfig(update: Partial<NazarSetupConfig>): NazarSetupConfig {
   const current = parseNazarSetupConfig(true);
   const vaultDir = update.memory?.vaultDir?.trim() || current.memory?.vaultDir?.trim();
+  const sessions = update.sessions || current.sessions;
   const next: NazarSetupConfig = {
     version: 1,
     updatedAt: new Date().toISOString(),
@@ -79,6 +88,24 @@ export function writeNazarSetupConfig(update: Partial<NazarSetupConfig>): NazarS
   const profile = update.profile || current.profile;
   if (profile) next.profile = profile;
   if (vaultDir) next.memory = { vaultDir: resolve(vaultDir) };
+  if (sessions) {
+    const sessionDir = sessions.sessionDir?.trim();
+    const shellProfile = sessions.shellProfile?.trim();
+    const aliasWorkdir = sessions.aliasWorkdir?.trim();
+    const agentsPath = sessions.agentsPath?.trim();
+    const currentHostPath = sessions.currentHostPath?.trim();
+    const sync = sessions.sync === "syncthing" ? sessions.sync : undefined;
+    if (sessionDir || shellProfile || aliasWorkdir || agentsPath || currentHostPath || sync) {
+      next.sessions = {
+        ...(sessionDir ? { sessionDir: resolve(sessionDir) } : {}),
+        ...(shellProfile ? { shellProfile: resolve(shellProfile) } : {}),
+        ...(aliasWorkdir ? { aliasWorkdir: resolve(aliasWorkdir) } : {}),
+        ...(agentsPath ? { agentsPath: resolve(agentsPath) } : {}),
+        ...(currentHostPath ? { currentHostPath: resolve(currentHostPath) } : {}),
+        ...(sync ? { sync } : {}),
+      };
+    }
+  }
   writePrivateJsonSync(nazarSetupConfigPath(), next);
   return next;
 }
@@ -86,7 +113,7 @@ export function writeNazarSetupConfig(update: Partial<NazarSetupConfig>): NazarS
 export function ensureSetupDirectories(config = readNazarSetupConfig()): void {
   const dirs = getNazarDirs();
   const vaultDir = setupVaultDir(config);
-  for (const dir of [dirs.configDir, dirs.stateDir, dirs.dataDir, vaultDir, join(vaultDir, "05_Nazar", "runtime"), join(vaultDir, "05_Nazar", "llm-wiki", "wiki")]) {
+  for (const dir of [dirs.configDir, dirs.stateDir, dirs.dataDir, vaultDir, join(vaultDir, "05_Nazar", "runtime"), join(vaultDir, "05_Nazar", "llm-wiki", "wiki"), join(vaultDir, "05_Nazar", "session")]) {
     mkdirSync(dir, { recursive: true, mode: 0o700 });
   }
 }

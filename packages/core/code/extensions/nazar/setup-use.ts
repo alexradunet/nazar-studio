@@ -48,7 +48,7 @@ async function choose(ctx: ExtensionContext, title: string, options: string[]): 
 }
 
 async function configureProfile(ctx: ExtensionContext): Promise<SetupProfile | undefined> {
-  const selected = await choose(ctx, "What kind of computer is this?", ["laptop", "desktop", "remote", "headless", "custom"]);
+  const selected = await choose(ctx, "What kind of computer is this?", ["laptop", "desktop", "termux", "server", "remote", "headless", "custom"]);
   if (!selected) return undefined;
   const profile = selected as SetupProfile;
   writeNazarSetupConfig({ profile });

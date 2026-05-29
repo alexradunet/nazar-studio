@@ -2,6 +2,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
+import { readNazarSetupConfig } from "@nazar/core/setup";
 import { showText, truncateUtf8, trim, xdgDataHome } from "@nazar/core/shared";
 import { getMemoryPaths } from "./paths.ts";
 import { lifeMemoryCommand, lifeMemoryUsage } from "./life-use.ts";
@@ -786,6 +787,14 @@ export function compactSessionFile(sessionFile: string | undefined): CompactResu
   return compactMemory({ session: sessionFile });
 }
 
+function piRawSessionStatusText(): string {
+  const envSessionDir = process.env.PI_CODING_AGENT_SESSION_DIR?.trim();
+  if (envSessionDir) return `Pi raw sessions: ${envSessionDir} (PI_CODING_AGENT_SESSION_DIR)`;
+  const configuredSessionDir = readNazarSetupConfig().sessions?.sessionDir?.trim();
+  if (configuredSessionDir) return `Pi raw sessions: ${configuredSessionDir} (configured by /nazar setup sessions; restart Pi if this is not active)`;
+  return "Pi raw sessions: Pi default session storage (not repo-local); .pi/settings.json does not set sessionDir.";
+}
+
 export function memoryStatusText(): string {
   ensureDirs();
   const paths = getMemoryPaths();
@@ -802,7 +811,7 @@ export function memoryStatusText(): string {
     `Memory root: ${paths.MEMORY_ROOT}`,
     `Rollups dir: ${paths.ROLLUPS_DIR}`,
     `State dir: ${paths.STATE_DIR}`,
-    "Pi raw sessions: Pi default session storage (not repo-local); .pi/settings.json does not set sessionDir.",
+    piRawSessionStatusText(),
     `Compaction lock: ${lockStatus}`,
     `Pinned memory page: ${paths.PINNED_MEMORY_PAGE}`,
     `Durable pages dir: ${paths.PAGES_DIR}`,

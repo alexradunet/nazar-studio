@@ -27,7 +27,7 @@ Two Pi packages, with one memory-maintenance Agent Skill:
 
 | Extension | Commands | What it does |
 | --- | --- | --- |
-| **`@nazar/core`** | `/nazar setup`, `/nazar onboard`, `/nazar status`, `/nazar-setup`, `/nazar-status` | Post-install setup/status shell plus shared helpers. |
+| **`@nazar/core`** | `/nazar setup`, `/nazar onboard`, `/nazar status`, `/nazar-setup`, `/nazar-status` | Post-install setup/status shell, synced Pi session setup, and shared helpers. |
 | **`@nazar/memory`** | `/memory`, `memory_status`, `memory_search` | Durable memory, generated rollups, searchable project knowledge. Ships with the integrated `memory-janitor` Agent Skill. |
 
 ### Skills
@@ -40,7 +40,7 @@ Two Pi packages, with one memory-maintenance Agent Skill:
 
 ### 1. Install Pi.Dev
 
-Nazar runs as a set of extensions inside the [Pi.Dev coding agent](https://github.com/earendil-works/pi-coding-agent). Install Pi first per its docs.
+Nazar runs as a set of extensions inside the [Pi.Dev coding agent](https://github.com/earendil-works/pi-coding-agent). Install Pi first per its docs. For Android, see the [Termux setup guide](docs/termux.md).
 
 ### 2. Install Nazar
 
@@ -62,8 +62,10 @@ export NAZAR_HOME="$HOME/NazarVault"
 Then run setup inside the agent:
 
 ```
-/nazar setup memory
+/nazar setup all
 ```
+
+For memory-only setup, use `/nazar setup memory`. For synced Pi conversations, use `/nazar setup sessions`; this configures Pi's `sessionDir`, adds host-local shell exports for `NAZAR_HOME` and `PI_CODING_AGENT_SESSION_DIR`, and adds a `nazar` shortcut pointing at your checkout.
 
 Nazar will scaffold a PARA-style vault structure if one doesn't exist:
 
@@ -78,6 +80,7 @@ NazarVault/
     ├── llm-wiki/
     │   └── wiki/       # Karpathy-style compiled wiki
     ├── runtime/        # generated state and rollups
+    ├── session/        # Pi JSONL conversations when /nazar setup sessions is enabled
     └── pinned-memory.md  # human-curated long-term facts (when using vault layout)
 ```
 
@@ -117,13 +120,32 @@ If `NAZAR_HOME` and setup config are unset in a source checkout, Nazar may creat
 
 Extension-specific configuration is set through the respective setup flows. No secrets are stored in git.
 
+### Synced sessions
+
+Run `/nazar setup sessions` on each host that should share Pi conversation history. It writes host-local Pi settings and a managed shell-profile block equivalent to:
+
+```sh
+export NAZAR_HOME="$HOME/Nazar"
+export PI_CODING_AGENT_SESSION_DIR="$NAZAR_HOME/05_Nazar/session"
+alias nazar='cd "$HOME/src/nazar" && pi'
+```
+
+The same setup also maintains host-local context files under `~/.pi/agent/`:
+
+- `AGENTS.md` — standard Nazar host-context instructions loaded by Pi.
+- `current_host.md` — the current machine's local environment, role, constraints, paths, and sync notes. This file is intentionally outside the synced vault and is not shared between devices.
+
+Nazar core appends `current_host.md` to the system prompt when present, while `AGENTS.md` points assistants to the file for host-specific decisions.
+
+Use Syncthing to sync the whole `NAZAR_HOME` vault between devices, not only the session folder, and enable file versioning. Avoid actively continuing the same live Pi session on two devices at once; let sync settle, then resume elsewhere.
+
 ---
 
 ## Privacy and safety
 
 Nazar is built around a strict public-private boundary:
 
-- **In git:** code, tests, docs, templates, and public product documentation.
+- **In git:** code, tests, docs, website files, templates, and public product documentation.
 - **Out of git (always):** memory pages, generated rollups, copied reports, OAuth tokens, runtime credentials, and personal Obsidian vaults.
 
 Do not commit secrets. Do not commit raw session transcripts. Do not expose SSH/RDP services to the internet without an explicit VPN/tunnel plan.
