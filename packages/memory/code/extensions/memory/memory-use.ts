@@ -218,6 +218,10 @@ function ensureDirs(): void {
   ensuredDirsKey = key;
 }
 
+export function ensureMemoryStorage(): void {
+  ensureDirs();
+}
+
 function ensurePinnedMemoryPage(paths = getMemoryPaths()): void {
   mkdirSync(dirname(paths.PINNED_MEMORY_PAGE), { recursive: true });
   if (!existsSync(paths.PINNED_MEMORY_PAGE)) writeFileSync(paths.PINNED_MEMORY_PAGE, PINNED_MEMORY_TEMPLATE, "utf8");
@@ -593,8 +597,8 @@ function debrandMemoryText(text: string): string {
     .replace(new RegExp(`\\b${legacy}-voice\\b`, "g"), "Pi voice")
     .replace(new RegExp(`\\b${legacy}_`, "g"), "pi_")
     .replace(new RegExp(`\\b${legacy.toUpperCase()}_`, "g"), "PI_")
+    .replace(new RegExp(`\\.pi/extensions/${legacy}\\b`, "g"), "packages/memory/code/extensions/memory")
     .replace(new RegExp(`/${legacy}\\b`, "g"), "/memory")
-    .replace(new RegExp(`\\.pi/extensions/${legacy}\\b`, "g"), "code/extensions/memory")
     .replace(new RegExp(`llm-wiki/${legacy}-memory`, "g"), "memory/pages")
     .replace(new RegExp(`${legacy}-pinned-memory\\.md`, "g"), "pinned-memory.md")
     .replace(new RegExp(`\\b${legacy[0].toUpperCase()}${legacy.slice(1)}\\b`, "g"), "Pi")
@@ -798,7 +802,6 @@ export function memoryStatusText(): string {
   return [
     "Optional memory status",
     `Project root: ${paths.PROJECT_ROOT}`,
-    `Code root: ${paths.CODE_ROOT}`,
     `Nazar vault: ${paths.VAULT_DIR || "(not configured; using ignored local dev fallback)"}`,
     `Nazar control dir: ${paths.NAZAR_DIR}`,
     `LLM wiki pages dir: ${paths.LLM_WIKI_PAGES_DIR}`,

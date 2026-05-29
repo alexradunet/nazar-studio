@@ -20,12 +20,15 @@ function state(): SetupRegistryState {
   return root[STATE_KEY];
 }
 
-export function registerSetupProvider(provider: SetupProvider): void {
+export function registerSetupProvider(provider: SetupProvider): () => void {
   state().providers.set(provider.id, provider);
+  return () => unregisterSetupProvider(provider.id, provider);
 }
 
-export function unregisterSetupProvider(id: string): void {
-  state().providers.delete(id);
+export function unregisterSetupProvider(id: string, provider?: SetupProvider): void {
+  const providers = state().providers;
+  if (provider && providers.get(id) !== provider) return;
+  providers.delete(id);
 }
 
 export function setupProviders(): SetupProvider[] {

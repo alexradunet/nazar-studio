@@ -4,7 +4,6 @@ import { readNazarSetupConfig } from "@nazar/core/setup";
 
 export type MemoryPaths = {
   PROJECT_ROOT: string;
-  CODE_ROOT: string;
   VAULT_DIR?: string;
   NAZAR_DIR: string;
   LLM_WIKI_DIR: string;
@@ -37,7 +36,6 @@ export function projectRoot(): string {
 
 export function getMemoryPaths(root = projectRoot()): MemoryPaths {
   const PROJECT_ROOT = resolve(root);
-  const CODE_ROOT = join(PROJECT_ROOT, "code");
   const setupMemory = readNazarSetupConfig().memory;
   const VAULT_DIR = optionalPath(PROJECT_ROOT, process.env.NAZAR_HOME) || optionalPath(PROJECT_ROOT, setupMemory?.vaultDir);
   const NAZAR_DIR = VAULT_DIR ? join(VAULT_DIR, "05_Nazar") : join(PROJECT_ROOT, "memory");
@@ -54,7 +52,6 @@ export function getMemoryPaths(root = projectRoot()): MemoryPaths {
 
   return {
     PROJECT_ROOT,
-    CODE_ROOT,
     VAULT_DIR,
     NAZAR_DIR,
     LLM_WIKI_DIR,

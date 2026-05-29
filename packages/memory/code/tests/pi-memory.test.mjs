@@ -18,7 +18,9 @@ import {
   rememberPinnedMemory,
   searchMemoryText,
 } from "../extensions/memory/memory-use.ts";
+import { registerMemorySetupProvider } from "../extensions/memory/memory-setup.ts";
 import { getMemoryPaths, QMD_COLLECTION, QMD_CONTEXT, QMD_INDEX } from "../extensions/memory/paths.ts";
+import { setupProviders } from "@nazar/core/setup-registry";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 
@@ -136,7 +138,6 @@ test("path derivation uses repo-local fallback when no vault is configured", () 
   try {
     const paths = getMemoryPaths();
     assert.equal(paths.PROJECT_ROOT, ctx.root);
-    assert.equal(paths.CODE_ROOT, join(ctx.root, "code"));
     assert.equal(paths.VAULT_DIR, undefined);
     assert.equal(paths.NAZAR_DIR, join(ctx.root, "memory"));
     assert.equal(paths.LLM_WIKI_DIR, join(ctx.root, "memory", "llm-wiki"));
@@ -151,6 +152,7 @@ test("path derivation uses repo-local fallback when no vault is configured", () 
 
     const status = memoryStatusText();
     assert.match(status, new RegExp(`Memory root: ${join(ctx.root, "memory").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+    assert.doesNotMatch(status, /Code root:/);
     assert.doesNotMatch(status, /Context:/);
     assert.doesNotMatch(status, /Historical daily sessions dir|Subconversation dir|Active memory:/);
     assert.equal(existsSync(join(ctx.root, "memory", "sessions")), false);
@@ -181,6 +183,35 @@ test("NAZAR_HOME configures a portable Obsidian vault backend", () => {
     }
     assert.equal(existsSync(join(vault, "05_Nazar", "llm-wiki", "AGENTS.md")), true);
   } finally {
+    cleanup(ctx);
+  }
+});
+
+test("memory setup provider scaffolds the configured vault immediately", async () => {
+  const ctx = makeProject();
+  const cleanupProvider = registerMemorySetupProvider();
+  try {
+    const vault = join(ctx.tmp, "SetupVault");
+    const provider = setupProviders().find((entry) => entry.id === "memory");
+    assert.ok(provider?.configure, "memory setup provider should be registered");
+
+    await provider.configure({}, {
+      hasUI: true,
+      ui: {
+        async input() { return vault; },
+        setWidget() {},
+        notify() {},
+      },
+    });
+
+    for (const dir of ["00_Inbox", "01_Projects", "02_Areas", "03_Resources", "04_Archive", "05_Nazar"]) {
+      assert.equal(existsSync(join(vault, dir)), true, `${dir} should be scaffolded during setup`);
+    }
+    assert.equal(existsSync(join(vault, "05_Nazar", "AGENTS.md")), true);
+    assert.equal(existsSync(join(vault, "05_Nazar", "llm-wiki", "wiki", "index.md")), true);
+    assert.equal(existsSync(join(vault, "05_Nazar", "pinned-memory.md")), true);
+  } finally {
+    cleanupProvider();
     cleanup(ctx);
   }
 });
@@ -362,6 +393,23 @@ test("generated memory redacts obvious secrets", () => {
     assert.doesNotMatch(daily, new RegExp(secret));
     assert.equal(existsSync(join(ctx.root, "memory", "context", "bootstrap.md")), false);
     assert.match(daily, /password=\[REDACTED_SECRET\]/);
+  } finally {
+    cleanup(ctx);
+  }
+});
+
+test("legacy memory debranding emits package-era paths", () => {
+  const ctx = makeProject();
+  const session = join(ctx.tmp, "sessions", "legacy.jsonl");
+  try {
+    writeJsonl(session, [message("user", "Let's update .pi/extensions/nazar setup docs for Nazar memory.")]);
+
+    const result = compactMemory({ session });
+    assert.equal(result.code, 0, result.text);
+
+    const daily = readFileSync(join(ctx.root, "memory", "rollups", "daily", `${DAY}.md`), "utf8");
+    assert.match(daily, /packages\/memory\/code\/extensions\/memory/);
+    assert.doesNotMatch(daily, /\.pi\/extensions\/(?:nazar|memory)/);
   } finally {
     cleanup(ctx);
   }

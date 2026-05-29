@@ -1,6 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-import { unregisterSetupProvider } from "@nazar/core/setup-registry";
 import { clearTranscriber, setTranscriber } from "@nazar/core/transcriber";
 
 import { transcribeSherpaPcm16 } from "./voice/sherpa-runtime.ts";
@@ -9,10 +8,10 @@ import { registerTtsUse } from "./voice/tts-use.ts";
 import { registerVoiceUse } from "./voice/voice-use.ts";
 
 export default function voiceExtension(pi: ExtensionAPI) {
-  registerVoiceSetupProvider();
+  const unregisterVoiceSetupProvider = registerVoiceSetupProvider();
   setTranscriber(transcribeSherpaPcm16);
   pi.on("session_shutdown", () => {
-    unregisterSetupProvider("voice");
+    unregisterVoiceSetupProvider();
     clearTranscriber(transcribeSherpaPcm16);
   });
   registerTtsUse(pi);

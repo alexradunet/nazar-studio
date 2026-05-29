@@ -2,9 +2,10 @@ import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { join, resolve } from "node:path";
 
 import { defaultMemoryConfig, ensureSetupDirectories, readNazarSetupConfig, writeNazarSetupConfig } from "@nazar/core/setup";
-import { registerSetupProvider } from "@nazar/core/setup-registry";
+import { registerSetupProvider, type SetupProvider } from "@nazar/core/setup-registry";
 import { hasInteractiveUi, showText } from "@nazar/core/shared";
 
+import { ensureMemoryStorage } from "./memory-use.ts";
 import { getMemoryPaths } from "./paths.ts";
 
 async function show(ctx: ExtensionContext, title: string, text: string, level: "info" | "warning" | "error" = "info"): Promise<void> {
@@ -45,6 +46,7 @@ async function configureMemory(ctx: ExtensionContext): Promise<void> {
   const memory = memoryConfigFromVault(vaultDir);
   writeNazarSetupConfig({ memory });
   ensureSetupDirectories(readNazarSetupConfig());
+  ensureMemoryStorage();
   await show(ctx, "Memory configured", `${memoryConfigSummary(memory)}\n\nRun /reload or restart Pi so all extensions see the updated vault paths.`);
 }
 
@@ -59,12 +61,13 @@ function memorySetupStatusText(): string {
   ].join("\n");
 }
 
-export function registerMemorySetupProvider(): void {
-  registerSetupProvider({
+export function registerMemorySetupProvider(): () => void {
+  const provider: SetupProvider = {
     id: "memory",
     label: "Memory",
     order: 10,
     configure: async (_pi, ctx) => configureMemory(ctx),
     statusText: memorySetupStatusText,
-  });
+  };
+  return registerSetupProvider(provider);
 }

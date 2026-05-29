@@ -102,7 +102,7 @@ export async function truncateToolOutput(text: string, options: { maxBytes?: num
 }
 
 export function hasInteractiveUi(ctx: { hasUI?: boolean } | undefined): boolean {
-  return ctx?.hasUI !== false;
+  return Boolean(ctx) && ctx.hasUI !== false;
 }
 
 export function notify(ctx: ExtensionContext, text: string, level: NotifyLevel = "info"): void {

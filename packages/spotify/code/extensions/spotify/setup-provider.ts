@@ -1,7 +1,7 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 import { writeNazarSetupConfig } from "@nazar/core/setup";
-import { registerSetupProvider } from "@nazar/core/setup-registry";
+import { registerSetupProvider, type SetupProvider } from "@nazar/core/setup-registry";
 import { showText } from "@nazar/core/shared";
 
 import { spotifyLoginWithLocalCallback } from "./spotify-auth.ts";
@@ -41,12 +41,13 @@ async function configureSpotify(pi: ExtensionAPI, ctx: ExtensionContext): Promis
   }
 }
 
-export function registerSpotifySetupProvider(): void {
-  registerSetupProvider({
+export function registerSpotifySetupProvider(): () => void {
+  const provider: SetupProvider = {
     id: "spotify",
     label: "Spotify",
     order: 40,
     configure: configureSpotify,
     statusText: spotifySetupStatusText,
-  });
+  };
+  return registerSetupProvider(provider);
 }

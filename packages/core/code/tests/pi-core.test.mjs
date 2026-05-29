@@ -4,8 +4,9 @@ import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { truncateToolOutput, truncateUtf8 } from "../extensions/shared.ts";
+import { hasInteractiveUi, truncateToolOutput, truncateUtf8 } from "../extensions/shared.ts";
 import { defaultVoiceModelDir, writeNazarSetupConfig } from "../extensions/nazar/setup-store.ts";
+import { registerSetupProvider, setupProviders } from "../extensions/nazar/setup-registry.ts";
 
 const ENV_KEYS = [
   "PI_PROJECT_ROOT",
@@ -48,6 +49,28 @@ function cleanup(ctx) {
   ctx.restore();
   rmSync(ctx.tmp, { recursive: true, force: true });
 }
+
+test("interactive UI guard treats missing contexts as headless", () => {
+  assert.equal(hasInteractiveUi(undefined), false);
+  assert.equal(hasInteractiveUi({ hasUI: false }), false);
+  assert.equal(hasInteractiveUi({}), true);
+  assert.equal(hasInteractiveUi({ hasUI: true }), true);
+});
+
+test("setup provider cleanup does not remove newer same-id registrations", () => {
+  const id = `test-provider-${Date.now()}-${Math.random()}`;
+  const first = { id, label: "First" };
+  const second = { id, label: "Second" };
+  const cleanupFirst = registerSetupProvider(first);
+  const cleanupSecond = registerSetupProvider(second);
+  try {
+    cleanupFirst();
+    assert.equal(setupProviders().find((provider) => provider.id === id)?.label, "Second");
+  } finally {
+    cleanupSecond();
+  }
+  assert.equal(setupProviders().some((provider) => provider.id === id), false);
+});
 
 test("tool output truncation caps text at 50KB", async () => {
   assert.equal(truncateUtf8("short output", 50 * 1024), "short output");

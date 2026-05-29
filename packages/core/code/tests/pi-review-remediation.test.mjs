@@ -18,6 +18,7 @@ test("core setup is registry-driven and feature-free", () => {
   const registry = source("packages/core/code/extensions/nazar/setup-registry.ts");
   assert.match(registry, /Symbol\.for\("nazar\.setup-registry"\)/);
   assert.match(registry, /unregisterSetupProvider/);
+  assert.match(registry, /providers\.get\(id\) !== provider/);
 
   const transcriber = source("packages/core/code/extensions/nazar/transcriber-registry.ts");
   assert.match(transcriber, /Symbol\.for\("nazar\.transcriber-registry"\)/);
@@ -44,6 +45,7 @@ test("review remediation keeps critical runtime fixes wired", () => {
 test("memory_search tool truncates search output before returning", () => {
   const memoryExtension = source("packages/memory/code/extensions/memory.ts");
   assert.doesNotMatch(memoryExtension, /TOOL_OUTPUT_LIMIT_BYTES/);
+  assert.match(memoryExtension, /hasInteractiveUi\(ctx\)[\s\S]*ctx\.ui\.setWidget\("memory", undefined\)/);
   assert.match(memoryExtension, /await truncateToolOutput\(await searchMemoryText\(/);
   assert.match(memoryExtension, /await truncateToolOutput\(memoryStatusText\(\)\)/);
   assert.match(memoryExtension, /throw toolError\("memory_search", error\)/);

@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { defaultVoiceModelDir, readNazarSetupConfig, writeNazarSetupConfig } from "@nazar/core/setup";
-import { registerSetupProvider } from "@nazar/core/setup-registry";
+import { registerSetupProvider, type SetupProvider } from "@nazar/core/setup-registry";
 import { hasInteractiveUi, showText } from "@nazar/core/shared";
 
 import { sherpaModelStatus } from "./sherpa-runtime.ts";
@@ -131,12 +131,13 @@ async function configureVoice(pi: ExtensionAPI, ctx: ExtensionContext): Promise<
   }
 }
 
-export function registerVoiceSetupProvider(): void {
-  registerSetupProvider({
+export function registerVoiceSetupProvider(): () => void {
+  const provider: SetupProvider = {
     id: "voice",
     label: "Voice",
     order: 20,
     configure: configureVoice,
     statusText: sherpaModelStatus,
-  });
+  };
+  return registerSetupProvider(provider);
 }

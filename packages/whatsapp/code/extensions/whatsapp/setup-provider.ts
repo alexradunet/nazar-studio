@@ -1,7 +1,7 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 import { writeNazarSetupConfig } from "@nazar/core/setup";
-import { registerSetupProvider } from "@nazar/core/setup-registry";
+import { registerSetupProvider, type SetupProvider } from "@nazar/core/setup-registry";
 import { showText } from "@nazar/core/shared";
 
 import { startWhatsAppQrPairing } from "./whatsapp-use.ts";
@@ -67,12 +67,13 @@ async function whatsappSetupStatusText(): Promise<string> {
   }
 }
 
-export function registerWhatsAppSetupProvider(): void {
-  registerSetupProvider({
+export function registerWhatsAppSetupProvider(): () => void {
+  const provider: SetupProvider = {
     id: "whatsapp",
     label: "WhatsApp",
     order: 30,
     configure: configureWhatsApp,
     statusText: whatsappSetupStatusText,
-  });
+  };
+  return registerSetupProvider(provider);
 }

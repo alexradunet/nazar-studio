@@ -10,12 +10,11 @@ import {
   searchMemoryText,
 } from "./memory/memory-use.ts";
 import { registerMemorySetupProvider } from "./memory/memory-setup.ts";
-import { unregisterSetupProvider } from "@nazar/core/setup-registry";
-import { toolError, truncateToolOutput } from "@nazar/core/shared";
+import { hasInteractiveUi, toolError, truncateToolOutput } from "@nazar/core/shared";
 
 export default function memoryExtension(pi: ExtensionAPI) {
-  registerMemorySetupProvider();
-  pi.on("session_shutdown", () => unregisterSetupProvider("memory"));
+  const unregisterMemorySetupProvider = registerMemorySetupProvider();
+  pi.on("session_shutdown", unregisterMemorySetupProvider);
   registerMemoryUse(pi);
 
   // Append durable memory to the system prompt (cache-stable) instead of injecting
@@ -29,7 +28,7 @@ export default function memoryExtension(pi: ExtensionAPI) {
   });
 
   pi.on("session_shutdown", async (_event, ctx) => {
-    ctx.ui.setWidget("memory", undefined);
+    if (hasInteractiveUi(ctx)) ctx.ui.setWidget("memory", undefined);
   });
 
   pi.on("session_compact", async (_event, ctx) => {
