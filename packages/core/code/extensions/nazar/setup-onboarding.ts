@@ -67,8 +67,26 @@ function normalizeState(value: unknown): SetupOnboardingState {
   };
 }
 
+export function setupOnboardingErrorMessage(error: unknown, extraPaths: string[] = []): string {
+  const dirs = getNazarDirs();
+  let message = errorMessage(error);
+  const knownPaths = [setupOnboardingStatePath(), dirs.configDir, dirs.stateDir, dirs.dataDir, ...extraPaths]
+    .filter((path) => path.trim())
+    .sort((a, b) => b.length - a.length);
+
+  message = message
+    .replace(/[A-Za-z]:[\\/][^\s"'`<>]+/g, (match) => basename(match))
+    .replace(/\/(?:[^/\s"'`<>]+\/)+[^/\s"'`<>]+/g, (match) => basename(match));
+
+  for (const path of knownPaths) {
+    message = message.replaceAll(path, basename(path));
+  }
+
+  return message;
+}
+
 function onboardingStateError(path: string, error: unknown): Error {
-  const message = errorMessage(error).replaceAll(path, basename(path));
+  const message = setupOnboardingErrorMessage(error, [path]);
   return new Error(`Nazar setup onboarding state is unreadable at ${basename(path)}: ${message}`, { cause: error });
 }
 
@@ -83,7 +101,12 @@ function readSetupOnboardingState(): SetupOnboardingState {
 }
 
 function writeSetupOnboardingState(state: SetupOnboardingState): void {
-  writePrivateJsonSync(setupOnboardingStatePath(), normalizeState(state));
+  const path = setupOnboardingStatePath();
+  try {
+    writePrivateJsonSync(path, normalizeState(state));
+  } catch (error) {
+    throw onboardingStateError(path, error);
+  }
 }
 
 function providerVersion(provider: SetupProvider): number {
@@ -99,14 +122,17 @@ function alreadyRecorded(state: SetupOnboardingState, contribution: SetupOnboard
   return Boolean(state.prompted[key] || state.skipped[key]);
 }
 
-function composeSetupOnboardingPrompt(contributions: SetupOnboardingContribution[]): string {
+function composeSetupOnboardingPrompt(contributions: SetupOnboardingContribution[], context: SetupOnboardingContext): string {
   const providerSections = contributions.map((contribution, index) => [
     `## Provider ${index + 1}: ${contribution.label}`,
     contribution.prompt,
   ].join("\n\n"));
+  const intro = context.reason === "manual"
+    ? "Nazar onboarding was requested manually. Start a short onboarding conversation using the provider instructions below."
+    : "Nazar setup just completed. Start a short first-run onboarding conversation using the provider instructions below.";
 
   return [
-    "Nazar setup just completed. Start a short first-run onboarding conversation using the provider instructions below.",
+    intro,
     "",
     "Core rules:",
     "- Keep it conversational and ask one question at a time.",
@@ -141,12 +167,12 @@ export async function collectSetupOnboarding(
       if (!prompt) continue;
       contributions.push({ ...contribution, prompt });
     } catch (error) {
-      warnings.push(`${provider.label}: ${errorMessage(error)}`);
+      warnings.push(`${provider.label}: ${setupOnboardingErrorMessage(error)}`);
     }
   }
 
   if (contributions.length === 0 && warnings.length === 0) return undefined;
-  return { contributions, warnings, prompt: composeSetupOnboardingPrompt(contributions) };
+  return { contributions, warnings, prompt: composeSetupOnboardingPrompt(contributions, context) };
 }
 
 export function recordSetupOnboarding(contributions: SetupOnboardingContribution[], decision: Exclude<SetupOnboardingDecision, "later">): void {

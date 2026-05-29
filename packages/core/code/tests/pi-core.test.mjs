@@ -205,6 +205,196 @@ test("nazar setup does not start onboarding when providers contribute no prompt"
   }
 });
 
+test("nazar setup Later leaves onboarding eligible for the next setup", async () => {
+  const tmp = mkdtempSync(join(tmpdir(), "pi-core-onboarding-later-test-"));
+  const previousConfigDir = process.env.NAZAR_CONFIG_DIR;
+  const previousStateDir = process.env.NAZAR_STATE_DIR;
+  const commands = new Map();
+  const sent = [];
+  const selections = ["desktop", "Later", "desktop", "Start onboarding"];
+  const providerId = `test-onboarding-later-${Date.now()}-${Math.random()}`;
+  const cleanupProvider = registerSetupProvider({
+    id: providerId,
+    label: "Test Memory",
+    configure: async () => {},
+    onboardingPrompt: () => "Memory onboarding instructions from provider.",
+  });
+  const fakePi = {
+    registerCommand(name, spec) {
+      commands.set(name, spec);
+    },
+    sendUserMessage(text) {
+      sent.push(text);
+    },
+  };
+  const fakeCtx = {
+    hasUI: true,
+    ui: {
+      async select() { return selections.shift(); },
+      setWidget() {},
+      notify() {},
+    },
+  };
+
+  try {
+    process.env.NAZAR_CONFIG_DIR = join(tmp, "config");
+    process.env.NAZAR_STATE_DIR = join(tmp, "state");
+    registerNazarSetupUse(fakePi);
+
+    await commands.get("nazar-setup").handler("all", fakeCtx);
+    await commands.get("nazar-setup").handler("all", fakeCtx);
+
+    assert.equal(sent.length, 1);
+    assert.match(sent[0], /Memory onboarding instructions from provider/);
+  } finally {
+    cleanupProvider();
+    if (previousConfigDir === undefined) delete process.env.NAZAR_CONFIG_DIR;
+    else process.env.NAZAR_CONFIG_DIR = previousConfigDir;
+    if (previousStateDir === undefined) delete process.env.NAZAR_STATE_DIR;
+    else process.env.NAZAR_STATE_DIR = previousStateDir;
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("nazar setup onboarding version bump prompts again", async () => {
+  const tmp = mkdtempSync(join(tmpdir(), "pi-core-onboarding-version-test-"));
+  const previousConfigDir = process.env.NAZAR_CONFIG_DIR;
+  const previousStateDir = process.env.NAZAR_STATE_DIR;
+  const commands = new Map();
+  const sent = [];
+  const selections = ["desktop", "Start onboarding", "desktop", "Start onboarding"];
+  const providerId = `test-onboarding-version-${Date.now()}-${Math.random()}`;
+  const provider = {
+    id: providerId,
+    label: "Test Memory",
+    configure: async () => {},
+    onboardingVersion: 1,
+    onboardingPrompt: () => `Memory onboarding instructions v${provider.onboardingVersion}.`,
+  };
+  const cleanupProvider = registerSetupProvider(provider);
+  const fakePi = {
+    registerCommand(name, spec) {
+      commands.set(name, spec);
+    },
+    sendUserMessage(text) {
+      sent.push(text);
+    },
+  };
+  const fakeCtx = {
+    hasUI: true,
+    ui: {
+      async select() { return selections.shift(); },
+      setWidget() {},
+      notify() {},
+    },
+  };
+
+  try {
+    process.env.NAZAR_CONFIG_DIR = join(tmp, "config");
+    process.env.NAZAR_STATE_DIR = join(tmp, "state");
+    registerNazarSetupUse(fakePi);
+
+    await commands.get("nazar-setup").handler("all", fakeCtx);
+    provider.onboardingVersion = 2;
+    await commands.get("nazar-setup").handler("all", fakeCtx);
+
+    assert.equal(sent.length, 2);
+    assert.match(sent[0], /instructions v1/);
+    assert.match(sent[1], /instructions v2/);
+  } finally {
+    cleanupProvider();
+    if (previousConfigDir === undefined) delete process.env.NAZAR_CONFIG_DIR;
+    else process.env.NAZAR_CONFIG_DIR = previousConfigDir;
+    if (previousStateDir === undefined) delete process.env.NAZAR_STATE_DIR;
+    else process.env.NAZAR_STATE_DIR = previousStateDir;
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("nazar onboard uses manual prompt wording", async () => {
+  const tmp = mkdtempSync(join(tmpdir(), "pi-core-onboarding-manual-test-"));
+  const previousStateDir = process.env.NAZAR_STATE_DIR;
+  const commands = new Map();
+  const sent = [];
+  const providerId = `test-onboarding-manual-${Date.now()}-${Math.random()}`;
+  const cleanupProvider = registerSetupProvider({
+    id: providerId,
+    label: "Test Memory",
+    onboardingPrompt: () => "Memory onboarding instructions from provider.",
+  });
+  const fakePi = {
+    registerCommand(name, spec) {
+      commands.set(name, spec);
+    },
+    sendUserMessage(text) {
+      sent.push(text);
+    },
+  };
+  const fakeCtx = { hasUI: true, ui: { setWidget() {}, notify() {} } };
+
+  try {
+    process.env.NAZAR_STATE_DIR = join(tmp, "state");
+    registerNazarSetupUse(fakePi);
+
+    await commands.get("nazar").handler("onboard", fakeCtx);
+
+    assert.equal(sent.length, 1);
+    assert.match(sent[0], /onboarding was requested manually/);
+    assert.doesNotMatch(sent[0], /setup just completed/);
+  } finally {
+    cleanupProvider();
+    if (previousStateDir === undefined) delete process.env.NAZAR_STATE_DIR;
+    else process.env.NAZAR_STATE_DIR = previousStateDir;
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("nazar onboard sanitizes provider failure paths", async () => {
+  const tmp = mkdtempSync(join(tmpdir(), "pi-core-onboarding-error-test-"));
+  const previousStateDir = process.env.NAZAR_STATE_DIR;
+  const commands = new Map();
+  const sent = [];
+  const notifications = [];
+  const leakedPath = join(tmp, "state", "provider-secret.json");
+  const providerId = `test-onboarding-error-${Date.now()}-${Math.random()}`;
+  const cleanupProvider = registerSetupProvider({
+    id: providerId,
+    label: "Test Memory",
+    onboardingPrompt: () => { throw new Error(`cannot read ${leakedPath}`); },
+  });
+  const fakePi = {
+    registerCommand(name, spec) {
+      commands.set(name, spec);
+    },
+    sendUserMessage(text) {
+      sent.push(text);
+    },
+  };
+  const fakeCtx = {
+    hasUI: true,
+    ui: {
+      setWidget() {},
+      notify(text) { notifications.push(text); },
+    },
+  };
+
+  try {
+    process.env.NAZAR_STATE_DIR = join(tmp, "state");
+    registerNazarSetupUse(fakePi);
+
+    await commands.get("nazar").handler("onboard", fakeCtx);
+
+    assert.equal(sent.length, 0);
+    assert.equal(notifications.join("\n").includes(leakedPath), false);
+    assert.match(notifications.join("\n"), /provider-secret\.json/);
+  } finally {
+    cleanupProvider();
+    if (previousStateDir === undefined) delete process.env.NAZAR_STATE_DIR;
+    else process.env.NAZAR_STATE_DIR = previousStateDir;
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
 test("tool output truncation caps text at 50KB", async () => {
   assert.equal(truncateUtf8("short output", 50 * 1024), "short output");
 

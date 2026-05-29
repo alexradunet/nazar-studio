@@ -5,7 +5,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
 import { errorMessage, hasInteractiveUi, showText } from "@nazar/core/shared";
-import { chooseSetupOnboardingDecision, collectSetupOnboarding, recordSetupOnboarding } from "./setup-onboarding.ts";
+import { chooseSetupOnboardingDecision, collectSetupOnboarding, recordSetupOnboarding, setupOnboardingErrorMessage } from "./setup-onboarding.ts";
 import { getNazarDirs, nazarSetupConfigPath, readNazarSetupConfig, type SetupProfile, writeNazarSetupConfig } from "./setup-store.ts";
 import { setupProviders, type SetupOnboardingReason, type SetupProvider } from "./setup-registry.ts";
 
@@ -68,6 +68,7 @@ function validSetupSections(): string[] {
 }
 
 type SetupAction = "all" | "status" | "doctor" | "cancel" | string;
+type SetupOnboardingRunResult = "started" | "none" | "deferred" | "failed";
 
 async function showSetupMenu(ctx: ExtensionContext): Promise<SetupAction | undefined> {
   const providers = configurableProviders();
@@ -127,8 +128,8 @@ async function runSetupOnboarding(
   providers: SetupProvider[],
   reason: SetupOnboardingReason,
   force = false,
-): Promise<boolean> {
-  if (!hasInteractiveUi(ctx) || providers.length === 0) return false;
+): Promise<SetupOnboardingRunResult> {
+  if (!hasInteractiveUi(ctx) || providers.length === 0) return "none";
 
   let collection;
   try {
@@ -138,44 +139,44 @@ async function runSetupOnboarding(
       force,
     });
   } catch (error) {
-    ctx.ui.notify(`Nazar onboarding could not inspect setup state: ${errorMessage(error)}`, "warning");
-    return false;
+    ctx.ui.notify(`Nazar onboarding could not inspect setup state: ${setupOnboardingErrorMessage(error)}`, "warning");
+    return "failed";
   }
 
-  if (!collection) return false;
+  if (!collection) return "none";
   for (const warning of collection.warnings) {
     ctx.ui.notify(`Nazar onboarding provider skipped: ${warning}`, "warning");
   }
-  if (collection.contributions.length === 0) return false;
+  if (collection.contributions.length === 0) return "failed";
 
   const decision = reason === "post-setup" && !force ? await chooseSetupOnboardingDecision(ctx) : "start";
   if (decision === "skip") {
     try {
       recordSetupOnboarding(collection.contributions, "skip");
     } catch (error) {
-      ctx.ui.notify(`Nazar onboarding skip state could not be saved: ${errorMessage(error)}`, "warning");
+      ctx.ui.notify(`Nazar onboarding skip state could not be saved: ${setupOnboardingErrorMessage(error)}`, "warning");
     }
     ctx.ui.notify("Nazar onboarding skipped. Run /nazar onboard when you want to do it later.", "info");
-    return false;
+    return "deferred";
   }
   if (decision === "later") {
     ctx.ui.notify("Nazar onboarding left for later. Run /nazar onboard when ready.", "info");
-    return false;
+    return "deferred";
   }
 
   try {
     pi.sendUserMessage(collection.prompt);
   } catch (error) {
-    ctx.ui.notify(`Nazar onboarding could not start: ${errorMessage(error)}`, "warning");
-    return false;
+    ctx.ui.notify(`Nazar onboarding could not start: ${setupOnboardingErrorMessage(error)}`, "warning");
+    return "failed";
   }
 
   try {
     recordSetupOnboarding(collection.contributions, "start");
   } catch (error) {
-    ctx.ui.notify(`Nazar onboarding start state could not be saved: ${errorMessage(error)}`, "warning");
+    ctx.ui.notify(`Nazar onboarding start state could not be saved: ${setupOnboardingErrorMessage(error)}`, "warning");
   }
-  return true;
+  return "started";
 }
 
 async function runSetup(pi: ExtensionAPI, ctx: ExtensionContext, section?: string): Promise<void> {
@@ -213,8 +214,9 @@ async function onboardCommand(pi: ExtensionAPI, ctx: ExtensionContext): Promise<
     await show(ctx, "Nazar onboarding", "Interactive onboarding requires Pi interactive mode. Run /nazar onboard in the TUI.");
     return;
   }
-  const started = await runSetupOnboarding(pi, ctx, onboardingProviders(), "manual", true);
-  if (!started) await show(ctx, "Nazar onboarding", "No Nazar onboarding prompts are registered. Install/configure a Nazar provider such as memory, then run /nazar onboard again.", "warning");
+  const result = await runSetupOnboarding(pi, ctx, onboardingProviders(), "manual", true);
+  if (result === "none") await show(ctx, "Nazar onboarding", "No Nazar onboarding prompts are registered. Install/configure a Nazar provider such as memory, then run /nazar onboard again.", "warning");
+  else if (result === "failed") await show(ctx, "Nazar onboarding", "Nazar onboarding could not start. See the warning messages above for provider details.", "warning");
 }
 
 async function setupCommand(pi: ExtensionAPI, ctx: ExtensionContext, section = ""): Promise<void> {
