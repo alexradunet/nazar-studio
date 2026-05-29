@@ -221,6 +221,27 @@ test("memory setup provider scaffolds the configured vault immediately", async (
   }
 });
 
+test("memory setup provider contributes consent-first onboarding prompt", async () => {
+  const ctx = makeProject();
+  const cleanupProvider = registerMemorySetupProvider();
+  try {
+    const provider = setupProviders().find((entry) => entry.id === "memory");
+    assert.ok(provider?.onboardingPrompt, "memory setup provider should contribute onboarding");
+
+    const prompt = await provider.onboardingPrompt({ reason: "manual", selectedProviderIds: ["memory"], force: true });
+
+    assert.match(prompt, /canonical memory feature/);
+    assert.match(prompt, /one question at a time/);
+    assert.match(prompt, /consent-based/);
+    assert.match(prompt, /Life OS tools/);
+    assert.match(prompt, /dossier/);
+    assert.match(prompt, /\/nazar onboard/);
+  } finally {
+    cleanupProvider();
+    cleanup(ctx);
+  }
+});
+
 test("dry-run with no explicit session source writes nothing", () => {
   const ctx = makeProject();
   try {

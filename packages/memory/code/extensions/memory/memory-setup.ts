@@ -61,6 +61,21 @@ function memorySetupStatusText(): string {
   ].join("\n");
 }
 
+function memoryOnboardingPrompt(): string {
+  return [
+    "You are onboarding Nazar's canonical memory feature after setup.",
+    "",
+    "Memory onboarding goals:",
+    "- Keep it conversational and ask one question at a time; do not dump a questionnaire.",
+    "- First ask what the user wants to be called and what they want Nazar to help with.",
+    "- Explain that memory is optional and consent-based. After each answer, summarize the exact concise facts you would save and ask before writing them.",
+    "- If Life OS tools are available, use them only after approval for stable profile facts, active goals, and reflections.",
+    "- For approved project/workflow facts that should persist, use `/memory remember` rather than inventing a new durable write path.",
+    "- Do not store secrets, raw transcripts, temporary task state, or anything that feels like a dossier.",
+    "- If the user wants to skip, be warm and tell them they can return later with `/nazar onboard`, `/memory life readout`, or `/memory status`.",
+  ].join("\n");
+}
+
 export function registerMemorySetupProvider(): () => void {
   const provider: SetupProvider = {
     id: "memory",
@@ -68,6 +83,8 @@ export function registerMemorySetupProvider(): () => void {
     order: 10,
     configure: async (_pi, ctx) => configureMemory(ctx),
     statusText: memorySetupStatusText,
+    onboardingVersion: 1,
+    onboardingPrompt: () => memoryOnboardingPrompt(),
   };
   return registerSetupProvider(provider);
 }

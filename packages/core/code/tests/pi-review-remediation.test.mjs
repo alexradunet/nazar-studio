@@ -14,6 +14,12 @@ test("core setup is registry-driven and feature-free", () => {
   const setupUse = source("packages/core/code/extensions/nazar/setup-use.ts");
   assert.match(setupUse, /setupProviders/);
   assert.doesNotMatch(setupUse, /\.\.\/\.\.\/memory|@nazar\/memory|@nazar\/voice/);
+  assert.doesNotMatch(setupUse, /Life OS|durable memory tools|\/memory/);
+  assert.match(setupUse, /collectSetupOnboarding/);
+
+  const setupOnboarding = source("packages/core/code/extensions/nazar/setup-onboarding.ts");
+  assert.doesNotMatch(setupOnboarding, /Life OS|durable memory tools|\/memory/);
+  assert.match(setupOnboarding, /getNazarDirs\(\)\.stateDir/);
 
   const registry = source("packages/core/code/extensions/nazar/setup-registry.ts");
   assert.match(registry, /Symbol\.for\("nazar\.setup-registry"\)/);

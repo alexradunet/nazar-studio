@@ -57,17 +57,21 @@ test("setup config rewrites only supported fields", () => {
   }
 });
 
-test("nazar setup starts consent-first memory onboarding after successful setup", async () => {
+test("nazar setup starts provider-owned onboarding once after confirmation", async () => {
   const tmp = mkdtempSync(join(tmpdir(), "pi-core-onboarding-test-"));
   const previousConfigDir = process.env.NAZAR_CONFIG_DIR;
+  const previousStateDir = process.env.NAZAR_STATE_DIR;
   const commands = new Map();
   const sent = [];
+  const selections = ["desktop", "Start onboarding", "desktop"];
   const providerId = `test-onboarding-${Date.now()}-${Math.random()}`;
   const cleanupProvider = registerSetupProvider({
     id: providerId,
     label: "Test Memory",
     configure: async () => {},
     statusText: () => "ready",
+    onboardingVersion: 1,
+    onboardingPrompt: () => "Memory onboarding instructions from provider.",
   });
   const fakePi = {
     registerCommand(name, spec) {
@@ -80,7 +84,7 @@ test("nazar setup starts consent-first memory onboarding after successful setup"
   const fakeCtx = {
     hasUI: true,
     ui: {
-      async select() { return "desktop"; },
+      async select() { return selections.shift(); },
       setWidget() {},
       notify() {},
     },
@@ -88,19 +92,115 @@ test("nazar setup starts consent-first memory onboarding after successful setup"
 
   try {
     process.env.NAZAR_CONFIG_DIR = join(tmp, "config");
+    process.env.NAZAR_STATE_DIR = join(tmp, "state");
     registerNazarSetupUse(fakePi);
 
     await commands.get("nazar-setup").handler("all", fakeCtx);
+    await commands.get("nazar-setup").handler("all", fakeCtx);
 
     assert.equal(sent.length, 1);
+    assert.match(sent[0], /Provider 1: Test Memory/);
+    assert.match(sent[0], /Memory onboarding instructions from provider/);
     assert.match(sent[0], /one question at a time/);
-    assert.match(sent[0], /consent-based/);
-    assert.match(sent[0], /Life OS tools/);
-    assert.match(sent[0], /dossier/);
   } finally {
     cleanupProvider();
     if (previousConfigDir === undefined) delete process.env.NAZAR_CONFIG_DIR;
     else process.env.NAZAR_CONFIG_DIR = previousConfigDir;
+    if (previousStateDir === undefined) delete process.env.NAZAR_STATE_DIR;
+    else process.env.NAZAR_STATE_DIR = previousStateDir;
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("nazar setup skip records onboarding and manual onboard force-runs it", async () => {
+  const tmp = mkdtempSync(join(tmpdir(), "pi-core-onboarding-skip-test-"));
+  const previousConfigDir = process.env.NAZAR_CONFIG_DIR;
+  const previousStateDir = process.env.NAZAR_STATE_DIR;
+  const commands = new Map();
+  const sent = [];
+  const selections = ["desktop", "Skip", "desktop"];
+  const providerId = `test-onboarding-skip-${Date.now()}-${Math.random()}`;
+  const cleanupProvider = registerSetupProvider({
+    id: providerId,
+    label: "Test Memory",
+    configure: async () => {},
+    onboardingPrompt: () => "Memory onboarding instructions from provider.",
+  });
+  const fakePi = {
+    registerCommand(name, spec) {
+      commands.set(name, spec);
+    },
+    sendUserMessage(text) {
+      sent.push(text);
+    },
+  };
+  const fakeCtx = {
+    hasUI: true,
+    ui: {
+      async select() { return selections.shift(); },
+      setWidget() {},
+      notify() {},
+    },
+  };
+
+  try {
+    process.env.NAZAR_CONFIG_DIR = join(tmp, "config");
+    process.env.NAZAR_STATE_DIR = join(tmp, "state");
+    registerNazarSetupUse(fakePi);
+
+    await commands.get("nazar-setup").handler("all", fakeCtx);
+    await commands.get("nazar-setup").handler("all", fakeCtx);
+    await commands.get("nazar").handler("onboard", fakeCtx);
+
+    assert.equal(sent.length, 1);
+    assert.match(sent[0], /Memory onboarding instructions from provider/);
+  } finally {
+    cleanupProvider();
+    if (previousConfigDir === undefined) delete process.env.NAZAR_CONFIG_DIR;
+    else process.env.NAZAR_CONFIG_DIR = previousConfigDir;
+    if (previousStateDir === undefined) delete process.env.NAZAR_STATE_DIR;
+    else process.env.NAZAR_STATE_DIR = previousStateDir;
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("nazar setup does not start onboarding when providers contribute no prompt", async () => {
+  const tmp = mkdtempSync(join(tmpdir(), "pi-core-no-onboarding-test-"));
+  const previousConfigDir = process.env.NAZAR_CONFIG_DIR;
+  const previousStateDir = process.env.NAZAR_STATE_DIR;
+  const commands = new Map();
+  const sent = [];
+  const providerId = `test-provider-only-${Date.now()}-${Math.random()}`;
+  const cleanupProvider = registerSetupProvider({
+    id: providerId,
+    label: "Test Provider",
+    configure: async () => {},
+    statusText: () => "ready",
+  });
+  const fakePi = {
+    registerCommand(name, spec) {
+      commands.set(name, spec);
+    },
+    sendUserMessage(text) {
+      sent.push(text);
+    },
+  };
+  const fakeCtx = { hasUI: true, ui: { async select() { return "desktop"; }, setWidget() {}, notify() {} } };
+
+  try {
+    process.env.NAZAR_CONFIG_DIR = join(tmp, "config");
+    process.env.NAZAR_STATE_DIR = join(tmp, "state");
+    registerNazarSetupUse(fakePi);
+
+    await commands.get("nazar-setup").handler("all", fakeCtx);
+
+    assert.equal(sent.length, 0);
+  } finally {
+    cleanupProvider();
+    if (previousConfigDir === undefined) delete process.env.NAZAR_CONFIG_DIR;
+    else process.env.NAZAR_CONFIG_DIR = previousConfigDir;
+    if (previousStateDir === undefined) delete process.env.NAZAR_STATE_DIR;
+    else process.env.NAZAR_STATE_DIR = previousStateDir;
     rmSync(tmp, { recursive: true, force: true });
   }
 });

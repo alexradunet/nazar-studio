@@ -10,7 +10,7 @@ Memory and your knowledge base — woven together as a single personal world.
 
 ## Overview
 
-Nazar is a TypeScript Pi.Dev extension product currently split into two installable Pi packages: `@nazar/core` and `@nazar/memory`. It is intentionally:
+Nazar is a TypeScript Pi.Dev extension product currently shipped as two canonical Pi packages: `@nazar/core` and `@nazar/memory`. Memory is part of the default Nazar product experience, but it remains separately packaged so core stays a small setup shell and future capabilities can stay modular. It is intentionally:
 
 - **OS-agnostic.** No NixOS, no Fedora, no Docker host assumptions. Install dependencies through the package manager of your platform. The extensions stay portable.
 - **Local-first.** Your memory and generated state live on your machine in a portable Obsidian vault. Networked integrations are deferred until they are essential.
@@ -27,7 +27,7 @@ Two Pi packages, with one memory-maintenance Agent Skill:
 
 | Extension | Commands | What it does |
 | --- | --- | --- |
-| **`@nazar/core`** | `/nazar setup`, `/nazar status`, `/nazar-setup`, `/nazar-status` | Post-install setup/status shell plus shared helpers. |
+| **`@nazar/core`** | `/nazar setup`, `/nazar onboard`, `/nazar status`, `/nazar-setup`, `/nazar-status` | Post-install setup/status shell plus shared helpers. |
 | **`@nazar/memory`** | `/memory`, `memory_status`, `memory_search` | Durable memory, generated rollups, searchable project knowledge. Ships with the integrated `memory-janitor` Agent Skill. |
 
 ### Skills
@@ -49,7 +49,7 @@ pi install npm:@nazar/core
 pi install npm:@nazar/memory
 ```
 
-Install `@nazar/core` plus `@nazar/memory` for the local-first memory appliance.
+Install both canonical packages for the local-first memory appliance.
 
 ### 3. Point Nazar at your memory vault
 

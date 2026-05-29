@@ -1,11 +1,21 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
+export type SetupOnboardingReason = "post-setup" | "manual";
+
+export type SetupOnboardingContext = {
+  reason: SetupOnboardingReason;
+  selectedProviderIds: string[];
+  force: boolean;
+};
+
 export type SetupProvider = {
   id: string;
   label: string;
   order?: number;
   configure?: (pi: ExtensionAPI, ctx: ExtensionContext) => Promise<void>;
   statusText?: () => string | Promise<string>;
+  onboardingVersion?: number;
+  onboardingPrompt?: (context: SetupOnboardingContext) => string | undefined | Promise<string | undefined>;
 };
 
 type SetupRegistryState = {
