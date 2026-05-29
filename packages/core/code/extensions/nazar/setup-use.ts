@@ -142,7 +142,7 @@ async function runSetup(pi: ExtensionAPI, ctx: ExtensionContext, section?: strin
 }
 
 async function showDoctor(ctx: ExtensionContext): Promise<void> {
-  await show(ctx, "Nazar setup status", `${await statusText()}\n\nDoctor notes:\n- Reload/restart Pi after setup changes.\n- OAuth and WhatsApp auth are never stored in Nazar setup config.\n- On Windows, use winget for host dependencies when available.`);
+  await show(ctx, "Nazar setup status", `${await statusText()}\n\nDoctor notes:\n- Reload/restart Pi after setup changes.\n- Runtime credentials and tokens are never stored in Nazar setup config.\n- On Windows, use winget for host dependencies when available.`);
 }
 
 async function setupCommand(pi: ExtensionAPI, ctx: ExtensionContext, section = ""): Promise<void> {

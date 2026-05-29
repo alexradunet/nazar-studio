@@ -26,7 +26,7 @@ The existing `@nazar/memory` package is the correct owner for the Life OS person
 - `memoryExtension(pi)` is a thin entrypoint that registers setup, `/memory`, durable prompt injection, compaction, and memory tools (`packages/memory/code/extensions/memory.ts:15-84`).
 - The setup provider is package-local and unregistered on `session_shutdown` (`packages/memory/code/extensions/memory.ts:16-17`; `packages/memory/code/extensions/memory/memory-setup.ts:64-72`).
 - `/memory` is currently the only memory command surface, registered by `registerMemoryUse(pi)` (`packages/memory/code/extensions/memory.ts:18`; `packages/memory/code/extensions/memory/memory-use.ts:992-1055`).
-- This matches the FRD decision that the MVP belongs in `@nazar/memory`, not core, voice, WhatsApp, Spotify, or a new runtime.
+- This matches the FRD decision that the MVP belongs in `@nazar/memory`, not core, voice, retired messaging bridge, retired media control, or a new runtime.
 
 ### Command surface: lock `/memory life ...`
 - The current command handler splits the raw tail into whitespace tokens, treats `parts[0]` as the subcommand, and passes the rest onward (`packages/memory/code/extensions/memory/memory-use.ts:995-998`).
@@ -140,7 +140,7 @@ The existing `@nazar/memory` package is the correct owner for the Life OS person
 5 similar past change groups analyzed.
 
 ### Precedent: Package split moved memory behind `@nazar/memory`
-**Commit(s)**: `ef99c66d` — "refactor: restructure Nazar into a monorepo with distinct packages for core functionality, memory, voice, Spotify, and WhatsApp" (2026-05-29); follow-up `19034189` — "fix: harden package split review findings" (2026-05-29).
+**Commit(s)**: `ef99c66d` — "refactor: restructure Nazar into a monorepo with distinct packages for core functionality, memory, voice, retired media control, and retired messaging bridge" (2026-05-29); follow-up `19034189` — "fix: harden package split review findings" (2026-05-29).
 
 **Blast radius**: 69 files across core, memory, feature packages, config, docs, and tests.
 

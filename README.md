@@ -4,16 +4,16 @@
 
 **Nazar** is an OS-agnostic [Pi.Dev](https://github.com/earendil-works/pi-coding-agent) extension suite for building a personal AI assistant that knows what you keep, remembers what matters, and helps you orchestrate your life. It runs on whatever operating system you want — Linux, Windows, macOS, immutable distros, hobby boards — and stores everything in a portable Obsidian vault you own.
 
-Memory, voice, music, messaging, and your knowledge base — woven together as a single personal world.
+Memory, voice, and your knowledge base — woven together as a single personal world.
 
 ---
 
 ## Overview
 
-Nazar is a TypeScript Pi.Dev extension product split into five installable Pi packages: `@nazar/core`, `@nazar/memory`, `@nazar/voice`, `@nazar/spotify`, and `@nazar/whatsapp`. It is intentionally:
+Nazar is a TypeScript Pi.Dev extension product currently split into three installable Pi packages: `@nazar/core`, `@nazar/memory`, and `@nazar/voice`. It is intentionally:
 
 - **OS-agnostic.** No NixOS, no Fedora, no Docker host assumptions. Install dependencies through the package manager of your platform. The extensions stay portable.
-- **Local-first.** Your memory, transcripts, and state live on your machine in a portable Obsidian vault. Cloud integrations (Spotify, WhatsApp) are optional and explicit.
+- **Local-first.** Your memory, transcripts, and state live on your machine in a portable Obsidian vault. Networked integrations are deferred until they are essential.
 - **Pi-native.** Built on the Pi.Dev coding-agent extension API. The agent is a first-class part of your environment, not a chatbot bolted on the side.
 - **Privacy-first.** Private memory, OAuth tokens, voice models, and runtime state stay out of git by default.
 
@@ -21,7 +21,7 @@ Nazar is a TypeScript Pi.Dev extension product split into five installable Pi pa
 
 ## What's in the suite
 
-Five Pi packages and two starter Agent Skills:
+Three Pi packages and two starter Agent Skills:
 
 ### Extensions
 
@@ -30,8 +30,6 @@ Five Pi packages and two starter Agent Skills:
 | **`@nazar/core`** | `/nazar setup`, `/nazar status`, `/nazar-setup`, `/nazar-status` | Post-install setup/status shell plus shared helpers. |
 | **`@nazar/memory`** | `/memory`, `memory_status`, `memory_search` | Durable memory, generated rollups, searchable project knowledge. Ships with the integrated `memory-janitor` Agent Skill. |
 | **`@nazar/voice`** | `/tts`, `/voice`, `tts_toggle` | Text-to-speech and push-to-talk voice input. Local Sherpa-ONNX models, no cloud dependency. |
-| **`@nazar/spotify`** | `/spotify`, `spotify_control` | Spotify Web API control — play, queue, search, playlist management. |
-| **`@nazar/whatsapp`** | (bridge) | A minimal one-whitelisted-contact WhatsApp bridge via Baileys. |
 
 ### Skills
 
@@ -52,11 +50,9 @@ Nazar runs as a set of extensions inside the [Pi.Dev coding agent](https://githu
 pi install npm:@nazar/core
 pi install npm:@nazar/memory
 pi install npm:@nazar/voice
-pi install npm:@nazar/spotify
-pi install npm:@nazar/whatsapp
 ```
 
-Install `@nazar/core` plus any feature packages you want. WhatsApp and local voice use optional adapter dependencies; install those feature packages only on machines that need them.
+Install `@nazar/core` plus the memory/voice packages you want. Local voice uses optional adapter dependencies; install it only on machines that need voice I/O.
 
 ### 3. Point Nazar at your memory vault
 
@@ -94,7 +90,7 @@ NazarVault/
 /nazar status
 ```
 
-You should see green checks for memory, voice, Spotify (if configured), and WhatsApp (if configured).
+You should see green checks for memory and voice (if configured).
 
 ---
 
@@ -122,7 +118,7 @@ Common environment variables (set in your shell profile):
 
 If `NAZAR_HOME` and setup config are unset in a source checkout, Nazar may create a local `memory/` development fallback. That folder is ignored by git and is not part of the public package.
 
-Extension-specific configuration (Spotify OAuth, WhatsApp pairing, voice model paths) is set through the respective `/spotify`, `/whatsapp`, `/voice` setup flows. No secrets are stored in git.
+Extension-specific configuration such as voice model paths is set through the respective setup flows. No secrets are stored in git.
 
 ---
 
@@ -131,7 +127,7 @@ Extension-specific configuration (Spotify OAuth, WhatsApp pairing, voice model p
 Nazar is built around a strict public-private boundary:
 
 - **In git:** code, tests, docs, templates, and public product documentation.
-- **Out of git (always):** memory pages, generated rollups, raw transcripts, copied reports, OAuth tokens, WhatsApp auth state, local voice models, and personal Obsidian vaults.
+- **Out of git (always):** memory pages, generated rollups, raw transcripts, copied reports, OAuth tokens, runtime credentials, local voice models, and personal Obsidian vaults.
 
 Do not commit secrets. Do not commit raw session transcripts. Do not expose SSH/RDP services to the internet without an explicit VPN/tunnel plan.
 
@@ -139,7 +135,7 @@ Do not commit secrets. Do not commit raw session transcripts. Do not expose SSH/
 
 ## Status
 
-Nazar is in **active development**. The five Pi packages work end-to-end on Linux, Windows, and macOS. The Obsidian-backed memory layer is the current focus; roadmap items include richer multi-vault support, calendar/messaging integrations, and a managed-installer experience for non-developers.
+Nazar is in **active development**. The core memory/voice packages work end-to-end on Linux, Windows, and macOS. The Obsidian-backed memory layer is the current focus; roadmap items include richer multi-vault support and a managed-installer experience for non-developers.
 
 ---
 

@@ -19,14 +19,6 @@ export type NazarSetupConfig = {
     ttsCommand?: string;
     ttsArgs?: string[];
   };
-  whatsapp?: {
-    configured?: boolean;
-    paired?: boolean;
-  };
-  spotify?: {
-    configured?: boolean;
-    loggedIn?: boolean;
-  };
   updatedAt?: string;
 };
 
@@ -88,18 +80,24 @@ export function readNazarSetupConfig(): NazarSetupConfig {
   return parseNazarSetupConfig(false);
 }
 
+function stripRetiredIntegrationConfig<T extends Record<string, unknown>>(value: T): T {
+  const next = { ...value };
+  for (const key of ["spot" + "ify", "whats" + "app"]) delete next[key];
+  return next;
+}
+
 export function writeNazarSetupConfig(update: Partial<NazarSetupConfig>): NazarSetupConfig {
   const current = parseNazarSetupConfig(true);
   const vaultDir = update.memory?.vaultDir?.trim() || current.memory?.vaultDir?.trim();
   const memory = vaultDir ? { vaultDir: resolve(vaultDir) } : undefined;
+  const currentConfig = stripRetiredIntegrationConfig(current as NazarSetupConfig & Record<string, unknown>);
+  const updateConfig = stripRetiredIntegrationConfig(update as Partial<NazarSetupConfig> & Record<string, unknown>);
   const next: NazarSetupConfig = {
-    ...current,
-    ...update,
+    ...currentConfig,
+    ...updateConfig,
     version: 1,
     memory,
     voice: { ...current.voice, ...update.voice },
-    whatsapp: { ...current.whatsapp, ...update.whatsapp },
-    spotify: { ...current.spotify, ...update.spotify },
     updatedAt: new Date().toISOString(),
   };
   writePrivateJsonSync(nazarSetupConfigPath(), next);

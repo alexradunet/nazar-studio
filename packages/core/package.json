@@ -21,8 +21,7 @@
     "./shared": "./code/extensions/shared.ts",
     "./setup": "./code/extensions/nazar/setup-store.ts",
     "./setup-registry": "./code/extensions/nazar/setup-registry.ts",
-    "./transcriber": "./code/extensions/nazar/transcriber-registry.ts",
-    "./remote-origin": "./code/extensions/remote-origin.ts"
+    "./transcriber": "./code/extensions/nazar/transcriber-registry.ts"
   },
   "files": [
     "code/extensions/**/*.ts",

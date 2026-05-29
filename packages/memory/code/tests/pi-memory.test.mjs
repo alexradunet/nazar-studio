@@ -113,8 +113,6 @@ test("project Pi settings load workspace package resources and no repo sessionDi
     "../packages/core/code/extensions/nazar.ts",
     "../packages/memory/code/extensions/memory.ts",
     "../packages/voice/code/extensions/voice.ts",
-    "../packages/spotify/code/extensions/spotify.ts",
-    "../packages/whatsapp/code/extensions/whatsapp.ts",
   ]);
   assert.deepEqual(settings.skills, ["../packages/core/code/skills", "../packages/memory/code/extensions/memory/skills"]);
   assert.equal(Object.hasOwn(settings, "sessionDir"), false);
@@ -131,18 +129,13 @@ test("workspace packages expose Nazar Pi package resources", () => {
   const core = JSON.parse(readFileSync(resolve(repoRoot, "packages", "core", "package.json"), "utf8"));
   const memory = JSON.parse(readFileSync(resolve(repoRoot, "packages", "memory", "package.json"), "utf8"));
   const voice = JSON.parse(readFileSync(resolve(repoRoot, "packages", "voice", "package.json"), "utf8"));
-  const spotify = JSON.parse(readFileSync(resolve(repoRoot, "packages", "spotify", "package.json"), "utf8"));
-  const whatsapp = JSON.parse(readFileSync(resolve(repoRoot, "packages", "whatsapp", "package.json"), "utf8"));
 
   assert.deepEqual(core.pi.extensions, ["./code/extensions/nazar.ts"]);
   assert.deepEqual(core.pi.skills, ["./code/skills"]);
   assert.deepEqual(memory.pi.extensions, ["./code/extensions/memory.ts"]);
   assert.deepEqual(memory.pi.skills, ["./code/extensions/memory/skills"]);
   assert.deepEqual(voice.pi.extensions, ["./code/extensions/voice.ts"]);
-  assert.deepEqual(spotify.pi.extensions, ["./code/extensions/spotify.ts"]);
-  assert.deepEqual(whatsapp.pi.extensions, ["./code/extensions/whatsapp.ts"]);
   assert.equal(voice.optionalDependencies["sherpa-onnx-node"], "1.13.2");
-  assert.equal(whatsapp.optionalDependencies["@whiskeysockets/baileys"], "7.0.0-rc13");
 });
 
 test("path derivation uses repo-local fallback when no vault is configured", () => {

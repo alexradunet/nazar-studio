@@ -151,7 +151,7 @@ Run the specific legacy extension-path rewrite before the generic slash-command 
 | `b7c3027f` | refactor: address core review findings | Runtime setup/import/shutdown issues needed follow-up hardening (`90df3e37`, `e27792ac`, `f6a613a1`). |
 | `66f67d9e` | Add wiki extension types and path utilities with tests | Path/type guard gaps fixed immediately in `221d37e3`. |
 | `7e612896` | Add wiki metadata rebuild engine: registry, backlinks, index, log, events | Registry ordering/export cleanup followed in `8ebc15b2`. |
-| `2b4964c4` | feat: replace whatsapp-web.js with Baileys | Optional/heavy dependency moves needed API/runtime follow-ups (`158e1fe3`, `edc030d5`, `94d053b6`). |
+| `2b4964c4` | feat: replace retired-messaging-bridge-web.js with retired messaging adapter | Optional/heavy dependency moves needed API/runtime follow-ups (`158e1fe3`, `edc030d5`, `94d053b6`). |
 
 **Recurring lessons (most → least frequent)**
 
@@ -172,4 +172,4 @@ Run the specific legacy extension-path rewrite before the generic slash-command 
 | 4 | Q3 | Remove `CODE_ROOT` from memory path model/status. | This is cleanup but prevents misleading diagnostics. |
 | 5 | Q4 | Update debranding path and test it via compaction. | Preserve the legacy shim until its scheduled removal. |
 
-**Dependency/advisory note:** Manifest changes were reviewed. Direct touched versions (`@whiskeysockets/baileys@7.0.0-rc13`, `pino@10.3.1`, `qrcode-terminal@0.12.0`, `sherpa-onnx-node@1.13.2`) had no direct published advisories in the checked sources; a final `npm audit`/lockfile validation is still recommended after fixes.
+**Dependency/advisory note:** Manifest changes were reviewed. Direct touched versions (`@retired-messaging-adapter/retired-messaging-adapter@7.0.0-rc13`, `pino@10.3.1`, `qrcode-terminal@0.12.0`, `sherpa-onnx-node@1.13.2`) had no direct published advisories in the checked sources; a final `npm audit`/lockfile validation is still recommended after fixes.

@@ -35,7 +35,7 @@ Implement the low-risk/high-value portion of the supplied codebase review while 
 - No full `memory-use.ts` god-module split in this pass; that remains a larger pure-decomposition follow-up once behavior changes land.
 - No LLM-based memory summarizer; deterministic extraction remains default by design.
 - No QMD indexing of generated rollups; monthly rollups are dropped instead.
-- No broad typing rewrite for Baileys/Sherpa dynamic surfaces beyond touched seams.
+- No broad typing rewrite for retired messaging adapter/Sherpa dynamic surfaces beyond touched seams.
 
 ---
 
@@ -48,7 +48,7 @@ Use a shared adapter for tool-output truncation and remove the stale ignore rule
 
 - `code/extensions/shared.ts` — add async `truncateToolOutput()` that dynamically uses Pi SDK `truncateHead`/defaults when available, otherwise applies a local line+byte fallback. Keep `truncateUtf8()` for synchronous memory-context truncation.
 - `code/extensions/memory.ts` — replace local 50KB constant and sync byte-only truncation with `await truncateToolOutput()`.
-- `code/extensions/spotify/spotify-use.ts` — replace local 50KB constant and sync byte-only truncation with `await truncateToolOutput()`.
+- `code/extensions/retired-media-control/retired-media-control-use.ts` — replace local 50KB constant and sync byte-only truncation with `await truncateToolOutput()`.
 - `.gitignore` — remove `code/extensions/websearch/node_modules/**`.
 - Tests — update source-level remediation tests and add fallback line-cap coverage.
 
@@ -59,7 +59,7 @@ Use a shared adapter for tool-output truncation and remove the stale ignore rule
 - [ ] Tool truncation tests prove byte cap and line cap behavior.
 
 #### Manual Verification
-- [ ] Memory/Spotify tool outputs still include an explicit truncation suffix when truncated.
+- [ ] Memory/retired media control tool outputs still include an explicit truncation suffix when truncated.
 
 ---
 
@@ -122,7 +122,7 @@ Collapse repeated notification-only UI/headless branches where it does not alter
 - `code/extensions/shared.ts` — add `notify(ctx, text, level)` helper.
 - `code/extensions/voice/voice-use.ts` — use `notify()` for notification-only branches; keep `showText()`/widget branches unchanged.
 - `code/extensions/voice/tts-use.ts` — use `notify()` for notification-only branches; keep widget branches unchanged.
-- `code/extensions/whatsapp/whatsapp-use.ts` — use `notify()` for notification-only branches; keep widget branches unchanged.
+- `code/extensions/retired-messaging-bridge/retired-messaging-bridge-use.ts` — use `notify()` for notification-only branches; keep widget branches unchanged.
 
 ### Success Criteria
 
@@ -154,7 +154,7 @@ Implemented in the working tree on 2026-05-28.
 - `ensureDirs()` is path-key memoized with cheap existence self-healing.
 - Sherpa native loading uses `createRequire(import.meta.url)` and the voice package scope is ESM.
 - Audio resolver test seams and macOS FFmpeg avfoundation setup were added.
-- Notification-only branches in voice/TTS/WhatsApp use `notify()`.
+- Notification-only branches in voice/TTS/retired messaging bridge use `notify()`.
 - Stale websearch node_modules ignore entry was removed.
 
 Validation completed:

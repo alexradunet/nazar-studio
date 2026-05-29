@@ -13,7 +13,7 @@ function source(path) {
 test("core setup is registry-driven and feature-free", () => {
   const setupUse = source("packages/core/code/extensions/nazar/setup-use.ts");
   assert.match(setupUse, /setupProviders/);
-  assert.doesNotMatch(setupUse, /\.\.\/\.\.\/memory|@nazar\/memory|@nazar\/voice|@nazar\/spotify|@nazar\/whatsapp/);
+  assert.doesNotMatch(setupUse, /\.\.\/\.\.\/memory|@nazar\/memory|@nazar\/voice/);
 
   const registry = source("packages/core/code/extensions/nazar/setup-registry.ts");
   assert.match(registry, /Symbol\.for\("nazar\.setup-registry"\)/);
@@ -24,19 +24,9 @@ test("core setup is registry-driven and feature-free", () => {
   assert.match(transcriber, /Symbol\.for\("nazar\.transcriber-registry"\)/);
   assert.match(transcriber, /clearTranscriber/);
 
-  const remoteOrigin = source("packages/core/code/extensions/remote-origin.ts");
-  assert.match(remoteOrigin, /Symbol\.for\("nazar\.remote-origin"\)/);
 });
 
-test("review remediation keeps critical runtime fixes wired", () => {
-  const whatsappUse = source("packages/whatsapp/code/extensions/whatsapp/whatsapp-use.ts");
-  assert.match(whatsappUse, /FFMPEG_TIMEOUT_MS/);
-  assert.match(whatsappUse, /stdoutBytes > MAX_PCM_BYTES/);
-  assert.match(whatsappUse, /ffmpeg timed out after/);
-  assert.match(whatsappUse, /ctxRef = undefined/);
-  assert.match(whatsappUse, /getTranscriber\(\)/);
-  assert.doesNotMatch(whatsappUse, /sherpa-runtime/);
-
+test("review remediation keeps voice runtime cleanup wired", () => {
   const ttsUse = source("packages/voice/code/extensions/voice/tts-use.ts");
   assert.match(ttsUse, /function clearDebounceTimer/);
   assert.match(ttsUse, /pi\.on\("session_shutdown"[\s\S]*clearDebounceTimer\(\)/);
@@ -54,11 +44,6 @@ test("memory_search tool truncates search output before returning", () => {
   assert.match(memoryExtension, /before_agent_start[\s\S]*buildDurableMemoryContext\(\)/);
 });
 
-test("spotify_control tool truncates action output before returning", () => {
-  const spotifyUse = source("packages/spotify/code/extensions/spotify/spotify-use.ts");
-  assert.doesNotMatch(spotifyUse, /TOOL_OUTPUT_LIMIT_BYTES/);
-  assert.match(spotifyUse, /await truncateToolOutput\(await spotifyAction\(params\)\)/);
-});
 
 test("voice runtime uses ESM-safe native loading and registers setup/transcriber", async () => {
   const voicePackage = JSON.parse(source("packages/voice/package.json"));
@@ -93,12 +78,4 @@ test("stale websearch extension ignore rule is removed", () => {
   const gitignore = source(".gitignore");
   assert.doesNotMatch(gitignore, /code\/extensions\/websearch\/node_modules/);
   assert.match(gitignore, /packages\/\*\/node_modules/);
-});
-
-test("Spotify JSON state errors avoid leaking full paths", () => {
-  const spotifyAuth = source("packages/spotify/code/extensions/spotify/spotify-auth.ts");
-  const readJsonBlock = spotifyAuth.slice(spotifyAuth.indexOf("function readJson"), spotifyAuth.indexOf("function writeJson"));
-  assert.match(readJsonBlock, /basename\(path\)/);
-  assert.doesNotMatch(readJsonBlock, /malformed at \$\{path\}/);
-  assert.doesNotMatch(readJsonBlock, /error\.message : String\(error\)/);
 });

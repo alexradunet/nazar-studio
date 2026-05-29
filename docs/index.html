@@ -153,7 +153,7 @@
     <section class="intro" aria-labelledby="intro-heading">
       <h2 id="intro-heading" hidden>About</h2>
       <p class="lede">An OS-agnostic Pi.Dev extension suite for building a personal AI assistant that knows what you keep, remembers what matters, and helps you orchestrate your life.</p>
-      <p>Memory, voice, music, messaging, and your knowledge base — woven together as a single personal world. Runs on Linux, Windows, macOS. Stores everything in a portable Obsidian vault you own. <strong>Local-first by default.</strong> Cloud integrations are optional and explicit.</p>
+      <p>Memory, voice, and your knowledge base — woven together as a single personal world. Runs on Linux, Windows, macOS. Stores everything in a portable Obsidian vault you own. <strong>Local-first by default.</strong> Networked integrations are deferred until they are essential.</p>
       <p>
         <a class="button-primary" href="#quick-start">
           Quick start <span class="button-arrow" aria-hidden="true">↓</span>
@@ -169,7 +169,7 @@
         <li><strong>OS-agnostic.</strong> No NixOS, no Docker host assumptions. Install dependencies through the package manager of your platform. The extensions stay portable.</li>
         <li><strong>Local-first.</strong> Your memory, transcripts, and state live on your machine in a portable Obsidian vault. You can move it. You can read it without Nazar.</li>
         <li><strong>Pi-native.</strong> Built on the Pi.Dev coding-agent extension API. The agent is a first-class part of your environment, not a chatbot bolted on the side.</li>
-        <li><strong>Privacy-first.</strong> Private memory, OAuth tokens, voice models, and runtime state stay out of git by default.</li>
+        <li><strong>Privacy-first.</strong> Private memory, runtime credentials, voice models, and runtime state stay out of git by default.</li>
         <li><strong>KISS &amp; inspectable.</strong> TypeScript modules you can read in an afternoon. No magical build steps. No hidden services.</li>
       </ul>
     </section>
@@ -178,7 +178,7 @@
 
     <section aria-labelledby="extensions-heading">
       <h2 id="extensions-heading">What's in the suite</h2>
-      <p class="intro" style="margin-bottom: var(--space-md); max-width: 720px;">Five core extensions and two starter Agent Skills. All registered with Pi.Dev through <code>.pi/settings.json</code>.</p>
+      <p class="intro" style="margin-bottom: var(--space-md); max-width: 720px;">Three core extensions and two starter Agent Skills. All registered with Pi.Dev through <code>.pi/settings.json</code>.</p>
 
       <div class="card-grid">
 
@@ -220,28 +220,6 @@
           </ul>
         </article>
 
-        <article class="card">
-          <header class="card-head">
-            <h3 class="card-name mono">spotify</h3>
-            <span class="card-status muted">Integration</span>
-          </header>
-          <p>Spotify Web API control. Play, queue, search, manage playlists. OAuth tokens stored locally, never committed.</p>
-          <ul class="card-tags">
-            <li>/spotify</li>
-            <li>spotify_control</li>
-          </ul>
-        </article>
-
-        <article class="card">
-          <header class="card-head">
-            <h3 class="card-name mono">whatsapp</h3>
-            <span class="card-status muted">Integration</span>
-          </header>
-          <p>Minimal one-whitelisted-contact WhatsApp bridge via Baileys. For when your agent needs to text exactly one person.</p>
-          <ul class="card-tags">
-            <li>(bridge)</li>
-          </ul>
-        </article>
 
         <article class="card">
           <header class="card-head">
@@ -269,7 +247,7 @@
         <p class="step-label">Step 2</p>
         <h3>Install Nazar</h3>
 <pre>pi install @nazar/nazar-pi</pre>
-        <p>This registers the five extensions in your Pi settings and pulls dependencies (Baileys for WhatsApp, sherpa-onnx-node for voice, etc.).</p>
+        <p>This registers the core, memory, and voice extensions in your Pi settings and pulls the optional local voice dependency when enabled.</p>
       </div>
 
       <div class="step">
@@ -285,7 +263,7 @@
         <p class="step-label">Step 4</p>
         <h3>Verify</h3>
 <pre>/nazar-status</pre>
-        <p>You should see green checks for memory, voice, Spotify (if configured), and WhatsApp (if configured).</p>
+        <p>You should see green checks for memory and voice (if configured).</p>
       </div>
     </section>
 
@@ -324,7 +302,7 @@
       <h2 id="privacy-heading">Privacy boundary</h2>
       <ul class="stitched-list">
         <li><strong>In git:</strong> code, tests, docs, templates, public AI/infrastructure memory.</li>
-        <li><strong>Out of git (always):</strong> private memory pages, generated rollups, journals, source reports, OAuth tokens, WhatsApp auth state, local voice models, your personal Obsidian vault.</li>
+        <li><strong>Out of git (always):</strong> private memory pages, generated rollups, journals, source reports, runtime credentials, local voice models, your personal Obsidian vault.</li>
       </ul>
       <p style="margin-top: var(--space-sm); max-width: 720px;">Do not commit secrets. Do not commit raw session transcripts. Do not expose SSH or RDP to the internet without an explicit VPN/tunnel plan.</p>
     </section>
@@ -333,8 +311,8 @@
 
     <section aria-labelledby="status-heading">
       <h2 id="status-heading">Status</h2>
-      <p style="max-width: 720px; margin: 0 0 var(--space-sm) 0;">Nazar is in <strong>active development</strong>. The five core extensions work end-to-end on Linux, Windows, and macOS. The Obsidian-backed memory layer is the current focus.</p>
-      <p style="max-width: 720px; margin: 0;">Roadmap items include richer multi-vault support, additional integrations (calendar, more messaging), and a managed-installer experience for non-developers.</p>
+      <p style="max-width: 720px; margin: 0 0 var(--space-sm) 0;">Nazar is in <strong>active development</strong>. The core memory/voice extensions work end-to-end on Linux, Windows, and macOS. The Obsidian-backed memory layer is the current focus.</p>
+      <p style="max-width: 720px; margin: 0;">Roadmap items include richer multi-vault support and a managed-installer experience for non-developers.</p>
     </section>
 
     <hr class="stitch" aria-hidden="true">

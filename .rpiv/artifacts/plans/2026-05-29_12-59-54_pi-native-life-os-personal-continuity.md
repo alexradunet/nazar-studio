@@ -51,7 +51,7 @@ Model tools can retrieve a bounded Life OS readout and perform narrow state upda
 - No QMD indexing of raw `life.json` state.
 - No new top-level `/life` command.
 - No new `NAZAR_LIFE_*` env vars or setup config keys.
-- No scheduler, daemon, Hermes runtime loop, voice/WhatsApp/Spotify delivery, wellness logs, or daily briefing workflow.
+- No scheduler, daemon, Hermes runtime loop, voice/retired messaging bridge/retired media control delivery, wellness logs, or daily briefing workflow.
 - No broad refactor of `memory-use.ts` beyond thin delegation.
 
 ## Phase 1: Life state and readout foundation

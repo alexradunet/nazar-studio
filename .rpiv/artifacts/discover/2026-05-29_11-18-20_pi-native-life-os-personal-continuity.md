@@ -26,13 +26,13 @@ Developer framing captured during interview: "All of them but first we go with p
 - Keep the implementation Pi-native: package-local extension code, commands, tools, and skills only.
 - Reuse Nazar's existing memory vault/runtime paths and private write helpers.
 - Keep raw Life OS data private and on-demand by default.
-- Enable later daily briefings, wellness tracking, voice/WhatsApp delivery, and broader Life OS orchestration to consume the continuity core.
+- Enable later daily briefings, wellness tracking, voice/retired messaging bridge delivery, and broader Life OS orchestration to consume the continuity core.
 
 ## Non-Goals
 - Do not port Hermes' Python/OpenRouter/Rich/argparse runtime loop.
 - Do not implement the full Hermes mode surface in the MVP.
 - Do not add a new daemon, MCP server, wrapper CLI, scheduler, or Pi core patch.
-- Do not add voice, WhatsApp, Spotify, health/wellness logs, or briefing delivery in the first slice.
+- Do not add voice, retired messaging bridge, retired media control, health/wellness logs, or briefing delivery in the first slice.
 - Do not inject raw personal logs into the default Pi system prompt.
 
 ## Functional Requirements
@@ -122,7 +122,7 @@ Extend `@nazar/memory` with a minimal personal-continuity layer for profile, goa
 ## Suggested Follow-ups
 - Daily rhythm / briefing workflows from `.rpiv/external/hermes-life-os/skills/life-os/SKILL.md:18-59` should be a later memory skill/command after the continuity core exists.
 - Wellness logs, dream journal, habit tracking, and pattern detection from `.rpiv/artifacts/research/2026-05-29_10-51-54_hermes-life-os-feature-port-analysis.md` should be later slices, not MVP scope.
-- Voice and WhatsApp delivery should consume this memory capability later through existing package surfaces, not drive the first implementation.
+- Voice and retired messaging bridge delivery should consume this memory capability later through existing package surfaces, not drive the first implementation.
 
 ## References
 - `.rpiv/artifacts/research/2026-05-29_10-51-54_hermes-life-os-feature-port-analysis.md`

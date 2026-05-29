@@ -5,7 +5,7 @@ commit: b8084da4
 branch: main
 repository: nazar
 topic: "Nazar Pareto Split"
-tags: [plan, pareto, monorepo, pi-packages, memory, voice, spotify, whatsapp]
+tags: [plan, pareto, monorepo, pi-packages, memory, voice, retired-media-control, retired-messaging-bridge]
 status: completed
 parent: "user-directed Pareto simplification + 5-package split"
 last_updated: 2026-05-29T01:35:54+0300
@@ -16,7 +16,7 @@ last_updated_by: Pi
 
 ## Overview
 
-Apply the Pareto principle to the Nazar Pi extension product: remove dead/write-only code, collapse low-value configuration knobs, and split the three "satellite" features (Voice, Spotify, WhatsApp) out of the monolith into a 5-package npm-workspaces monorepo with a shared `@nazar/core`. No feature is dropped — satellites become independently installable Pi packages, so the core appliance becomes auditable and free of native/OAuth dependencies while every capability stays available.
+Apply the Pareto principle to the Nazar Pi extension product: remove dead/write-only code, collapse low-value configuration knobs, and split the three "satellite" features (Voice, retired media control, retired messaging bridge) out of the monolith into a 5-package npm-workspaces monorepo with a shared `@nazar/core`. No feature is dropped — satellites become independently installable Pi packages, so the core appliance becomes auditable and free of native/OAuth dependencies while every capability stays available.
 
 This plan is the durable tracking pipeline across three sequential PRs. Cleanups (Phase A, B) ship first against the monolith so diffs stay small and the suite stays green; the split (Phase C) then moves already-clean code.
 
@@ -25,9 +25,9 @@ This plan is the durable tracking pipeline across three sequential PRs. Cleanups
 1. **`memory_search` `query` mode** — dropped. Keep only `search`.
 2. **QMD scopes** — collapsed to `default` (warm memory) + `archive` (cold). Drop `personal`/`ai`/`all`.
 3. **`isJournalPrivateMessage` rollup filter** — removed along with the rest of the journal subsystem.
-4. **Package granularity** — 5 packages: `@nazar/core`, `@nazar/memory`, `@nazar/voice`, `@nazar/spotify`, `@nazar/whatsapp`.
+4. **Package granularity** — 5 packages: `@nazar/core`, `@nazar/memory`, `@nazar/voice`, `@nazar/retired-media-control`, `@nazar/retired-messaging-bridge`.
 5. **Layout** — npm-workspaces monorepo.
-6. **Coupling** — shared `@nazar/core`, keep all features (registry seams for setup + transcriber; `remote-origin` moves to core).
+6. **Coupling** — shared `@nazar/core`, keep all features (registry seams for setup + transcriber; `retired-origin-channel` moves to core).
 
 ### Phase status tracker
 
@@ -41,11 +41,11 @@ This plan is the durable tracking pipeline across three sequential PRs. Cleanups
 
 ```mermaid
 graph TD
-  core["@nazar/core (pi-pkg + lib)\nshared.ts, remote-origin.ts, setup-store.ts,\nsetup-registry.ts, transcriber-registry.ts,\nnazar.ts (/nazar setup + status)"]
+  core["@nazar/core (pi-pkg + lib)\nshared.ts, retired-origin-channel.ts, setup-store.ts,\nsetup-registry.ts, transcriber-registry.ts,\nnazar.ts (/nazar setup + status)"]
   mem["@nazar/memory\nmemory.ts + memory/* + skills"]
   voice["@nazar/voice\nvoice.ts, voice-text.ts, voice/*\noptionalDep: sherpa-onnx-node"]
-  spot["@nazar/spotify\nspotify.ts, spotify/*"]
-  wa["@nazar/whatsapp\nwhatsapp.ts, whatsapp/*\noptionalDep: baileys, pino, qrcode-terminal"]
+  spot["@nazar/retired-media-control\nretired-media-control.ts, retired-media-control/*"]
+  wa["@nazar/retired-messaging-bridge\nretired-messaging-bridge.ts, retired-messaging-bridge/*\noptionalDep: retired-messaging-adapter, pino, qrcode-terminal"]
   mem --> core
   voice --> core
   spot --> core
@@ -54,14 +54,14 @@ graph TD
   wa -. "reads transcriber (graceful)" .-> core
 ```
 
-Each feature package registers its own setup provider and status text into core's registry at load time (same process-singleton pattern as today's `remote-origin.ts`). Core never imports a feature. WhatsApp gets STT through a core transcriber seam that Voice populates, so WhatsApp degrades gracefully if Voice is absent. Packages ship raw TypeScript (no build step), loaded via Pi's `jiti` — confirmed against `.pi/npm/node_modules/pi-subagents` (ships `src/**/*.ts`, `pi.extensions` points straight at `.ts`).
+Each feature package registers its own setup provider and status text into core's registry at load time (same process-singleton pattern as today's `retired-origin-channel.ts`). Core never imports a feature. retired messaging bridge gets STT through a core transcriber seam that Voice populates, so retired messaging bridge degrades gracefully if Voice is absent. Packages ship raw TypeScript (no build step), loaded via Pi's `jiti` — confirmed against `.pi/npm/node_modules/pi-subagents` (ships `src/**/*.ts`, `pi.extensions` points straight at `.ts`).
 
 ## Desired End State
 
 - The monolith's dead code (journal subsystem, write-only runtime dirs, monthly leftovers) is gone with no behavior change.
 - Memory paths derive from a single mental model: `PI_PROJECT_ROOT` + `NAZAR_HOME` (vault) + repo-local dev fallback. No `PI_MEMORY_*` override matrix, no advanced-paths setup branch.
 - `memory_search` has one mode (`search`) and two scopes (`default`, `archive`).
-- The repo is a private npm-workspaces root with `packages/{core,memory,voice,spotify,whatsapp}`, each a publishable Pi package.
+- The repo is a private npm-workspaces root with `packages/{core,memory,voice,retired-media-control,retired-messaging-bridge}`, each a publishable Pi package.
 - `@nazar/core` holds shared helpers, setup store/wizard shell, and the two registry seams; it imports no feature.
 - `/nazar setup` and `/nazar status` are registry-driven and list whatever feature packages are installed.
 - `npm test` (workspace-wide), `npm run pack:dry` per package, and `git diff --check` all pass.
@@ -73,7 +73,7 @@ Each feature package registers its own setup provider and status text into core'
 - No build step — packages ship raw `.ts` loaded via `jiti`.
 - No rewrite of memory rollup/pinned/QMD internals beyond the knob collapse.
 - No deletion of legacy on-disk files (monthly rollups, old journal/sources/indexes/archive dirs) created by prior runs — only code paths are removed.
-- No broad Baileys/Sherpa typing rewrite.
+- No broad retired messaging adapter/Sherpa typing rewrite.
 
 ---
 
@@ -180,7 +180,7 @@ Reduce the permanent branching tax in the memory path layer and QMD layer. Compl
 
 ### Overview
 
-Move already-clean code into `packages/{core,memory,voice,spotify,whatsapp}` under npm workspaces. Completed with registry-driven setup/status, a global transcriber seam for optional voice STT, global remote-origin attribution, package manifests/exports, moved tests, updated dev settings, package docs, and session-shutdown cleanup for global setup/transcriber registrations.
+Move already-clean code into `packages/{core,memory,voice,retired-media-control,retired-messaging-bridge}` under npm workspaces. Completed with registry-driven setup/status, a global transcriber seam for optional voice STT, global retired-origin-channel attribution, package manifests/exports, moved tests, updated dev settings, package docs, and session-shutdown cleanup for global setup/transcriber registrations.
 
 ### Changes Required
 
@@ -188,34 +188,34 @@ Move already-clean code into `packages/{core,memory,voice,spotify,whatsapp}` und
 **Files**: `package.json` (root), `packages/core/package.json`, moved core files
 **Changes**:
 - Root `package.json` → private workspace root: `{ "private": true, "workspaces": ["packages/*"], scripts: { test, pack:dry } }`. Remove monolithic `pi.extensions`/`files`/`optionalDependencies`.
-- Create `@nazar/core`: move `shared.ts`, `remote-origin.ts`, `nazar.ts`, `nazar/setup-use.ts`, `nazar/setup-store.ts` under `packages/core/code/extensions/...`. `pi.extensions: ["./code/extensions/nazar.ts"]`, light peerDeps only.
-- Add `exports` map for raw `.ts`: `./shared`, `./setup`, `./remote-origin`, `./setup-registry`, `./transcriber`.
+- Create `@nazar/core`: move `shared.ts`, `retired-origin-channel.ts`, `nazar.ts`, `nazar/setup-use.ts`, `nazar/setup-store.ts` under `packages/core/code/extensions/...`. `pi.extensions: ["./code/extensions/nazar.ts"]`, light peerDeps only.
+- Add `exports` map for raw `.ts`: `./shared`, `./setup`, `./retired-origin-channel`, `./setup-registry`, `./transcriber`.
 
 #### C2. Setup registry seam
 **Files**: `packages/core/code/extensions/nazar/setup-registry.ts`, `nazar.ts`, each feature entry
 **Changes**:
 - Lift the existing `SetupProvider`/`SETUP_PROVIDERS` shape into a process-singleton registry: `registerSetupProvider({ id, label, order, configure, statusText? })` + `setupProviders()` (dedupe by id).
 - Core builds the `/nazar setup` menu, section validator, and aggregated `/nazar status` from `setupProviders()` instead of static feature imports.
-- Each feature package registers its own provider and moves its `configure*` logic out of core (memory → `@nazar/memory`, voice wizard + `setup-sherpa.mjs` + `sherpaModelStatus` → `@nazar/voice`, spotify → `@nazar/spotify`, whatsapp → `@nazar/whatsapp`).
+- Each feature package registers its own provider and moves its `configure*` logic out of core (memory → `@nazar/memory`, voice wizard + `setup-sherpa.mjs` + `sherpaModelStatus` → `@nazar/voice`, retired-media-control → `@nazar/retired-media-control`, retired-messaging-bridge → `@nazar/retired-messaging-bridge`).
 
-#### C3. Transcriber seam + remote-origin
-**Files**: `packages/core/.../transcriber-registry.ts`, voice + whatsapp + spotify entries
+#### C3. Transcriber seam + retired-origin-channel
+**Files**: `packages/core/.../transcriber-registry.ts`, voice + retired-messaging-bridge + retired-media-control entries
 **Changes**:
 - Add `setTranscriber(fn)` / `getTranscriber()` to core.
-- `@nazar/voice` registers `transcribeSherpaPcm16` at load; `@nazar/whatsapp` calls `getTranscriber()?.(pcm)` and skips audio transcription when Voice is absent (documented optional/peer dep).
-- Move `remote-origin.ts` to core; WhatsApp imports `set/clearRemoteTurnOrigin`, Spotify imports `getRemoteTurnOrigin` from `@nazar/core/remote-origin`.
+- `@nazar/voice` registers `transcribeSherpaPcm16` at load; `@nazar/retired-messaging-bridge` calls `getTranscriber()?.(pcm)` and skips audio transcription when Voice is absent (documented optional/peer dep).
+- Move `retired-origin-channel.ts` to core; retired messaging bridge imports `set/clearRemoteTurnOrigin`, retired media control imports `getRemoteTurnOrigin` from `@nazar/core/retired-origin-channel`.
 
 #### C4. Move features into packages
-**Files**: `packages/{memory,voice,spotify,whatsapp}/...`
+**Files**: `packages/{memory,voice,retired-media-control,retired-messaging-bridge}/...`
 **Changes**:
 - Move each area's files under `packages/<x>/code/extensions/...` (intra-package relative imports unchanged).
-- New `package.json` per package: `@nazar/<x>`, single `pi.extensions` entry, `pi.skills` where applicable (memory keeps `memory/skills`), `dependencies: { "@nazar/core": "workspace:*" }`, correct `optionalDependencies` (sherpa → voice; baileys/pino/qrcode-terminal → whatsapp), `files` glob.
-- Rewrite cross-package imports: `../shared.ts` → `@nazar/core/shared`, `../nazar/setup-store.ts` → `@nazar/core/setup`, `../remote-origin.ts` → `@nazar/core/remote-origin`, whatsapp's `../voice/sherpa-runtime.ts` → `@nazar/core/transcriber`.
+- New `package.json` per package: `@nazar/<x>`, single `pi.extensions` entry, `pi.skills` where applicable (memory keeps `memory/skills`), `dependencies: { "@nazar/core": "workspace:*" }`, correct `optionalDependencies` (sherpa → voice; retired-messaging-adapter/pino/qrcode-terminal → retired-messaging-bridge), `files` glob.
+- Rewrite cross-package imports: `../shared.ts` → `@nazar/core/shared`, `../nazar/setup-store.ts` → `@nazar/core/setup`, `../retired-origin-channel.ts` → `@nazar/core/retired-origin-channel`, retired-messaging-bridge's `../voice/sherpa-runtime.ts` → `@nazar/core/transcriber`.
 
 #### C5. Tests, dev settings, docs
 **Files**: `packages/*/code/tests/*`, `.pi/settings.json`, `README.md`, `AGENTS.md`, `code/tests/README.md`
 **Changes**:
-- Move tests next to packages: `pi-spotify`/`pi-whatsapp`/`pi-voice` wholesale; `pi-memory` splits — truncation + `defaultVoiceModelDir` coupling → `@nazar/core`, command-shape + memory behavior → `@nazar/memory`. Update structural `package.json`/`.pi/settings.json` assertions.
+- Move tests next to packages: `pi-retired-media-control`/`pi-retired-messaging-bridge`/`pi-voice` wholesale; `pi-memory` splits — truncation + `defaultVoiceModelDir` coupling → `@nazar/core`, command-shape + memory behavior → `@nazar/memory`. Update structural `package.json`/`.pi/settings.json` assertions.
 - Update `.pi/settings.json` `extensions` to the new `packages/*/code/extensions/*.ts` paths.
 - Update `README.md`, `AGENTS.md` (package layout + per-package install), and `code/tests/README.md`.
 
@@ -226,12 +226,12 @@ Move already-clean code into `packages/{core,memory,voice,spotify,whatsapp}` und
 - [x] `npm test` (workspace-wide) passes.
 - [x] `npm run pack:dry` passes for each package; each tarball contains only its own files + correct `optionalDependencies`.
 - [x] `git diff --check` clean (CRLF/LF warnings expected on Windows).
-- [x] `@nazar/core` source contains no import from `memory`/`voice`/`spotify`/`whatsapp`.
+- [x] `@nazar/core` source contains no import from `memory`/`voice`/`retired-media-control`/`retired-messaging-bridge`.
 
 #### Manual Verification
 - [x] Smoke-load via updated `.pi/settings.json`: extension entry modules import successfully; `/nazar setup` and `/nazar status` are registry-driven.
-- [x] With `@nazar/voice` absent, WhatsApp audio messages skip transcription instead of erroring.
-- [x] WhatsApp→Spotify playback attribution still works through core `remote-origin`.
+- [x] With `@nazar/voice` absent, retired messaging bridge audio messages skip transcription instead of erroring.
+- [x] retired messaging bridge→retired media control playback attribution still works through core `retired-origin-channel`.
 
 ---
 
@@ -265,11 +265,11 @@ pi --no-session --offline -p "/memory search test"
 
 - No user data migration. Legacy on-disk dirs/files (monthly rollups, journal/sources/indexes/runtime-archive) are left untouched; only code paths are removed.
 - Dropping `PI_MEMORY_*` env overrides is a behavior change for anyone relying on them; `NAZAR_HOME` + repo-local fallback remain. Document in `README.md`/`AGENTS.md`.
-- After the split, consumers install per feature: `pi install npm:@nazar/core` + `npm:@nazar/memory` (+ optional `@nazar/voice`/`@nazar/spotify`/`@nazar/whatsapp`).
+- After the split, consumers install per feature: `pi install npm:@nazar/core` + `npm:@nazar/memory` (+ optional `@nazar/voice`/`@nazar/retired-media-control`/`@nazar/retired-messaging-bridge`).
 
 ## Developer Context
 
-- Coupling map (grounding the seams): `nazar/setup-use.ts` statically imports memory/voice/spotify/whatsapp; `whatsapp-use.ts` imports `transcribeSherpaPcm16` from `voice/sherpa-runtime.ts`; `spotify-use.ts` reads, `whatsapp-use.ts` writes `remote-origin.ts`.
+- Coupling map (grounding the seams): `nazar/setup-use.ts` statically imports memory/voice/retired-media-control/retired-messaging-bridge; `retired-messaging-bridge-use.ts` imports `transcribeSherpaPcm16` from `voice/sherpa-runtime.ts`; `retired-media-control-use.ts` reads, `retired-messaging-bridge-use.ts` writes `retired-origin-channel.ts`.
 - Build-free packaging confirmed against `.pi/npm/node_modules/pi-subagents` (ships raw `src/**/*.ts`, depends on `jiti`).
 - The existing `SetupProvider`/`SETUP_PROVIDERS` array in `setup-use.ts` is nearly the registry seam already — C2 lifts it into core.
 - Working-tree state at plan authoring: `code/extensions/memory/paths.ts` has the Phase A type-field deletions applied but derivations/returns not yet finished; complete Phase A before validating.

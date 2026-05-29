@@ -17,7 +17,7 @@ last_updated_by: Alex Radu
 Analyze `https://github.com/Lethe044/hermes-life-os` and identify which features are worth implementing in Nazar in a clean, Pi-native way. The user specifically asked to use RPIV and selected **Life memory core** as the first feature family to optimize for.
 
 ## Summary
-Hermes Life OS is best treated as a feature-inspiration repository, not an architecture to port. Its durable ideas are structured life logs, deterministic pattern detection, personalized briefing workflows, and a tool-trace evaluation rubric; its implementation shell is a monolithic Python OpenRouter/Rich/argparse demo that conflicts with Nazar's Pi-extension-only architecture. For Nazar, the first clean slice should live in `@nazar/memory`: private structured life events, normalized schemas, deterministic/offline pattern summaries, and bounded searchable/brief prompt context. Daily briefings, WhatsApp/voice delivery, and reward-style evaluation should consume that memory core later rather than driving the first implementation.
+Hermes Life OS is best treated as a feature-inspiration repository, not an architecture to port. Its durable ideas are structured life logs, deterministic pattern detection, personalized briefing workflows, and a tool-trace evaluation rubric; its implementation shell is a monolithic Python OpenRouter/Rich/argparse demo that conflicts with Nazar's Pi-extension-only architecture. For Nazar, the first clean slice should live in `@nazar/memory`: private structured life events, normalized schemas, deterministic/offline pattern summaries, and bounded searchable/brief prompt context. Daily briefings, retired messaging bridge/voice delivery, and reward-style evaluation should consume that memory core later rather than driving the first implementation.
 
 ## Detailed Findings
 
@@ -30,13 +30,13 @@ Hermes Life OS is best treated as a feature-inspiration repository, not an archi
 ### Nazar ownership and package boundaries
 - Nazar core is a setup shell: `packages/core/code/extensions/nazar.ts:5-6` delegates to setup command registration, while `packages/core/code/extensions/nazar/setup-use.ts:174-204` owns `/nazar`, `/nazar-setup`, and `/nazar-status`.
 - `@nazar/memory` owns durable memory surfaces: its extension registers setup, `/memory`, prompt injection, compaction, `memory_status`, and `memory_search` (`packages/memory/code/extensions/memory.ts:15-84`).
-- `@nazar/voice`, `@nazar/spotify`, and `@nazar/whatsapp` already own STT/TTS, music, and remote-message transport surfaces (`packages/voice/code/extensions/voice.ts:10-18`; `packages/spotify/code/extensions/spotify.ts:6-9`; `packages/whatsapp/code/extensions/whatsapp.ts:6-9`).
+- `@nazar/voice`, `@nazar/retired-media-control`, and `@nazar/retired-messaging-bridge` already own STT/TTS, music, and remote-message transport surfaces (`packages/voice/code/extensions/voice.ts:10-18`; `packages/retired-media-control/code/extensions/retired-media-control.ts:6-9`; `packages/retired-messaging-bridge/code/extensions/retired-messaging-bridge.ts:6-9`).
 - Project rules prohibit copying Hermes as a new runtime: Nazar must stay within Pi extension APIs, commands, tools, lifecycle events, skills, and guarded UI (`AGENTS.md:19-36`).
 
 ### Life memory core is the best first port
 - Hermes' reusable data model is a stream of personal events plus structured side stores for profile, habits, goals, meals, sleep, hydration, fitness, focus, and mental state (`.rpiv/external/hermes-life-os/demo/demo_life_os.py:68-78`).
 - Tool branches show the candidate event families: meals (`demo_life_os.py:323-342`), sleep (`demo_life_os.py:345-365`), hydration (`demo_life_os.py:365-382`), workouts (`demo_life_os.py:386-399`), stress/meditation/gratitude/focus (`demo_life_os.py:407-462`), habits/goals (`demo_life_os.py:470-519`), dashboards/reports (`demo_life_os.py:539-629`), briefings (`demo_life_os.py:631-657`), profile (`demo_life_os.py:659-675`), and dreams (`demo_life_os.py:679-704`).
-- Nazar should not map each Hermes mode to a package. The modes collapse into one `@nazar/memory` capability group, with later consumers in voice/WhatsApp/Spotify only when transport or media is actually involved.
+- Nazar should not map each Hermes mode to a package. The modes collapse into one `@nazar/memory` capability group, with later consumers in voice/retired messaging bridge/retired media control only when transport or media is actually involved.
 - `packages/memory/code/extensions/memory/memory-use.ts` is already an oversized known limitation in `AGENTS.md`; a port should add small modules beside it rather than extending the monolith.
 
 ### Persistence, privacy, and local-first boundary
@@ -54,8 +54,8 @@ Hermes Life OS is best treated as a feature-inspiration repository, not an archi
 
 ### UI, voice, chat, and transport surfaces
 - Hermes' UI is terminal-first: argparse flags in `main()` (`.rpiv/external/hermes-life-os/demo/demo_life_os.py:1544-1553`), Rich panels in `send_briefing()` (`demo_life_os.py:646-653`), blocking chat input in `run_chat_mode()` (`demo_life_os.py:1399-1440`), and direct OpenRouter calls in both chat and voice paths.
-- Nazar already has Pi commands and guarded UI helpers (`packages/core/code/extensions/shared.ts:104-122`), voice commands/shortcuts/TTS streaming (`packages/voice/code/extensions/voice/voice-use.ts:177-187`; `packages/voice/code/extensions/voice/tts-use.ts:148-286`), and WhatsApp outbound reply delivery (`packages/whatsapp/code/extensions/whatsapp/whatsapp-use.ts:797-859`).
-- Transport delivery should be explicitly out of scope for the first life-memory slice. Existing voice and WhatsApp packages can consume the memory capability later.
+- Nazar already has Pi commands and guarded UI helpers (`packages/core/code/extensions/shared.ts:104-122`), voice commands/shortcuts/TTS streaming (`packages/voice/code/extensions/voice/voice-use.ts:177-187`; `packages/voice/code/extensions/voice/tts-use.ts:148-286`), and retired messaging bridge outbound reply delivery (`packages/retired-messaging-bridge/code/extensions/retired-messaging-bridge/retired-messaging-bridge-use.ts:797-859`).
+- Transport delivery should be explicitly out of scope for the first life-memory slice. Existing voice and retired messaging bridge packages can consume the memory capability later.
 
 ### Evaluation and acceptance criteria inspiration
 - Hermes' reward function scores five behaviors: briefing sent, memory used, pattern detected, personalization, and expected tool coverage (`.rpiv/external/hermes-life-os/environments/life_os_env.py:93-144`; `.rpiv/external/hermes-life-os/environments/life_os_config.yaml:15-20`).
@@ -83,19 +83,19 @@ Hermes Life OS is best treated as a feature-inspiration repository, not an archi
 - `packages/memory/code/extensions/memory/memory-use.ts:339-395` — Durable memory context/pinned/rollup prompt injection.
 - `packages/memory/code/extensions/memory/memory-use.ts:852-939` — QMD memory search collections and search flow.
 - `packages/voice/code/extensions/voice.ts:10-18` — Voice package ownership.
-- `packages/spotify/code/extensions/spotify/spotify-use.ts:366-485` — Spotify command/tool surface.
-- `packages/whatsapp/code/extensions/whatsapp/whatsapp-use.ts:797-859` — WhatsApp session/agent reply gateway.
+- `packages/retired-media-control/code/extensions/retired-media-control/retired-media-control-use.ts:366-485` — retired media control command/tool surface.
+- `packages/retired-messaging-bridge/code/extensions/retired-messaging-bridge/retired-messaging-bridge-use.ts:797-859` — retired messaging bridge session/agent reply gateway.
 
 ## Integration Points
 
 ### Inbound References
 - Pi model/tool loop would call any new life-memory tools through `pi.registerTool`, analogous to `memory_status` and `memory_search` (`packages/memory/code/extensions/memory.ts:46-85`).
 - Human command use would enter through `/memory` or a narrowly named memory command; `/memory` currently routes subcommands in `packages/memory/code/extensions/memory/memory-use.ts:992-1053`.
-- Later briefing/transport consumers could enter through existing voice/WhatsApp packages, but they should depend on memory APIs rather than own storage.
+- Later briefing/transport consumers could enter through existing voice/retired messaging bridge packages, but they should depend on memory APIs rather than own storage.
 
 ### Outbound Dependencies
 - New life-memory persistence should depend on `getMemoryPaths()` for storage roots (`packages/memory/code/extensions/memory/paths.ts:33-56`) and `writePrivateJsonSync()`/`writePrivateFileSync()` for secret-bearing/private data (`packages/core/code/extensions/shared.ts:156-165`).
-- Tool output should use `truncateToolOutput()` and errors should route through `toolError()` like existing memory and Spotify tools (`packages/memory/code/extensions/memory.ts:46-85`; `packages/spotify/code/extensions/spotify/spotify-use.ts:455-485`).
+- Tool output should use `truncateToolOutput()` and errors should route through `toolError()` like existing memory and retired media control tools (`packages/memory/code/extensions/memory.ts:46-85`; `packages/retired-media-control/code/extensions/retired-media-control/retired-media-control-use.ts:455-485`).
 - Searchable summaries should use existing QMD page mechanics rather than inventing a new index (`packages/memory/code/extensions/memory/memory-use.ts:852-939`).
 
 ### Infrastructure Wiring
@@ -115,21 +115,21 @@ Hermes Life OS is best treated as a feature-inspiration repository, not an archi
 1. **Life memory core (selected first):** private structured events for life domains, normalized schema versions, deterministic pattern summaries, explicit deletion/reset behavior, and bounded outputs.
 2. **Pattern summary command/tool:** a memory-owned command/tool that summarizes recent life patterns from structured state without exposing raw logs by default.
 3. **Daily rhythm skill/command:** a later memory skill or `/memory brief` command that renders morning/check-in/evening/weekly briefings from the summaries.
-4. **Transport consumers:** later optional delivery over existing `@nazar/voice` and `@nazar/whatsapp`, consuming memory summaries rather than owning scheduling/storage.
+4. **Transport consumers:** later optional delivery over existing `@nazar/voice` and `@nazar/retired-messaging-bridge`, consuming memory summaries rather than owning scheduling/storage.
 5. **Rubric-backed tests:** acceptance tests inspired by Hermes reward components, not Atropos integration.
 
 ## Precedents & Lessons
 5 similar past changes analyzed.
 
 ### Precedent: Nazar package split
-**Commit(s)**: `ef99c66d` — "refactor: restructure Nazar into a monorepo with distinct packages for core functionality, memory, voice, Spotify, and WhatsApp" (2026-05-29); follow-up `19034189` — "fix: harden package split review findings" (2026-05-29).
+**Commit(s)**: `ef99c66d` — "refactor: restructure Nazar into a monorepo with distinct packages for core functionality, memory, voice, retired media control, and retired messaging bridge" (2026-05-29); follow-up `19034189` — "fix: harden package split review findings" (2026-05-29).
 
-**Blast radius**: 68 files across package manifests, core, memory, voice, Spotify, WhatsApp, docs/config.
+**Blast radius**: 68 files across package manifests, core, memory, voice, retired media control, retired messaging bridge, docs/config.
 
 **Takeaway**: Add Hermes-facing features through package-local entrypoints and small core seams; include stale-path, lifecycle, and package-boundary tests.
 
 ### Precedent: Review-driven shared/setup hardening
-**Commit(s)**: `b7c3027f`, `90df3e37`, `e27792ac`, `f6a613a1` — review remediation and hardening around shared helpers, setup paths, truncation, voice, Spotify, WhatsApp.
+**Commit(s)**: `b7c3027f`, `90df3e37`, `e27792ac`, `f6a613a1` — review remediation and hardening around shared helpers, setup paths, truncation, voice, retired media control, retired messaging bridge.
 
 **Takeaway**: Prefer small verified seams and tests over broad rewrites, especially around output truncation, privacy, setup, and shutdown behavior.
 
@@ -143,7 +143,7 @@ Hermes Life OS is best treated as a feature-inspiration repository, not an archi
 
 **Takeaway**: Any new memory modules need grep-driven stale reference checks and workspace-wide tests.
 
-### Precedent: WhatsApp transport replacement
+### Precedent: retired messaging bridge transport replacement
 **Commit(s)**: `2b4964c4`, `158e1fe3`, `edc030d5`, `94d053b6` — heavy transport dependency changes required multiple runtime/API follow-ups.
 
 **Takeaway**: Avoid new transport integrations in the first life-memory slice; if later needed, isolate optional/heavy deps package-locally and load lazily.

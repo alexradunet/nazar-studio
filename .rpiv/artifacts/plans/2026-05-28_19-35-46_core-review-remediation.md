@@ -25,11 +25,11 @@ The goal is to improve maintainability while preserving current public command/t
 - Shared cross-extension helpers live in `code/extensions/shared.ts`.
 - Voice model paths are resolved lazily from current setup config instead of frozen at import time.
 - TTS text normalization is testable as a pure module.
-- Spotify auth/persistence is separated from playback command/API logic.
-- WhatsApp QR overlay UI is separated from bridge/state logic.
+- retired media control auth/persistence is separated from playback command/API logic.
+- retired messaging bridge QR overlay UI is separated from bridge/state logic.
 - Memory rollups no longer inject hardcoded product-roadmap topic bullets.
 - Vault scaffolding only creates directories used by the extension.
-- Tests cover TTS text processing and Spotify auth helper behavior.
+- Tests cover TTS text processing and retired media control auth helper behavior.
 - Docs and package test command use the discovered `node --test` runner.
 
 ## What We're NOT Doing
@@ -37,7 +37,7 @@ The goal is to improve maintainability while preserving current public command/t
 - No behavior change to Pi commands, tool names, or package discovery resources.
 - No deletion of existing user vault directories; scaffold changes only affect future creation.
 - No full rewrite of memory rollup/pinned/QMD internals in this pass. The high-value safe extraction is vault scaffolding plus YAGNI removal; a deeper memory split can follow after this pass if desired.
-- No WhatsApp continuous-listening/autoreply redesign.
+- No retired messaging bridge continuous-listening/autoreply redesign.
 
 ---
 
@@ -63,15 +63,15 @@ Fix the active fragility issues first and add a shared utility module so later e
 - `code/extensions/nazar/setup-store.ts`
 - `code/extensions/nazar/setup-use.ts`
 - `code/extensions/memory/memory-use.ts`
-- `code/extensions/spotify/spotify-use.ts`
+- `code/extensions/retired-media-control/retired-media-control-use.ts`
 - `code/extensions/voice/tts-use.ts`
 - `code/extensions/voice/voice-use.ts`
-- `code/extensions/whatsapp/whatsapp-use.ts`
-- `code/extensions/whatsapp/whatsapp-utils.ts`
+- `code/extensions/retired-messaging-bridge/retired-messaging-bridge-use.ts`
+- `code/extensions/retired-messaging-bridge/retired-messaging-bridge-utils.ts`
 
 **Changes**:
 - Replace duplicated `hasInteractiveUi`, `trim`, and path helper bodies.
-- Import WhatsApp `maskPhone()` in setup instead of maintaining a divergent copy.
+- Import retired messaging bridge `maskPhone()` in setup instead of maintaining a divergent copy.
 - Preserve existing command output and widget names.
 
 #### Fix lazy voice model paths
@@ -84,13 +84,13 @@ Fix the active fragility issues first and add a shared utility module so later e
 **Files**:
 - `code/extensions/nazar/setup-store.ts`
 - `code/extensions/memory/paths.ts`
-- `code/extensions/remote-origin.ts`
+- `code/extensions/retired-origin-channel.ts`
 - `code/extensions/voice.ts`
 
 **Changes**:
 - Cache `getNazarDirs()` in `ensureSetupDirectories()`.
 - Document `NAZAR_HOME` override semantics.
-- Document the remote-origin coupling channel.
+- Document the retired-origin-channel coupling channel.
 - Name the default voice extension export.
 
 ### Success Criteria
@@ -119,31 +119,31 @@ Extract pure logic from large modules before broad refactors, then add focused t
 - Move markdown normalization, path simplification, cleanup, long-text splitting, and stream chunk splitting out of `tts-use.ts`.
 - Export pure functions for tests.
 
-#### Spotify auth module
-**File**: `code/extensions/spotify/spotify-auth.ts`
+#### retired media control auth module
+**File**: `code/extensions/retired-media-control/retired-media-control-auth.ts`
 **Changes**:
-- Move PKCE, config/token persistence, auth session, refresh-token, and local callback helpers out of `spotify-use.ts`.
+- Move PKCE, config/token persistence, auth session, refresh-token, and local callback helpers out of `retired-media-control-use.ts`.
 - Export testable PKCE/config/token helpers without requiring network calls.
 
 #### Tests
 **Files**:
 - `code/tests/pi-voice.test.mjs`
-- `code/tests/pi-spotify.test.mjs`
+- `code/tests/pi-retired-media-control.test.mjs`
 
 **Changes**:
 - Add TTS normalization and splitting tests.
-- Expand Spotify tests to cover PKCE challenge output, config round-trip, token response conversion, and refresh skew behavior.
+- Expand retired media control tests to cover PKCE challenge output, config round-trip, token response conversion, and refresh skew behavior.
 
 ### Success Criteria
 
 #### Automated Verification
 - [ ] Voice tests validate markdown stripping, link text, code block removal, empty input, long sentence fallback, and stream chunk boundaries.
-- [ ] Spotify tests validate auth helpers using temp XDG dirs and no network.
-- [ ] Existing memory/WhatsApp/Spotify URL tests still pass.
+- [ ] retired media control tests validate auth helpers using temp XDG dirs and no network.
+- [ ] Existing memory/retired messaging bridge/retired media control URL tests still pass.
 
 #### Manual Verification
 - [ ] TTS runtime behavior remains wired through `/tts` exactly as before.
-- [ ] `/spotify auth-url`, `/spotify finish`, `/spotify login`, and playback commands remain registered.
+- [ ] `/retired-media-control auth-url`, `/retired-media-control finish`, `/retired-media-control login`, and playback commands remain registered.
 
 ---
 
@@ -155,10 +155,10 @@ Address the maintainability findings with low-risk extractions and remove brittl
 
 ### Changes Required
 
-#### WhatsApp QR overlay extraction
+#### retired messaging bridge QR overlay extraction
 **Files**:
-- `code/extensions/whatsapp/qr-overlay.ts`
-- `code/extensions/whatsapp/whatsapp-use.ts`
+- `code/extensions/retired-messaging-bridge/qr-overlay.ts`
+- `code/extensions/retired-messaging-bridge/retired-messaging-bridge-use.ts`
 
 **Changes**:
 - Move `showQrOverlay()`/`closeQrOverlay()` and overlay serial/handle state into `qr-overlay.ts`.
@@ -185,7 +185,7 @@ Address the maintainability findings with low-risk extractions and remove brittl
 
 #### Automated Verification
 - [ ] Memory rollup tests continue passing after topic-bullet removal.
-- [ ] WhatsApp tests continue passing after QR extraction.
+- [ ] retired messaging bridge tests continue passing after QR extraction.
 
 #### Manual Verification
 - [ ] New vault scaffolds do not create speculative workbench/dashboard/template directories.
@@ -245,8 +245,8 @@ pi --no-session --offline -p "/nazar-status"
 pi --no-session --offline -p "/memory status"
 pi --no-session --offline -p "/tts status"
 pi --no-session --offline -p "/voice help"
-pi --no-session --offline -p "/spotify help"
-pi --no-session --offline -p "/whatsapp help"
+pi --no-session --offline -p "/retired-media-control help"
+pi --no-session --offline -p "/retired-messaging-bridge help"
 ```
 
 ## Migration Notes

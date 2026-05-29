@@ -9,7 +9,6 @@ Standalone Agent Skills packaged with `@nazar/core` and listed in `.pi/settings.
 
 ## Historical notes
 
-- The old `spotify-dj/` skill was removed. Spotify is handled by `@nazar/spotify` and its `spotify_control` tool plus `/spotify` command.
 - The old `wiki-janitor/` skill was renamed to `memory-janitor` and packaged with `@nazar/memory`.
 
 ## Rules
