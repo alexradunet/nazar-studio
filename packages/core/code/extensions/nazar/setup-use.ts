@@ -4,12 +4,36 @@ import { Container, type SelectItem, SelectList, Text } from "@earendil-works/pi
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
-import { hasInteractiveUi, showText } from "@nazar/core/shared";
+import { errorMessage, hasInteractiveUi, showText } from "@nazar/core/shared";
 import { getNazarDirs, nazarSetupConfigPath, readNazarSetupConfig, type SetupProfile, writeNazarSetupConfig } from "./setup-store.ts";
 import { setupProviders, type SetupProvider } from "./setup-registry.ts";
 
 async function show(ctx: ExtensionContext, title: string, text: string, level: "info" | "warning" | "error" = "info"): Promise<void> {
   await showText(ctx, "nazar-setup", text, title, level);
+}
+
+function setupOnboardingPrompt(): string {
+  return [
+    "Nazar setup just completed. Start a short first-run onboarding conversation for memory and personalization.",
+    "",
+    "Conversation rules:",
+    "- Keep it conversational and ask one question at a time; do not dump a questionnaire.",
+    "- First ask what the user wants to be called and what they want Nazar to help with.",
+    "- Explain that memory is optional and consent-based. After each answer, summarize the exact concise facts you would save and ask before writing them.",
+    "- If Life OS tools are available, use them only after approval for stable profile facts, active goals, and reflections.",
+    "- If durable memory tools are available, use them only after approval for project/workflow facts that should persist.",
+    "- Do not store secrets, raw transcripts, temporary task state, or anything that feels like a dossier.",
+    "- If the user wants to skip, be warm and tell them they can return later with `/memory life readout` or `/memory status`.",
+  ].join("\n");
+}
+
+function triggerSetupOnboarding(pi: ExtensionAPI, ctx: ExtensionContext): void {
+  if (!hasInteractiveUi(ctx)) return;
+  try {
+    pi.sendUserMessage(setupOnboardingPrompt());
+  } catch (error) {
+    ctx.ui.notify(`Nazar onboarding could not start: ${errorMessage(error)}`, "warning");
+  }
 }
 
 async function providerStatus(provider: SetupProvider): Promise<string> {
@@ -138,7 +162,8 @@ async function runSetup(pi: ExtensionAPI, ctx: ExtensionContext, section?: strin
     await provider.configure?.(pi, ctx);
   }
 
-  await show(ctx, "Nazar setup complete", `${await statusText()}\n\nNext: run /reload or restart Pi so setup changes are active.`);
+  await show(ctx, "Nazar setup complete", `${await statusText()}\n\nNext: Nazar will ask a few memory onboarding questions. Run /reload or restart Pi so setup changes are active.`);
+  triggerSetupOnboarding(pi, ctx);
 }
 
 async function showDoctor(ctx: ExtensionContext): Promise<void> {

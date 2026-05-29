@@ -4,6 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { hasInteractiveUi, truncateToolOutput, truncateUtf8 } from "../extensions/shared.ts";
+import { registerNazarSetupUse } from "../extensions/nazar/setup-use.ts";
 import { nazarSetupConfigPath, writeNazarSetupConfig } from "../extensions/nazar/setup-store.ts";
 import { registerSetupProvider, setupProviders } from "../extensions/nazar/setup-registry.ts";
 
@@ -50,6 +51,54 @@ test("setup config rewrites only supported fields", () => {
     assert.deepEqual(Object.keys(saved).sort(), ["memory", "profile", "updatedAt", "version"]);
     assert.equal(saved.memory.vaultDir, join(tmp, "Vault"));
   } finally {
+    if (previousConfigDir === undefined) delete process.env.NAZAR_CONFIG_DIR;
+    else process.env.NAZAR_CONFIG_DIR = previousConfigDir;
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("nazar setup starts consent-first memory onboarding after successful setup", async () => {
+  const tmp = mkdtempSync(join(tmpdir(), "pi-core-onboarding-test-"));
+  const previousConfigDir = process.env.NAZAR_CONFIG_DIR;
+  const commands = new Map();
+  const sent = [];
+  const providerId = `test-onboarding-${Date.now()}-${Math.random()}`;
+  const cleanupProvider = registerSetupProvider({
+    id: providerId,
+    label: "Test Memory",
+    configure: async () => {},
+    statusText: () => "ready",
+  });
+  const fakePi = {
+    registerCommand(name, spec) {
+      commands.set(name, spec);
+    },
+    sendUserMessage(text) {
+      sent.push(text);
+    },
+  };
+  const fakeCtx = {
+    hasUI: true,
+    ui: {
+      async select() { return "desktop"; },
+      setWidget() {},
+      notify() {},
+    },
+  };
+
+  try {
+    process.env.NAZAR_CONFIG_DIR = join(tmp, "config");
+    registerNazarSetupUse(fakePi);
+
+    await commands.get("nazar-setup").handler("all", fakeCtx);
+
+    assert.equal(sent.length, 1);
+    assert.match(sent[0], /one question at a time/);
+    assert.match(sent[0], /consent-based/);
+    assert.match(sent[0], /Life OS tools/);
+    assert.match(sent[0], /dossier/);
+  } finally {
+    cleanupProvider();
     if (previousConfigDir === undefined) delete process.env.NAZAR_CONFIG_DIR;
     else process.env.NAZAR_CONFIG_DIR = previousConfigDir;
     rmSync(tmp, { recursive: true, force: true });
