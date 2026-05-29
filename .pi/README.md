@@ -14,7 +14,6 @@ Project-local Pi discovery/configuration directory.
 - Project extensions are loaded from `.pi/settings.json`:
   - `../packages/core/code/extensions/nazar.ts`
   - `../packages/memory/code/extensions/memory.ts`
-  - `../packages/voice/code/extensions/voice.ts`
 - Project skills are loaded from `.pi/settings.json`.
 - Installed package resources are listed in `.pi/settings.json`.
 

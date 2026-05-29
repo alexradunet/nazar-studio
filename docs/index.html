@@ -4,13 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nazar — The studio for your life</title>
-  <meta name="description" content="Nazar is an OS-agnostic Pi.Dev extension suite for building a personal AI assistant. Memory, voice, music, messaging — woven together as the studio for your life.">
+  <meta name="description" content="Nazar is an OS-agnostic Pi.Dev extension suite for building a personal AI assistant. Memory and knowledge — woven together as the studio for your life.">
   <meta name="author" content="Alex Radu">
   <meta name="theme-color" content="#f4f6fb">
 
   <meta property="og:type" content="website">
   <meta property="og:title" content="Nazar — The studio for your life">
-  <meta property="og:description" content="An OS-agnostic Pi.Dev extension suite for building a personal AI assistant. Memory, voice, music, messaging — woven into one personal world.">
+  <meta property="og:description" content="An OS-agnostic Pi.Dev extension suite for building a personal AI assistant. Memory and knowledge — woven into one personal world.">
   <meta property="og:url" content="https://nazar.studio">
   <meta property="og:site_name" content="nazar.studio">
   <meta property="og:image" content="https://nazar.studio/og.png">
@@ -46,7 +46,7 @@
     "url": "https://nazar.studio",
     "applicationCategory": "DeveloperApplication",
     "operatingSystem": "Linux, Windows, macOS",
-    "description": "An OS-agnostic Pi.Dev extension suite for building a personal AI assistant. Memory, voice, music, messaging — woven into one personal world.",
+    "description": "An OS-agnostic Pi.Dev extension suite for building a personal AI assistant. Memory and knowledge — woven into one personal world.",
     "author": {
       "@type": "Person",
       "name": "Alex Radu",
@@ -153,7 +153,7 @@
     <section class="intro" aria-labelledby="intro-heading">
       <h2 id="intro-heading" hidden>About</h2>
       <p class="lede">An OS-agnostic Pi.Dev extension suite for building a personal AI assistant that knows what you keep, remembers what matters, and helps you orchestrate your life.</p>
-      <p>Memory, voice, and your knowledge base — woven together as a single personal world. Runs on Linux, Windows, macOS. Stores everything in a portable Obsidian vault you own. <strong>Local-first by default.</strong> Networked integrations are deferred until they are essential.</p>
+      <p>Memory and your knowledge base — woven together as a single personal world. Runs on Linux, Windows, macOS. Stores everything in a portable Obsidian vault you own. <strong>Local-first by default.</strong> Networked integrations are deferred until they are essential.</p>
       <p>
         <a class="button-primary" href="#quick-start">
           Quick start <span class="button-arrow" aria-hidden="true">↓</span>
@@ -167,9 +167,9 @@
       <h2 id="principles-heading">Principles</h2>
       <ul class="stitched-list">
         <li><strong>OS-agnostic.</strong> No NixOS, no Docker host assumptions. Install dependencies through the package manager of your platform. The extensions stay portable.</li>
-        <li><strong>Local-first.</strong> Your memory, transcripts, and state live on your machine in a portable Obsidian vault. You can move it. You can read it without Nazar.</li>
+        <li><strong>Local-first.</strong> Your memory and generated state live on your machine in a portable Obsidian vault. You can move it. You can read it without Nazar.</li>
         <li><strong>Pi-native.</strong> Built on the Pi.Dev coding-agent extension API. The agent is a first-class part of your environment, not a chatbot bolted on the side.</li>
-        <li><strong>Privacy-first.</strong> Private memory, runtime credentials, voice models, and runtime state stay out of git by default.</li>
+        <li><strong>Privacy-first.</strong> Private memory, runtime credentials, and generated runtime state stay out of git by default.</li>
         <li><strong>KISS &amp; inspectable.</strong> TypeScript modules you can read in an afternoon. No magical build steps. No hidden services.</li>
       </ul>
     </section>
@@ -178,7 +178,7 @@
 
     <section aria-labelledby="extensions-heading">
       <h2 id="extensions-heading">What's in the suite</h2>
-      <p class="intro" style="margin-bottom: var(--space-md); max-width: 720px;">Three core extensions and two starter Agent Skills. All registered with Pi.Dev through <code>.pi/settings.json</code>.</p>
+      <p class="intro" style="margin-bottom: var(--space-md); max-width: 720px;">Two core extensions and two starter Agent Skills. All registered with Pi.Dev through <code>.pi/settings.json</code>.</p>
 
       <div class="card-grid">
 
@@ -204,19 +204,6 @@
             <li>/memory</li>
             <li>memory_status</li>
             <li>memory_search</li>
-          </ul>
-        </article>
-
-        <article class="card">
-          <header class="card-head">
-            <h3 class="card-name mono">voice</h3>
-            <span class="card-status muted">I/O</span>
-          </header>
-          <p>Text-to-speech and push-to-talk voice input. Uses local Sherpa-ONNX models — no cloud dependency, your voice stays on your machine.</p>
-          <ul class="card-tags">
-            <li>/tts</li>
-            <li>/voice</li>
-            <li>tts_toggle</li>
           </ul>
         </article>
 
@@ -247,7 +234,7 @@
         <p class="step-label">Step 2</p>
         <h3>Install Nazar</h3>
 <pre>pi install @nazar/nazar-pi</pre>
-        <p>This registers the core, memory, and voice extensions in your Pi settings and pulls the optional local voice dependency when enabled.</p>
+        <p>This registers the core and memory extensions in your Pi settings.</p>
       </div>
 
       <div class="step">
@@ -263,7 +250,7 @@
         <p class="step-label">Step 4</p>
         <h3>Verify</h3>
 <pre>/nazar-status</pre>
-        <p>You should see green checks for memory and voice (if configured).</p>
+        <p>You should see setup status for the installed Nazar extensions.</p>
       </div>
     </section>
 
@@ -277,7 +264,7 @@
         <li><strong>Pi.Dev is the runtime.</strong> Extensions register with the Pi extension API. No separate daemon, no service to install.</li>
         <li><strong>Your Obsidian vault is the database.</strong> Personal memory lives in your vault. The <code>05_Nazar/</code> directory is the AI/system control plane.</li>
         <li><strong>Extensions are TypeScript modules.</strong> Each is a single <code>.ts</code> file plus an optional sub-directory. Edit <code>.pi/settings.json</code> to add or remove.</li>
-        <li><strong>Host setup is your problem.</strong> Install Node.js, audio helpers, GitHub CLI etc. through <code>apt</code> / <code>dnf</code> / <code>brew</code> / <code>winget</code> / <code>nix-env</code>.</li>
+        <li><strong>Host setup is your problem.</strong> Install Node.js, QMD, GitHub CLI etc. through <code>apt</code> / <code>dnf</code> / <code>brew</code> / <code>winget</code> / <code>nix-env</code>.</li>
       </ul>
 
       <p class="step-label" style="margin-bottom: 6px;">Vault structure (scaffolded by /nazar-setup)</p>
@@ -302,7 +289,7 @@
       <h2 id="privacy-heading">Privacy boundary</h2>
       <ul class="stitched-list">
         <li><strong>In git:</strong> code, tests, docs, templates, public AI/infrastructure memory.</li>
-        <li><strong>Out of git (always):</strong> private memory pages, generated rollups, journals, source reports, runtime credentials, local voice models, your personal Obsidian vault.</li>
+        <li><strong>Out of git (always):</strong> private memory pages, generated rollups, journals, source reports, runtime credentials, your personal Obsidian vault.</li>
       </ul>
       <p style="margin-top: var(--space-sm); max-width: 720px;">Do not commit secrets. Do not commit raw session transcripts. Do not expose SSH or RDP to the internet without an explicit VPN/tunnel plan.</p>
     </section>
@@ -311,7 +298,7 @@
 
     <section aria-labelledby="status-heading">
       <h2 id="status-heading">Status</h2>
-      <p style="max-width: 720px; margin: 0 0 var(--space-sm) 0;">Nazar is in <strong>active development</strong>. The core memory/voice extensions work end-to-end on Linux, Windows, and macOS. The Obsidian-backed memory layer is the current focus.</p>
+      <p style="max-width: 720px; margin: 0 0 var(--space-sm) 0;">Nazar is in <strong>active development</strong>. The core and memory extensions work end-to-end on Linux, Windows, and macOS. The Obsidian-backed memory layer is the current focus.</p>
       <p style="max-width: 720px; margin: 0;">Roadmap items include richer multi-vault support and a managed-installer experience for non-developers.</p>
     </section>
 

@@ -12,13 +12,6 @@ export type NazarSetupConfig = {
   memory?: {
     vaultDir?: string;
   };
-  voice?: {
-    modelDir?: string;
-    sttCommand?: string;
-    sttArgs?: string[];
-    ttsCommand?: string;
-    ttsArgs?: string[];
-  };
   updatedAt?: string;
 };
 
@@ -60,10 +53,6 @@ function setupVaultDir(config = readNazarSetupConfig()): string {
   return configured ? resolve(configured) : defaultNazarHomeDir();
 }
 
-export function defaultVoiceModelDir(config = readNazarSetupConfig()): string {
-  return join(setupVaultDir(config), "05_Nazar", "runtime", "state", "voice-models");
-}
-
 function parseNazarSetupConfig(strict: boolean): NazarSetupConfig {
   const path = nazarSetupConfigPath();
   try {
@@ -80,9 +69,9 @@ export function readNazarSetupConfig(): NazarSetupConfig {
   return parseNazarSetupConfig(false);
 }
 
-function stripRetiredIntegrationConfig<T extends Record<string, unknown>>(value: T): T {
+function stripRemovedFeatureConfig<T extends Record<string, unknown>>(value: T): T {
   const next = { ...value };
-  for (const key of ["spot" + "ify", "whats" + "app"]) delete next[key];
+  for (const key of ["spot" + "ify", "whats" + "app", "voice"]) delete next[key];
   return next;
 }
 
@@ -90,14 +79,13 @@ export function writeNazarSetupConfig(update: Partial<NazarSetupConfig>): NazarS
   const current = parseNazarSetupConfig(true);
   const vaultDir = update.memory?.vaultDir?.trim() || current.memory?.vaultDir?.trim();
   const memory = vaultDir ? { vaultDir: resolve(vaultDir) } : undefined;
-  const currentConfig = stripRetiredIntegrationConfig(current as NazarSetupConfig & Record<string, unknown>);
-  const updateConfig = stripRetiredIntegrationConfig(update as Partial<NazarSetupConfig> & Record<string, unknown>);
+  const currentConfig = stripRemovedFeatureConfig(current as NazarSetupConfig & Record<string, unknown>);
+  const updateConfig = stripRemovedFeatureConfig(update as Partial<NazarSetupConfig> & Record<string, unknown>);
   const next: NazarSetupConfig = {
     ...currentConfig,
     ...updateConfig,
     version: 1,
     memory,
-    voice: { ...current.voice, ...update.voice },
     updatedAt: new Date().toISOString(),
   };
   writePrivateJsonSync(nazarSetupConfigPath(), next);

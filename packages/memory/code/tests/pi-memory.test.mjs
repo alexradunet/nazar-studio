@@ -112,7 +112,6 @@ test("project Pi settings load workspace package resources and no repo sessionDi
   assert.deepEqual(settings.extensions, [
     "../packages/core/code/extensions/nazar.ts",
     "../packages/memory/code/extensions/memory.ts",
-    "../packages/voice/code/extensions/voice.ts",
   ]);
   assert.deepEqual(settings.skills, ["../packages/core/code/skills", "../packages/memory/code/extensions/memory/skills"]);
   assert.equal(Object.hasOwn(settings, "sessionDir"), false);
@@ -128,14 +127,12 @@ test("workspace packages expose Nazar Pi package resources", () => {
 
   const core = JSON.parse(readFileSync(resolve(repoRoot, "packages", "core", "package.json"), "utf8"));
   const memory = JSON.parse(readFileSync(resolve(repoRoot, "packages", "memory", "package.json"), "utf8"));
-  const voice = JSON.parse(readFileSync(resolve(repoRoot, "packages", "voice", "package.json"), "utf8"));
 
   assert.deepEqual(core.pi.extensions, ["./code/extensions/nazar.ts"]);
   assert.deepEqual(core.pi.skills, ["./code/skills"]);
   assert.deepEqual(memory.pi.extensions, ["./code/extensions/memory.ts"]);
   assert.deepEqual(memory.pi.skills, ["./code/extensions/memory/skills"]);
-  assert.deepEqual(voice.pi.extensions, ["./code/extensions/voice.ts"]);
-  assert.equal(voice.optionalDependencies["sherpa-onnx-node"], "1.13.2");
+  assert.equal(existsSync(resolve(repoRoot, "packages", "voice")), false);
 });
 
 test("path derivation uses repo-local fallback when no vault is configured", () => {

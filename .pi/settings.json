@@ -1,8 +1,7 @@
 {
   "extensions": [
     "../packages/core/code/extensions/nazar.ts",
-    "../packages/memory/code/extensions/memory.ts",
-    "../packages/voice/code/extensions/voice.ts"
+    "../packages/memory/code/extensions/memory.ts"
   ],
   "skills": [
     "../packages/core/code/skills",

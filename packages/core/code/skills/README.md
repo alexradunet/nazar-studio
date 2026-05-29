@@ -5,7 +5,7 @@ Standalone Agent Skills packaged with `@nazar/core` and listed in `.pi/settings.
 ## Current skills
 
 - `github-manager/` — GitHub profile and repository management workflows through the `gh` CLI.
-- `windows-setup/` — Windows dependency installation and Nazar configuration workflows, including FFmpeg voice input setup.
+- `windows-setup/` — Windows dependency installation and Nazar configuration workflows.
 
 ## Historical notes
 

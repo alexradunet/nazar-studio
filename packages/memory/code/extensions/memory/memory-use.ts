@@ -64,7 +64,7 @@ const LOW_SIGNAL_MESSAGES = new Set([
 
 const USER_DECISION_RE = /\b(canonical|remember|source of truth|prefer|rule|main language)\b/i;
 const USER_ACTION_RE = /\b(i want|we want|we will|let'?s|lets|install|add|remove|switch|move|create|implement|update|compact)\b/i;
-const USER_FEATURE_RE = /\b(memory|conversation|wiki|qmd|voice|tts|stt|whisper|piper|nazar|pi extension|pi package|typescript)\b/i;
+const USER_FEATURE_RE = /\b(memory|conversation|wiki|qmd|nazar|pi extension|pi package|typescript)\b/i;
 const ASSISTANT_MEMORY_RE = /^(done|implemented|created|updated|added|fixed|changed|installed|configured|switched|removed|validated|verified|opened|compacted|tested|web search works|test succeeded|code review|good\.|yes[ —-])\b/i;
 
 const NOISY_SUBSTRINGS = [
@@ -595,7 +595,6 @@ function debrandMemoryText(text: string): string {
   return text
     .replace(new RegExp(`\\b${legacy}-memory\\b`, "g"), "Pi memory")
     .replace(new RegExp(`\\b${legacy}-wiki\\b`, "g"), "memory_search")
-    .replace(new RegExp(`\\b${legacy}-voice\\b`, "g"), "Pi voice")
     .replace(new RegExp(`\\b${legacy}_`, "g"), "pi_")
     .replace(new RegExp(`\\b${legacy.toUpperCase()}_`, "g"), "PI_")
     .replace(new RegExp(`\\.pi/extensions/${legacy}\\b`, "g"), "packages/memory/code/extensions/memory")

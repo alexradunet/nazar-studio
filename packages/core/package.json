@@ -20,8 +20,7 @@
   "exports": {
     "./shared": "./code/extensions/shared.ts",
     "./setup": "./code/extensions/nazar/setup-store.ts",
-    "./setup-registry": "./code/extensions/nazar/setup-registry.ts",
-    "./transcriber": "./code/extensions/nazar/transcriber-registry.ts"
+    "./setup-registry": "./code/extensions/nazar/setup-registry.ts"
   },
   "files": [
     "code/extensions/**/*.ts",

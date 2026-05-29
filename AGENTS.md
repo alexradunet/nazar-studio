@@ -9,7 +9,7 @@ Nazar follows the design philosophy of Pi (the minimal terminal coding agent by 
 - Prefer direct, practical implementation steps.
 - Keep solutions KISS, inspectable, and reversible.
 - Use TypeScript/JavaScript for Pi extension logic and product runtime code.
-- Keep private memory, generated context, journals, rollups, OAuth tokens, runtime credentials, and local model downloads out of git.
+- Keep private memory, generated context, journals, rollups, OAuth tokens, and runtime credentials out of git.
 - Prefer Pi extension points, Agent Skills, and settings over wrapper scripts or Pi core patches.
 - Keep host operating-system setup outside this repository; document only portable environment variables and extension-level configuration here.
 - On Windows, install every Nazar host dependency through `winget` when a winget package exists; ask before using Chocolatey, Scoop, manual downloads, or ad-hoc installers.
@@ -28,12 +28,11 @@ Nazar follows the design philosophy of Pi (the minimal terminal coding agent by 
 - **Thin entry points.** Each `packages/<pkg>/code/extensions/<name>.ts` is ~5–10 lines: import and call `register<Name>Use(pi)`/provider registration only. No logic in entry files.
 - **Small, single-purpose modules.** Split a feature into `paths.ts`, `<name>-use.ts`, `<name>-utils.ts`, `<name>-auth.ts`, etc. Pure/format/parse helpers live in `*-utils.ts` or `*-text.ts` so they are unit-testable without Pi or I/O. Treat a module past ~500 lines as a smell to decompose, not extend.
 - **Shared helpers live in `@nazar/core/shared` (`packages/core/code/extensions/shared.ts`).** Reuse `hasInteractiveUi`, `notify`, `showText`, `truncateToolOutput`, `truncateUtf8`, `toolError`, `errorMessage`, `trim`, the `xdg*` home resolvers, and `writePrivateFileSync`/`writePrivateJsonSync`. Do not re-implement these per extension.
-- **Lifecycle events, used for their intent:** `before_agent_start` for cache-stable system-prompt injection; `session_compact` to refresh rollups; `session_shutdown` to release sockets/timers/widgets and reset native runtimes; `resources_discover` to contribute skills; `message_start`/`message_update`/`message_end` for streaming; `agent_end` for outbound replies. Always clean up in `session_shutdown`.
+- **Lifecycle events, used for their intent:** `before_agent_start` for cache-stable system-prompt injection; `session_compact` to refresh rollups; `session_shutdown` to release sockets/timers/widgets; `resources_discover` to contribute skills; `message_start`/`message_update`/`message_end` for streaming; `agent_end` for outbound replies. Always clean up in `session_shutdown`.
 - **Tools:** `pi.registerTool` with `name`, `label`, `description`, `promptSnippet`, `promptGuidelines`, TypeBox `parameters`, and an `execute` that wraps its body in `try/catch` and rethrows via `toolError("<tool>", error)`. Use `StringEnum` (from `pi-ai`) for enum params (Google compatibility). Truncate tool output with `truncateToolOutput()` so it honors byte and line caps.
 - **Commands and UI:** register `/commands` with `pi.registerCommand`. Branch on `ctx.hasUI` via `hasInteractiveUi(ctx)`; use `notify(ctx, text, level)` for notification-only output and `showText(ctx, widget, text, title, level)` when a widget should be set. Never call `ctx.ui.*` unguarded on the headless path.
 - **Persistent state:** survive restarts via on-disk config (`writePrivateJsonSync`) or tool-result `details`/`pi.appendEntry()` — not module globals. Avoid module-level singletons except for trivial same-process coupling that is documented and not persisted.
-- **Optional native dependencies** (`sherpa-onnx-node`) load lazily: `createRequire(import.meta.url)` or `await import(...)`, never bare top-level `require`/`import`. A missing optional dep must never stop Pi from starting; surface a setup hint instead.
-- **OS-agnostic by construction.** Centralize platform/`env` branching and inject it (e.g. `resolveSttInput({ platform, env })`) so resolution is unit-testable per OS. Resolve Windows/macOS/Linux (Pulse/ALSA) paths explicitly; gate `winget`/`ffmpeg`/`powershell` calls behind the right platform.
+- **OS-agnostic by construction.** Centralize platform/`env` branching and inject it so resolution is unit-testable per OS. Resolve Windows/macOS/Linux paths explicitly; gate host commands behind the right platform.
 
 ## Coding style
 
@@ -65,7 +64,6 @@ Nazar follows the design philosophy of Pi (the minimal terminal coding agent by 
 - The memory-worthiness heuristic is English/verb-prefix-bound by design (deterministic + offline). An opt-in LLM summarizer is a possible future hook, not a default.
 - Generated rollups are not QMD-indexed; monthly rollups are no longer generated (legacy files are left untouched).
 - `truncateToolOutput()` uses the Pi SDK truncation helpers when present and a local byte+line fallback otherwise, because the SDK is a peer dependency not installed in this repo.
-- Native-dependency surfaces (`sherpa-onnx-node`) keep narrow local `any` boundaries; tighten only the fields actually touched.
 - Legacy `debrandMemoryText()` migration shim is scheduled for removal after 2026-08-01.
 
 ## Safety
