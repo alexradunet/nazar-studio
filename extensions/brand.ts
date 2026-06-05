@@ -10,7 +10,6 @@ import { patchRpgAvatars } from "../lib/ui/avatars.ts";
 import { editorFactory } from "../lib/ui/editor.ts";
 import { footerFactory } from "../lib/ui/footer.ts";
 import { headerFactory } from "../lib/ui/header.ts";
-import { recordSessionStart } from "../lib/ui/session-info.ts";
 
 function applyNazarUI(pi: ExtensionAPI, ctx: ExtensionContext, onTui?: (tui: any) => void) {
   if (!ctx?.hasUI) return; // no terminal UI to brand
@@ -59,11 +58,16 @@ export default function (pi: ExtensionAPI) {
 
 
   pi.on("session_start", async (_event: unknown, ctx: any) => {
-    // Record the start moment so the header's third row can render a
-    // "session opened · HH:MM" chapter divider. /reload re-fires this
-    // event and overwrites the timestamp, which is the intended behaviour.
-    recordSessionStart("opened");
     applyNazarUI(pi, ctx, (tui) => { renderTui = tui; });
+  });
+
+  // Pi resets workingVisible = true before every agent run (interactive-mode.ts
+  // line ~1850). Our setWorkingVisible(false) call inside applyNazarUI runs once
+  // at session_start, but Pi re-enables the default "Working..." indicator on
+  // each subsequent agent invocation. before_agent_start fires right before Pi
+  // shows the loader, so we suppress it here reliably every turn.
+  pi.on("before_agent_start", async (_event: unknown, ctx: any) => {
+    try { ctx?.ui?.setWorkingVisible?.(false); } catch { /* ignore */ }
   });
 
   pi.on("model_select", async (_event: unknown, _ctx: any) => {

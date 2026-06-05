@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Slim Nazar-brand footer.
+// Nazar footer — effectively invisible now.
 //
-// The runtime status (model · git · tools · ctx) used to live here on the
-// right. It's been moved into the input editor's nameplate meta slot, so
-// the footer is now a quiet brand-mark line: "Nazar" on the left, an
-// optional context-warning pip on the right when usage gets high.
+// The footer used to carry the runtime status (model · git · tools · ctx).
+// That moved into the input editor's nameplate meta in PR #55. What remained
+// after that was just a "Nazar" brand mark on the left — the user asked to
+// remove it too, so the footer now renders as a single blank line to preserve
+// Pi's layout contract (footer always returns at least one row) while being
+// fully invisible. The only exception: a ctx-warning pip surfaces when usage
+// climbs to 85%+ so the alert is never silently hidden.
 import type { ExtensionAPI, ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
 import { compact, visibleWidth } from "./ansi.ts";
 import { panelStyle } from "./panel-style.ts";
@@ -28,28 +31,26 @@ function contextWarningPip(usage: any, theme: Theme): string | undefined {
   return theme.fg(role, label);
 }
 
-export function footerFactory(_pi: ExtensionAPI, ctx: ExtensionContext, onTui?: (tui: any) => void) {
-  return (tui: any, theme: Theme, footerData: any) => {
-    onTui?.(tui);
-
+export function footerFactory(_pi: ExtensionAPI, ctx: ExtensionContext, _onTui?: (tui: any) => void) {
+  return (_tui: any, theme: Theme, _footerData: any) => {
     return {
       dispose() {},
       invalidate() {},
       render(width: number): string[] {
-        const style = panelStyle("system");
-        const left = style.paint.title(theme.bold("Nazar"));
-
-        // Only surface a footer pip when context is genuinely tight.
-        // Otherwise the right side stays empty — runtime info lives in
-        // the editor meta now, no need to repeat it down here.
+        // Only surface a warning when context is genuinely tight.
+        // Otherwise return a plain blank line — the footer is invisible.
         const usage = ctx.getContextUsage?.();
-        const warning = contextWarningPip(usage, theme) ?? "";
+        const warning = contextWarningPip(usage, theme);
 
+        if (!warning) {
+          // Blank line to satisfy Pi's footer height contract.
+          return [" ".repeat(Math.max(0, width))];
+        }
+
+        const style = panelStyle("system");
         const innerWidth = Math.max(1, width - FOOTER_HORIZONTAL_PADDING * 2);
-        const gap = innerWidth - visibleWidth(left) - visibleWidth(warning);
-        const line = gap <= 1
-          ? compact(`${left} ${warning}`, innerWidth)
-          : compact(left + " ".repeat(gap) + warning, innerWidth);
+        const gap = Math.max(1, innerWidth - visibleWidth(warning));
+        const line = compact(" ".repeat(gap) + warning, innerWidth);
         return [padFooter(line, width)];
       },
     };
