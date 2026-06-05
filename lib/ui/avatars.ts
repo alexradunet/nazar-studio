@@ -162,7 +162,9 @@ function buildCells(owner: unknown, renderedLines?: string[]) {
 const BOLD_ON = "\x1b[1m";
 const BOLD_OFF = "\x1b[22m";
 
-function rolePanelStyle(role: SpriteRole): PanelStyle {
+/** Map a sprite role to its canonical panel style — exported so the editor
+ * can match the user-message panel exactly (same hue, same plaque). */
+export function rolePanelStyle(role: SpriteRole): PanelStyle {
   return panelStyle(role === "user" ? "user" : "assistant");
 }
 
@@ -179,8 +181,10 @@ function roleDescriptor(role: SpriteRole): string {
 /**
  * Format the nameplate title: `<icon> NAME · descriptor`.
  * NAME is bold in the role title colour; descriptor is muted.
+ * Exported so the input editor can render an IDENTICAL title to the
+ * submitted user-message panel below it — visual continuity through submit.
  */
-function roleTitle(role: SpriteRole): string {
+export function roleTitle(role: SpriteRole): string {
   const style = rolePanelStyle(role);
   const icon = roleIcon(role);
   const name = roleNameplate(role).toUpperCase();
@@ -191,7 +195,13 @@ function roleTitle(role: SpriteRole): string {
 /** Per-role meta string for the right side of the nameplate. */
 function roleMeta(role: SpriteRole, lastMessage: any): string {
   const style = rolePanelStyle(role);
-  if (role === "user") return style.paint.muted("resumed session");
+  if (role === "user") {
+    // User messages don't carry meta today. The right side of the nameplate
+    // stays empty so the panel reads as a clean speaker label — which also
+    // means the editor (which DOES show "drafting…" while live) is visually
+    // distinguishable from a submitted message only by that one indicator.
+    return "";
+  }
   // Assistant: tokens (if available) + elapsed (if available).
   const tokens = lastMessage?.usage?.output_tokens ?? lastMessage?.usage?.tokens;
   const elapsedMs = lastMessage?.elapsedMs ?? lastMessage?.elapsed_ms;
