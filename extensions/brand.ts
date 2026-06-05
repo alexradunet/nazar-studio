@@ -7,9 +7,13 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import { uiCapabilitySummary } from "../lib/ui/design.ts";
 import { setGraphicsQuality, type GraphicsQuality } from "../lib/ui/graphics-state.ts";
 import { patchRpgAvatars } from "../lib/ui/avatars.ts";
+import { renderChapterDivider, renderStitchLine } from "../lib/ui/divider.ts";
 import { editorFactory } from "../lib/ui/editor.ts";
 import { footerFactory } from "../lib/ui/footer.ts";
 import { headerFactory } from "../lib/ui/header.ts";
+import { panelStyle } from "../lib/ui/panel-style.ts";
+import { recordSessionStart } from "../lib/ui/session-info.ts";
+import { compact, visibleWidth } from "../lib/ui/ansi.ts";
 
 function applyNazarUI(pi: ExtensionAPI, ctx: ExtensionContext, onTui?: (tui: any) => void) {
   if (!ctx?.hasUI) return; // no terminal UI to brand
@@ -135,6 +139,74 @@ export default function (pi: ExtensionAPI) {
         "Markdown vault. Manage the package with the host CLI: pi list · pi update npm:pi-nazar-studio, " +
         "then /reload.";
       try { ctx.ui.notify(msg, "info"); } catch { /* ignore */ }
+    },
+  });
+
+  // /nazar-style — live style-guide: renders every panel, component, and
+  // state so you can inspect the visual language in one shot and quickly
+  // catch regressions. Output is injected as a custom notification block.
+  pi.registerCommand("nazar-style", {
+    description: "Show the Nazar terminal style guide — every panel, divider, and tool state.",
+    handler: async (_args: string, ctx: any) => {
+      const BOLD_ON = "\x1b[1m";
+      const BOLD_OFF = "\x1b[22m";
+      const width = Math.max(60, (process.stdout.columns ?? 80) - 4);
+
+      function section(title: string): string {
+        const s = panelStyle("system");
+        return renderChapterDivider({ width, label: title, style: s });
+      }
+      function row(label: string, value: string): string {
+        const s = panelStyle("system");
+        const lv = `${BOLD_ON}${label}${BOLD_OFF}`;
+        const pad = Math.max(1, width - visibleWidth(label) - visibleWidth(value));
+        return `${s.paint.muted(lv)}${" ".repeat(pad)}${value}`;
+      }
+      function stitch(): string {
+        return renderStitchLine({ width, style: panelStyle("system") });
+      }
+
+      const roles = ["user", "assistant", "tool", "thinking", "system"] as const;
+      const states = ["idle", "running", "ok", "error", "warning"] as const;
+
+      const lines: string[] = [];
+
+      lines.push(section("role palettes"));
+      for (const role of roles) {
+        const s = panelStyle(role);
+        const plaque = compact(`${s.paint.title(`✦ ${role.toUpperCase()}`)} ${s.paint.muted("· sample")}`, width - 2);
+        const nameplate = `\x1b[48;2;${s.nameplateBg.join(";")}m ${plaque}${" ".repeat(Math.max(0, width - 2 - visibleWidth(plaque)))} \x1b[49m`;
+        lines.push(nameplate);
+      }
+
+      lines.push(stitch());
+      lines.push(section("tool states"));
+      for (const st of states) {
+        const s = panelStyle("tool", st);
+        const accent = s.supports.pulse ? s.paint.pulse : s.paint.accent;
+        lines.push(row(`tool / ${st}`, accent(`● ${st}`)));
+      }
+
+      lines.push(stitch());
+      lines.push(section("chapter dividers"));
+      const divStyles = ["assistant", "thinking", "system"] as const;
+      const divLabels = ["session opened · 23:45", "context compacted", "branch summary"] as const;
+      for (let i = 0; i < divStyles.length; i++) {
+        lines.push(renderChapterDivider({ width, label: divLabels[i], style: panelStyle(divStyles[i]) }));
+      }
+
+      lines.push(stitch());
+      lines.push(section("stitch lines"));
+      for (const role of ["assistant", "user", "system"] as const) {
+        lines.push(renderStitchLine({ width, style: panelStyle(role) }));
+      }
+
+      lines.push(stitch());
+      lines.push(section("graphics + capabilities"));
+      lines.push(row("backend", uiCapabilitySummary()));
+
+      const guide = lines.join("\n");
+      try { ctx.ui.notify(guide, "info"); } catch { /* ignore */ }
     },
   });
 }
