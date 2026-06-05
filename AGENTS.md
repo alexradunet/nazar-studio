@@ -49,6 +49,7 @@ Nazar follows the design philosophy of Pi (the minimal terminal coding agent by 
 - **YAGNI:** do not generate write-only outputs, unused config knobs, or speculative directories/abstractions. If no code path reads it, do not write it.
 - **KISS:** the simplest correct option wins. Memoize on the hot path, but keep self-healing (cheap `existsSync` re-checks) so behavior stays obvious and recoverable.
 - **SUCKLESS:** collapse duplicated boilerplate into one shared helper; delete dead code rather than commenting it out; keep each module doing one thing. One source of truth per concern.
+- **Pareto first:** start with the smallest 20% implementation likely to deliver 80% of the user value. Prove that thin slice end-to-end before adding power-user paths, abstractions, automation, or polish.
 - Deterministic, offline, free behavior is the default. Add LLM/network/nondeterministic paths only as opt-in, and document the trade-off in a comment.
 - When in doubt, defer. Record deferred refactors below instead of growing scope mid-change.
 
