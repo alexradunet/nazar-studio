@@ -1,0 +1,29 @@
+Nazar — the bastion of your sovereign personal data
+Copyright (C) 2026 Alex Radunet <hello@alexradu.net>
+
+This program is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later).
+See the LICENSE file for the full text.
+
+A separate COMMERCIAL LICENSE is available for organisations that wish to host,
+embed, or distribute Nazar without the obligations of the AGPL.
+Contact: hello@alexradu.net
+
+----------------------------------------------------------------------
+Third-party components
+----------------------------------------------------------------------
+Nazar builds on and/or deploys these open-source projects, each under its own
+license:
+
+  - Pi agent (earendil-works/pi) ............ MIT
+  - Node.js (runtime) ...................... MIT-style (see Node.js license)
+  - SQLite (via Node's node:sqlite, FTS5) .. Public Domain
+  - open-webSearch (Aas-ee/open-webSearch) . Apache-2.0
+    Used as an optional external local CLI/daemon/MCP web retrieval tool; not vendored.
+  - Cozette (Samhain & contributors) ....... MIT
+    Vendored under assets/fonts/cozette/ for the Basm terminal font.
+  - Departure Mono (Helena Zhang) .......... SIL Open Font License 1.1
+    Vendored under assets/fonts/departure-mono/ for the Basm terminal font.
+  - Restic, Syncthing ...................... see their respective licenses
+
+Trademarks and product names are the property of their respective owners.

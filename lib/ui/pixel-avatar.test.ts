@@ -1,0 +1,153 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { afterEach, beforeEach, expect, test } from "vitest";
+import { getCellDimensions, resetCapabilitiesCache, setCapabilities, setCellDimensions } from "@earendil-works/pi-tui";
+import { visibleWidth } from "./ansi.ts";
+import {
+  avatarPixelAspect,
+  renderAnsiAvatarFrame,
+  renderRoleAvatar,
+  renderThinkingAvatarFrame,
+  renderToolAvatar,
+  renderToolPixelAvatar,
+  renderUserTypingAvatarFrame,
+} from "./pixel-avatar.ts";
+
+function plain(lines: string[]): string[] {
+  return lines.map((line) => line.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "").replace(/\x1b_G.*?\x1b\\/g, ""));
+}
+
+const originalAvatarRows = process.env.NAZAR_AVATAR_ROWS;
+const originalAvatarAspect = process.env.NAZAR_AVATAR_ASPECT;
+const originalCellWidth = process.env.NAZAR_CELL_WIDTH_PX;
+const originalCellHeight = process.env.NAZAR_CELL_HEIGHT_PX;
+const originalToolRows = process.env.NAZAR_TOOL_ROWS;
+const originalAnsiDetail = process.env.NAZAR_ANSI_DETAIL;
+const originalTerm = process.env.TERM;
+const originalTmux = process.env.TMUX;
+const originalZellij = process.env.ZELLIJ;
+const originalSty = process.env.STY;
+const originalCellDimensions = getCellDimensions();
+
+function restoreEnv(name: string, value: string | undefined): void {
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+}
+
+beforeEach(() => {
+  delete process.env.NAZAR_AVATAR_ROWS;
+  delete process.env.NAZAR_AVATAR_ASPECT;
+  delete process.env.NAZAR_CELL_WIDTH_PX;
+  delete process.env.NAZAR_CELL_HEIGHT_PX;
+  delete process.env.NAZAR_TOOL_ROWS;
+  delete process.env.NAZAR_ANSI_DETAIL;
+  process.env.TERM = "xterm-256color";
+  delete process.env.TMUX;
+  delete process.env.ZELLIJ;
+  delete process.env.STY;
+  setCellDimensions({ widthPx: 9, heightPx: 18 });
+  setCapabilities({ images: null, trueColor: true, hyperlinks: false });
+});
+
+afterEach(() => {
+  resetCapabilitiesCache();
+  setCellDimensions(originalCellDimensions);
+  restoreEnv("NAZAR_AVATAR_ROWS", originalAvatarRows);
+  restoreEnv("NAZAR_AVATAR_ASPECT", originalAvatarAspect);
+  restoreEnv("NAZAR_CELL_WIDTH_PX", originalCellWidth);
+  restoreEnv("NAZAR_CELL_HEIGHT_PX", originalCellHeight);
+  restoreEnv("NAZAR_TOOL_ROWS", originalToolRows);
+  restoreEnv("NAZAR_ANSI_DETAIL", originalAnsiDetail);
+  restoreEnv("TERM", originalTerm);
+  restoreEnv("TMUX", originalTmux);
+  restoreEnv("ZELLIJ", originalZellij);
+  restoreEnv("STY", originalSty);
+});
+
+test("role avatars render generated ANSI art", () => {
+  const nazar = renderAnsiAvatarFrame("nazar");
+  expect(nazar).toHaveLength(7);
+  expect(nazar.map((line) => visibleWidth(line))).toEqual([16, 16, 16, 16, 16, 16, 16]);
+  expect(nazar.join("\n")).toContain("\x1b[48;2;");
+  expect(renderAnsiAvatarFrame("user").join("\n")).toContain("\x1b[48;2;");
+});
+
+test("ANSI animations expose stable wrapping frames", () => {
+  expect(plain(renderThinkingAvatarFrame(9))).toEqual(plain(renderThinkingAvatarFrame(0)));
+  expect(plain(renderUserTypingAvatarFrame(9))).toEqual(plain(renderUserTypingAvatarFrame(0)));
+  expect(new Set(Array.from({ length: 4 }, (_, index) => renderThinkingAvatarFrame(index).join("\n"))).size).toBeGreaterThan(1);
+});
+
+test("avatar renderer derives cell width from terminal aspect ratio for square sprite framing", () => {
+  setCellDimensions({ widthPx: 9, heightPx: 18 });
+  let avatar = renderRoleAvatar("nazar")!;
+  expect(avatar.backend).toBe("ansi");
+  expect(avatar.width).toBe(16);
+  expect(avatar.height).toBe(7);
+  expect(avatarPixelAspect(avatar.width + 2, avatar.height + 2)).toBeCloseTo(1, 1);
+
+  setCellDimensions({ widthPx: 8, heightPx: 19 });
+  avatar = renderRoleAvatar("nazar")!;
+  expect(avatar.width).toBe(19);
+  expect(avatar.height).toBe(7);
+  expect(avatarPixelAspect(avatar.width + 2, avatar.height + 2)).toBeCloseTo(1, 1);
+});
+
+test("avatar renderer can calibrate cell dimensions for the live terminal font", () => {
+  process.env.NAZAR_CELL_WIDTH_PX = "9";
+  process.env.NAZAR_CELL_HEIGHT_PX = "17";
+  const avatar = renderRoleAvatar("nazar")!;
+  expect(avatar.width).toBe(15);
+  expect(avatar.height).toBe(7);
+  expect(getCellDimensions()).toEqual({ widthPx: 9, heightPx: 17 });
+  expect(avatarPixelAspect(avatar.width + 2, avatar.height + 2)).toBeCloseTo(1, 1);
+});
+
+test("image capabilities are ignored; avatars stay ANSI", () => {
+  setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
+  const avatar = renderRoleAvatar("nazar")!;
+  expect(avatar.backend).toBe("ansi");
+  expect(avatar.lines[0]?.text).not.toContain("\x1b_G");
+  expect(avatar.lines.map((line) => line.text).join("\n")).toContain("\x1b[");
+});
+
+test("explicit ANSI option ignores image capabilities", () => {
+  setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
+  const avatar = renderRoleAvatar("nazar", { backend: "ansi" })!;
+  expect(avatar.backend).toBe("ansi");
+  expect(avatar.lines[0]?.text).not.toContain("\x1b_G");
+});
+
+test("ANSI detail is always half-block", () => {
+  process.env.NAZAR_ANSI_DETAIL = "full-block";
+  const frame = renderAnsiAvatarFrame("nazar");
+  expect(frame.join("\n")).toContain("▀");
+});
+
+test("tool avatars are half-size generated ANSI icons with state backgrounds", () => {
+  const read = renderToolAvatar("read", "pending", 0);
+  expect(read).toHaveLength(3);
+  expect(read.map((line) => visibleWidth(line))).toEqual([8, 8, 8]);
+  expect(read.join("\n")).toContain("\x1b[48;2;");
+
+  const bash = renderToolAvatar("bash", "pending", 0, '{"command":"git status"}');
+  expect(bash).toHaveLength(3);
+  expect(bash.map((line) => visibleWidth(line))).toEqual([8, 8, 8]);
+  expect(bash.join("\n")).toContain("\x1b[48;2;");
+  expect(plain(bash)).not.toEqual(plain(read));
+
+  const ok = renderToolPixelAvatar("memory_search", "ok", 0, "", { backend: "ansi" });
+  const err = renderToolPixelAvatar("memory_search", "error", 0, "", { backend: "ansi" });
+  expect(ok?.background).toBeDefined();
+  expect(err?.background).toBeDefined();
+  expect(ok?.background).not.toEqual(err?.background);
+});
+
+test("tool avatars animate only while running", () => {
+  const done0 = renderToolPixelAvatar("bash", "ok", 0, "", { backend: "ansi" });
+  const done5 = renderToolPixelAvatar("bash", "ok", 5, "", { backend: "ansi" });
+  expect(done0?.lines[1]?.text).toBe(done5?.lines[1]?.text);
+
+  const running0 = renderToolPixelAvatar("bash", "running", 0, "", { backend: "ansi" });
+  const running5 = renderToolPixelAvatar("bash", "running", 5, "", { backend: "ansi" });
+  expect(running0?.lines[1]?.text).not.toBe(running5?.lines[1]?.text);
+});

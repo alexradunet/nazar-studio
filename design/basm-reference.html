@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- Nazar — Basm Design System reference. Phase 3 UI/UX deliverable. -->
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Basm Design System — Nazar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Silkscreen:wght@400;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── Basm design tokens ─────────────────────────────────────────── */
+:root{
+  --gold:#f2c14e;--gold-deep:#b8862a;--ember:#ff6a2b;--ember-deep:#c2410c;--ember-red:#e5484d;
+  --teal:#2dd4bf;--teal-deep:#0d9488;--folkred:#e0563b;--indigo:#a8c0f0;--violet:#c084fc;
+  --bg:#0b1310;--surface:#11201b;--surface-2:#172a23;--surface-3:#1f352c;
+  --fg:#eae4d6;--on-surface:#f5f0e6;--muted:#93a59b;--hair:#233530;--smoke:#566274;
+  --font-display:'Pixelify Sans',system-ui,sans-serif;
+  --font-pixel:'Silkscreen',monospace;
+  --font-body:'Work Sans',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+  --radius:3px;--maxw:1080px;
+}
+:root.light{
+  --gold:#8a6d12;--gold-deep:#6b5410;--ember:#c2410c;--ember-deep:#9a3410;--ember-red:#b42318;
+  --teal:#00656b;--teal-deep:#024a4f;--folkred:#983f20;--indigo:#1e3a8a;
+  --bg:#f5f1e8;--surface:#fffdf7;--surface-2:#ece6d7;--surface-3:#e3dcc9;
+  --fg:#18221d;--on-surface:#121b16;--muted:#5c6e63;--hair:#d8d0bf;--smoke:#7a8a80;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.6}
+h1,h2,h3,h4{font-family:var(--font-display);color:var(--on-surface)}
+a{color:var(--ember);text-decoration:none}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);color:var(--teal);padding:1px 5px;border-radius:2px}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 clamp(18px,5vw,48px)}
+section{padding:60px 0;border-top:2px solid var(--hair)}
+section:first-of-type{border-top:none}
+.section-label{font-family:var(--font-pixel);font-size:11px;color:var(--teal);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px}
+.section-title{font-size:clamp(26px,4vw,40px);line-height:1.05;margin-bottom:8px}
+.section-sub{font-size:16px;color:var(--muted);max-width:55ch;margin-bottom:32px}
+
+/* ── topbar ─── */
+.topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:2px solid var(--hair)}
+.topbar .row{display:flex;align-items:center;gap:0;padding:0}
+.topbar .logo{font-family:var(--font-pixel);font-size:14px;color:var(--on-surface);padding:11px 20px 11px 0;border-right:2px solid var(--hair)}
+.topbar .logo span{color:var(--gold)}
+.topbar nav{display:flex;flex:1;overflow-x:auto}
+.topbar nav a{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:12px 16px;white-space:nowrap;border-right:1px solid var(--hair)}
+.topbar nav a:hover{color:var(--on-surface);background:var(--surface)}
+.topbar .right{margin-left:auto;display:flex;align-items:center;padding-left:8px}
+.themebtn{width:34px;height:34px;display:grid;place-items:center;border:none;background:transparent;color:var(--muted);cursor:pointer;margin-right:12px}
+.themebtn:hover{color:var(--on-surface)}
+
+/* ── folk-band ─── */
+.folk-band{height:12px;border-top:2px solid var(--on-surface);border-bottom:2px solid var(--on-surface);
+  background:repeating-linear-gradient(135deg,var(--folkred) 0 8px,var(--gold) 8px 16px,var(--teal) 16px 24px,var(--ember-deep) 24px 32px);
+  image-rendering:pixelated;margin:0}
+
+/* ── hero ─── */
+.hero{padding:54px 0 40px;display:grid;grid-template-columns:1fr auto;align-items:end;gap:32px}
+.hero h1{font-size:clamp(42px,7vw,72px);line-height:.88;text-shadow:4px 4px 0 var(--ember-deep)}
+.hero .sub{font-family:var(--font-mono);font-size:13px;color:var(--muted);margin-top:14px}
+.hero .sub span{color:var(--teal)}
+
+/* ── palette ─── */
+.swatch-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+.swatch{width:92px;border-radius:var(--radius);border:2px solid var(--hair);overflow:hidden;font-family:var(--font-mono);font-size:11px}
+.swatch .chip{height:52px}
+.swatch .label{padding:5px 7px;background:var(--surface);color:var(--muted)}
+.swatch .label b{color:var(--on-surface);display:block;font-size:10px}
+
+/* ── type scale ─── */
+.type-row{margin-bottom:22px;padding-bottom:22px;border-bottom:1px dashed var(--hair)}
+.type-row:last-child{border:none}
+.type-meta{font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-bottom:6px}
+
+/* ── buttons ─── */
+.btn{display:inline-flex;align-items:center;gap:9px;font-family:var(--font-mono);font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;padding:11px 18px;border-radius:var(--radius);border:2px solid var(--on-surface);cursor:pointer;transition:transform .08s,box-shadow .08s}
+.btn-primary{background:var(--ember);color:#1a0e07;box-shadow:5px 5px 0 var(--ember-deep)}
+.btn-ghost{background:var(--surface);color:var(--on-surface);box-shadow:5px 5px 0 var(--hair)}
+.btn:hover{transform:translate(1px,1px)}
+.btn:active{transform:translate(5px,5px);box-shadow:0 0 0}
+.component-row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;margin-bottom:28px}
+
+/* ── cards ─── */
+.card{position:relative;background:var(--surface);border:2px solid var(--hair);border-radius:var(--radius);padding:20px 18px;transition:transform .12s,border-color .12s}
+.card:hover{transform:translateY(-2px);border-color:var(--teal)}
+.card::after{content:'';position:absolute;top:0;right:0;width:7px;height:7px;background:var(--gold)}
+.card h3{font-family:var(--font-display);font-size:18px;margin-bottom:7px}
+.card p{font-size:14px;line-height:1.55;color:var(--muted)}
+.card .ico{font-family:var(--font-pixel);font-size:20px;color:var(--gold);margin-bottom:10px}
+.cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
+@media(max-width:720px){.cards-grid{grid-template-columns:1fr 1fr}}
+
+/* ── tags ─── */
+.tag{font-family:var(--font-mono);font-size:12px;padding:5px 11px;border-radius:999px;border:2px solid var(--hair);background:var(--surface);color:var(--muted);display:inline-block}
+
+/* ── pills ─── */
+.pill{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding:3px 9px;border-radius:999px}
+.pill-done{background:rgba(45,212,191,.15);color:var(--teal)}
+.pill-now{background:rgba(242,193,78,.15);color:var(--gold)}
+.pill-next{background:rgba(168,192,240,.15);color:var(--indigo)}
+.pill-later{border:2px solid var(--hair);color:var(--muted)}
+
+/* ── stitch ─── */
+.stitch{height:2px;background-image:linear-gradient(to right,var(--hair) 50%,transparent 50%);background-size:10px 2px;background-repeat:repeat-x;margin:24px 0}
+
+/* ── principle ─── */
+.principle{border-left:3px solid var(--teal);padding:4px 0 4px 16px;margin-bottom:16px}
+.principle h4{font-family:var(--font-display);font-size:16px;margin-bottom:3px}
+.principle p{font-size:14px;color:var(--muted)}
+
+/* ─────────────────────────────────────────────────────────────────
+   TERMINAL SIMULATION
+───────────────────────────────────────────────────────────────── */
+.term-window{
+  background:#090e0c;
+  border:2px solid var(--hair);
+  border-radius:var(--radius);
+  overflow:hidden;
+  font-family:var(--font-mono);
+  font-size:14px;
+  line-height:1.45;
+  box-shadow:10px 10px 0 #050908;
+}
+/* titlebar */
+.term-titlebar{
+  background:var(--surface);
+  border-bottom:1px solid var(--hair);
+  padding:7px 14px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.term-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.term-dot.r{background:#e05050}.term-dot.y{background:#e0b050}.term-dot.g{background:#50b050}
+.term-title-text{font-size:12px;color:var(--muted);margin-left:6px;font-family:var(--font-mono)}
+/* inner padding */
+.term-body{padding:12px 16px 16px;display:flex;flex-direction:column;gap:0}
+/* header */
+.term-header{
+  color:var(--gold);
+  border:1px solid var(--gold);
+  padding:4px 8px;
+  margin-bottom:10px;
+  font-size:12px;
+  white-space:pre;
+}
+.term-header .dim{color:var(--smoke)}
+/* panel */
+.term-panel{
+  display:flex;
+  gap:0;
+  margin-bottom:1px;
+}
+.term-avatar{
+  width:88px;
+  flex-shrink:0;
+  border:1px solid var(--smoke);
+  padding:5px 4px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:2px;
+  font-size:13px;
+  white-space:pre;
+  line-height:1.2;
+}
+.term-avatar .badge{
+  font-size:11px;
+  margin-top:3px;
+  color:var(--muted);
+  white-space:nowrap;
+}
+.term-msg{
+  flex:1;
+  border:1px solid var(--smoke);
+  border-left:none;
+  padding:6px 10px;
+  color:var(--fg);
+  font-size:13px;
+  line-height:1.5;
+}
+.term-msg .dim{color:var(--muted)}
+.term-msg .acc{color:var(--teal)}
+.term-msg .gold{color:var(--gold)}
+.term-msg code{font-family:var(--font-mono);color:var(--teal);background:transparent;padding:0;font-size:13px}
+/* blank separator */
+.term-sep{height:10px}
+/* tool panel */
+.term-tool .term-avatar{border-color:var(--smoke)}
+.term-tool .term-avatar.running{border-color:var(--teal);color:var(--teal)}
+.term-tool .term-avatar.pending{border-color:var(--gold);color:var(--gold)}
+/* thinking panel */
+.term-thinking .term-avatar{border-color:var(--teal-deep);color:var(--teal)}
+.term-thinking .term-msg{color:var(--muted);font-style:italic;border-color:var(--teal-deep)}
+/* user panel */
+.term-user .term-avatar{border-color:var(--hair);color:var(--indigo)}
+.term-user .term-msg{background:#0e1a22}
+/* nazar panel */
+.term-nazar .term-avatar{border-color:var(--hair);color:var(--gold)}
+/* input */
+.term-input .term-avatar{border-color:var(--indigo);color:var(--indigo)}
+.term-input .term-msg{border-color:var(--indigo);color:var(--fg)}
+.term-input .prompt{color:var(--teal)}
+/* footer */
+.term-footer{
+  margin-top:10px;
+  font-size:11px;
+  color:var(--smoke);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border-top:1px solid var(--hair);
+  padding-top:6px;
+}
+.term-footer .mark{color:var(--gold);font-weight:500}
+.term-footer .trust{color:var(--teal)}
+.term-footer .warn{color:var(--gold)}
+.term-footer .bar{
+  display:inline-block;
+  font-family:var(--font-mono);
+  color:var(--muted);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   SPRITE CATALOG
+───────────────────────────────────────────────────────────────── */
+.sprite-grid{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:32px}
+.sprite-card{
+  background:var(--surface);
+  border:2px solid var(--hair);
+  border-radius:var(--radius);
+  padding:16px;
+  min-width:140px;
+  text-align:center;
+}
+.sprite-card .sprite-art{
+  font-family:var(--font-mono);
+  font-size:13px;
+  line-height:1.3;
+  white-space:pre;
+  display:block;
+  margin-bottom:10px;
+}
+.sprite-card .sprite-name{font-family:var(--font-pixel);font-size:12px;color:var(--on-surface);margin-bottom:3px}
+.sprite-card .sprite-role{font-size:12px;color:var(--muted)}
+.sprite-card .sprite-color{font-size:11px;font-family:var(--font-mono);margin-top:4px}
+
+/* ─────────────────────────────────────────────────────────────────
+   THE HEADS — SKILL CARDS
+───────────────────────────────────────────────────────────────── */
+.head-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px}
+@media(max-width:720px){.head-grid{grid-template-columns:1fr 1fr}}
+.head-card{background:var(--surface);border:2px solid var(--hair);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden}
+.head-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:3px}
+.head-nazar::before{background:var(--gold)}
+.head-keeper::before{background:var(--teal)}
+.head-maker::before{background:var(--ember)}
+.head-newhead::before{background:var(--violet)}
+.head-warden::before{background:var(--teal-deep)}
+.head-thinking::before{background:var(--muted)}
+.head-card .sprite{font-family:var(--font-mono);font-size:22px;margin-bottom:8px}
+.head-card .head-name{font-family:var(--font-display);font-size:18px;margin-bottom:4px}
+.head-card .head-sprite{font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-bottom:8px}
+.head-card .head-domain{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:10px}
+.head-card .head-status{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+.head-card .head-status.shipped{color:var(--teal)}
+.head-card .head-status.new{color:var(--gold)}
+
+/* growth viz */
+.growth-strip{
+  display:flex;gap:0;align-items:stretch;margin:20px 0;
+  border:2px solid var(--hair);border-radius:var(--radius);overflow:hidden;
+}
+.growth-head{
+  flex:1;padding:14px 12px;background:var(--surface);border-right:2px solid var(--hair);
+  font-family:var(--font-mono);font-size:12px;text-align:center;position:relative;
+}
+.growth-head:last-child{border-right:none}
+.growth-head .gh-sprite{font-size:20px;display:block;margin-bottom:6px}
+.growth-head .gh-name{font-size:11px;color:var(--on-surface);font-family:var(--font-pixel)}
+.growth-head .gh-state{font-size:10px;color:var(--muted);margin-top:3px}
+.growth-head.new-head{background:var(--surface-2);border-color:var(--gold)}
+.growth-head.new-head .gh-name{color:var(--gold)}
+.growth-head.new-head::after{content:'NEW';position:absolute;top:6px;right:6px;font-family:var(--font-pixel);font-size:8px;color:var(--gold);background:rgba(242,193,78,.15);padding:1px 4px;border:1px solid var(--gold)}
+
+/* self-evolution flow */
+.flow-steps{display:flex;gap:0;align-items:stretch;margin:20px 0}
+.flow-step{flex:1;background:var(--surface);border:2px solid var(--hair);padding:14px 12px;position:relative}
+.flow-step:not(:last-child)::after{content:'→';position:absolute;right:-14px;top:50%;transform:translateY(-50%);color:var(--gold);font-family:var(--font-mono);font-size:16px;z-index:1;background:var(--bg);padding:0 2px}
+.flow-step:not(:last-child){margin-right:12px}
+.flow-step .fs-num{font-family:var(--font-pixel);font-size:10px;color:var(--gold);margin-bottom:6px}
+.flow-step .fs-title{font-family:var(--font-display);font-size:14px;margin-bottom:4px}
+.flow-step .fs-desc{font-size:12px;color:var(--muted);line-height:1.4}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:720px){.grid-2{grid-template-columns:1fr}}
+.note-box{background:var(--surface);border:2px solid var(--hair);border-radius:var(--radius);padding:16px;font-size:14px;color:var(--muted)}
+.note-box b{color:var(--on-surface)}
+.note-box .note-icon{font-family:var(--font-pixel);font-size:18px;color:var(--gold);margin-bottom:8px}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar"><div class="wrap row" style="display:flex;align-items:center">
+  <div class="logo">NAZAR <span>·</span> BASM</div>
+  <nav>
+    <a href="#foundations">Foundations</a>
+    <a href="#components">Components</a>
+    <a href="#terminal">Terminal UI</a>
+    <a href="#eyes">The Eyes</a>
+  </nav>
+  <div class="right">
+    <button class="themebtn" id="t" aria-label="Toggle theme">
+      <svg class="t-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="t-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+    </button>
+  </div>
+</div></div>
+
+<div class="wrap">
+  <!-- HERO -->
+  <div class="hero">
+    <div>
+      <h1>Basm<br>Design System</h1>
+      <p class="sub">Nazar's visual language ·
+        <span>pixel-art 16-bit · Romanian fairy tales</span> ·
+        dark-first · woven, not rendered</p>
+    </div>
+    <div style="font-family:var(--font-mono);font-size:11px;color:var(--muted);text-align:right;line-height:1.8">
+      <div><span style="color:var(--gold)">version</span> 1.0 — June 2026</div>
+      <div><span style="color:var(--teal)">source</span> design/basm.md</div>
+      <div><span style="color:var(--teal)">tokens</span> design/tokens.css</div>
+    </div>
+  </div>
+</div>
+
+<div class="folk-band"></div>
+
+<!-- ── FOUNDATIONS ──────────────────────────────────────────────── -->
+<section id="foundations"><div class="wrap">
+  <div class="section-label">// 01 — Foundations</div>
+  <h2 class="section-title">Palette, type, spacing</h2>
+  <p class="section-sub">All hexes live in <code>design/tokens.css</code>. The terminal theme (<code>themes/nazar.json</code>) is the accent anchor. Never hand-pick hexes outside these tokens.</p>
+
+  <h3 style="font-size:17px;margin-bottom:14px;color:var(--muted);font-family:var(--font-mono);font-weight:400">// accent colors (theme-independent)</h3>
+  <div class="swatch-row">
+    <div class="swatch"><div class="chip" style="background:#f2c14e"></div><div class="label"><b>gold</b>#f2c14e<br>the companion, kickers</div></div>
+    <div class="swatch"><div class="chip" style="background:#b8862a"></div><div class="label"><b>gold-deep</b>#b8862a<br>hard shadows</div></div>
+    <div class="swatch"><div class="chip" style="background:#ff6a2b"></div><div class="label"><b>ember</b>#ff6a2b<br>CTA · links</div></div>
+    <div class="swatch"><div class="chip" style="background:#c2410c"></div><div class="label"><b>ember-deep</b>#c2410c<br>offset shadows</div></div>
+    <div class="swatch"><div class="chip" style="background:#2dd4bf"></div><div class="label"><b>teal</b>#2dd4bf<br>data-core · private</div></div>
+    <div class="swatch"><div class="chip" style="background:#0d9488"></div><div class="label"><b>teal-deep</b>#0d9488<br>teal shadows</div></div>
+    <div class="swatch"><div class="chip" style="background:#e0563b"></div><div class="label"><b>folkred</b>#e0563b<br>woven band</div></div>
+    <div class="swatch"><div class="chip" style="background:#a8c0f0"></div><div class="label"><b>indigo</b>#a8c0f0<br>the user</div></div>
+    <div class="swatch"><div class="chip" style="background:#c084fc"></div><div class="label"><b>violet</b>#c084fc<br>rare · syntax</div></div>
+    <div class="swatch"><div class="chip" style="background:#e5484d"></div><div class="label"><b>ember-red</b>#e5484d<br>error only</div></div>
+  </div>
+
+  <h3 style="font-size:17px;margin:24px 0 14px;color:var(--muted);font-family:var(--font-mono);font-weight:400">// dark surfaces (default)</h3>
+  <div class="swatch-row">
+    <div class="swatch"><div class="chip" style="background:#0b1310;border:1px solid #233530"></div><div class="label"><b>bg</b>#0b1310<br>page</div></div>
+    <div class="swatch"><div class="chip" style="background:#11201b"></div><div class="label"><b>surface</b>#11201b<br>cards</div></div>
+    <div class="swatch"><div class="chip" style="background:#172a23"></div><div class="label"><b>surface-2</b>#172a23<br>tags · code</div></div>
+    <div class="swatch"><div class="chip" style="background:#1f352c"></div><div class="label"><b>surface-3</b>#1f352c<br>deep inset</div></div>
+    <div class="swatch"><div class="chip" style="background:#f5f0e6;border:1px solid #233530"></div><div class="label"><b>on-surface</b>#f5f0e6<br>headings</div></div>
+    <div class="swatch"><div class="chip" style="background:#eae4d6;border:1px solid #233530"></div><div class="label"><b>fg</b>#eae4d6<br>body text</div></div>
+    <div class="swatch"><div class="chip" style="background:#93a59b"></div><div class="label"><b>muted</b>#93a59b<br>meta · sub</div></div>
+    <div class="swatch"><div class="chip" style="background:#233530"></div><div class="label"><b>hair</b>#233530<br>borders</div></div>
+  </div>
+
+  <div class="stitch"></div>
+
+  <h3 style="font-size:17px;margin-bottom:20px;color:var(--muted);font-family:var(--font-mono);font-weight:400">// typography scale</h3>
+  <div class="type-row">
+    <div class="type-meta">Pixelify Sans 700 · display / hero / headings</div>
+    <div style="font-family:var(--font-display);font-weight:700;font-size:54px;line-height:.88;text-shadow:3px 3px 0 var(--ember-deep);color:var(--on-surface)">Nazar</div>
+  </div>
+  <div class="type-row">
+    <div class="type-meta">Silkscreen 700 · brand mark / kickers / labels (uppercase only)</div>
+    <div style="font-family:var(--font-pixel);font-weight:700;font-size:20px;color:var(--gold);letter-spacing:.04em">NAZAR · BASM · NEW SKILL</div>
+  </div>
+  <div class="type-row">
+    <div class="type-meta">Work Sans 400/500/600 · body copy / lede / UI prose</div>
+    <div style="font-family:var(--font-body);font-size:18px;color:var(--fg);line-height:1.5">A wise companion that lives on your own box. It remembers the facts of your life, learns skills that act on them, and keeps everything in open files you own.</div>
+  </div>
+  <div class="type-row">
+    <div class="type-meta">JetBrains Mono 400/500 · nav / buttons / tags / code / terminal</div>
+    <div style="font-family:var(--font-mono);font-size:14px;color:var(--teal)">memory_write · skill_write · whenToUse · git:main · LOCAL/PRIVATE</div>
+  </div>
+</div></section>
+
+<!-- ── COMPONENTS ────────────────────────────────────────────────── -->
+<section id="components"><div class="wrap">
+  <div class="section-label">// 02 — Components</div>
+  <h2 class="section-title">Visual building blocks</h2>
+  <p class="section-sub">All components are pixel-hard: 2px borders, 3px radius, hard offset shadows, no rounded blobs or soft gradients.</p>
+
+  <h3 style="font-family:var(--font-mono);font-size:14px;color:var(--muted);margin-bottom:12px">Woven dividers</h3>
+  <div style="margin-bottom:6px;font-size:13px;color:var(--muted)">folk-band — use between major narrative sections</div>
+  <div class="folk-band" style="margin-bottom:18px"></div>
+  <div style="margin-bottom:6px;font-size:13px;color:var(--muted)">stitch — subtle separator inside sections</div>
+  <div class="stitch" style="margin-bottom:24px"></div>
+
+  <h3 style="font-family:var(--font-mono);font-size:14px;color:var(--muted);margin-bottom:12px">Buttons — pixel-hard, uppercase mono, hard shadow</h3>
+  <div class="component-row">
+    <button class="btn btn-primary">▶ Get started</button>
+    <button class="btn btn-ghost">View on GitHub</button>
+    <button class="btn btn-primary" style="box-shadow:none;transform:translate(5px,5px)">Active state</button>
+    <button class="btn btn-ghost" style="border-color:var(--teal);color:var(--teal)">Hover state</button>
+  </div>
+
+  <h3 style="font-family:var(--font-mono);font-size:14px;color:var(--muted);margin-bottom:12px">Cards — gold corner notch, 2px border, lift on hover</h3>
+  <div class="cards-grid" style="margin-bottom:28px">
+    <div class="card"><div class="ico">⌂</div><h3>Your data, your box</h3><p>Plain Markdown in a vault you own — never the price of admission to your own memory.</p></div>
+    <div class="card"><div class="ico">☉</div><h3>Local model first</h3><p>The terminal defaults to the local model. Personal context stays on the box.</p></div>
+    <div class="card"><div class="ico">☊</div><h3>Skills grow as eyes</h3><p>Each approved procedure becomes a new eye watching one more domain of your life.</p></div>
+  </div>
+
+  <h3 style="font-family:var(--font-mono);font-size:14px;color:var(--muted);margin-bottom:12px">Tags · Pills · Status indicators</h3>
+  <div class="component-row" style="margin-bottom:10px">
+    <span class="tag">Pi terminal runtime</span>
+    <span class="tag">Node</span>
+    <span class="tag">llamafile · Qwen3</span>
+    <span class="tag">Markdown vault</span>
+    <span class="tag">SQLite FTS5</span>
+    <span class="tag">AGPL-3.0</span>
+  </div>
+  <div class="component-row" style="margin-bottom:28px">
+    <span class="pill pill-done">● Done</span>
+    <span class="pill pill-now">● Now</span>
+    <span class="pill pill-next">● Next</span>
+    <span class="pill pill-later">Later</span>
+  </div>
+
+  <h3 style="font-family:var(--font-mono);font-size:14px;color:var(--muted);margin-bottom:12px">Principle panels — teal left border</h3>
+  <div class="grid-2">
+    <div class="principle"><h4>Files over platforms</h4><p>Facts and procedures are plain Markdown versioned in git — never an opaque memory service.</p></div>
+    <div class="principle"><h4>Suggest → approve</h4><p>The companion proposes. The human approves. Git records the change. No silent self-modification.</p></div>
+  </div>
+</div></section>
+
+<!-- ── TERMINAL UI ───────────────────────────────────────────────── -->
+<section id="terminal"><div class="wrap">
+  <div class="section-label">// 03 — Terminal UI</div>
+  <h2 class="section-title">RPG dialog panels</h2>
+  <p class="section-sub">The Pi terminal is Nazar's owned daily surface — an old-school fantasy RPG command interface that is compact, truthful, and useful. Panels use ANSI-colored RPG borders, fixed avatar cells, and colored role identities.</p>
+
+  <div class="term-window">
+    <div class="term-titlebar">
+      <span class="term-dot r"></span><span class="term-dot y"></span><span class="term-dot g"></span>
+      <span class="term-title-text">nazar — ~/nazar</span>
+    </div>
+    <div class="term-body">
+
+      <!-- HEADER -->
+      <div class="term-header" style="border-color:var(--gold)">
+<span style="color:var(--gold)">+-- B A L A U R </span><span class="dim">----------------------------------------------+</span>
+<span style="color:var(--teal)">| local-first </span><span class="dim">|</span><span style="color:var(--teal)"> private </span><span class="dim">|</span><span style="color:var(--fg)"> yours </span><span class="dim">| FOSS               woven, not rendered |</span>
+<span class="dim">+-------------------------------------------------- Jun 2026 · main ----+</span>
+      </div>
+
+      <!-- USER TURN -->
+      <div class="term-panel term-user">
+        <div class="term-avatar">
+          <span style="color:var(--indigo)">  ,_,  </span>
+          <span style="color:var(--indigo)"> (o.o) </span>
+          <span style="color:var(--indigo)">  |@|  </span>
+          <span style="color:var(--indigo)"> / | \ </span>
+          <span style="color:var(--indigo)">  |||  </span>
+          <div class="badge">[ cico ]</div>
+        </div>
+        <div class="term-msg">
+          What do I have scheduled this week?<br>
+          <span class="dim">Also remind me — I wanted to start tracking my sleep.</span>
+        </div>
+      </div>
+
+      <div class="term-sep"></div>
+
+      <!-- THINKING PANEL -->
+      <div class="term-panel term-thinking">
+        <div class="term-avatar">
+          <span>  ^~^  </span>
+          <span> (?~?) </span>
+          <span>  )?(  </span>
+          <span>  |||  </span>
+          <span>  ~~~  </span>
+          <div class="badge">[ Nazar ]</div>
+        </div>
+        <div class="term-msg"><em>weighing the matter…</em></div>
+      </div>
+
+      <div class="term-sep"></div>
+
+      <!-- TOOL CALL — MEMORY SEARCH -->
+      <div class="term-panel term-tool">
+        <div class="term-avatar running">
+          <span>  [M]  </span>
+          <span> (|~|) </span>
+          <span>  |M|  </span>
+          <span>  ---  </span>
+          <span>       </span>
+          <div class="badge" style="color:var(--teal)">[ memory ]</div>
+        </div>
+        <div class="term-msg" style="border-color:var(--teal)">
+          <span style="color:var(--teal)">memory_search</span> <span class="dim">→</span> <span class="acc">"schedule" "sleep" "this week"</span><br>
+          <span class="dim">vault/memory/ · FTS5 · 3 results recalled</span>
+        </div>
+      </div>
+
+      <div class="term-sep"></div>
+
+      <!-- NAZAR RESPONSE -->
+      <div class="term-panel term-nazar">
+        <div class="term-avatar">
+          <span style="color:var(--gold)"> ^\^/^ </span>
+          <span style="color:var(--gold)">(°B°ó)</span>
+          <span style="color:var(--gold)"> )|||( </span>
+          <span style="color:var(--gold)">  |||  </span>
+          <span style="color:var(--gold)">  ~~~  </span>
+          <div class="badge">[ Nazar ]</div>
+        </div>
+        <div class="term-msg">
+          <span class="gold">This week</span> you have the Medius sync Thursday 14:00 and Andreea's birthday Saturday.<br><br>
+          For sleep: I can start a <code>sleep</code> vault entry and log it each day. Shall I add a
+          <code>memory_write</code> for tonight, or would you like me to write a skill that
+          <span class="acc">reminds you each morning</span>?<br><br>
+          <span class="dim">(A new eye could wake for this, if you find it useful.)</span>
+        </div>
+      </div>
+
+      <div class="term-sep"></div>
+
+      <!-- USER: approve skill -->
+      <div class="term-panel term-user">
+        <div class="term-avatar">
+          <span style="color:var(--indigo)">  ,_,  </span>
+          <span style="color:var(--indigo)"> (o.o) </span>
+          <span style="color:var(--indigo)">  |@|  </span>
+          <span style="color:var(--indigo)"> / | \ </span>
+          <span style="color:var(--indigo)">  |||  </span>
+          <div class="badge">[ cico ]</div>
+        </div>
+        <div class="term-msg">Yes, write the skill. Let's give it an eye.</div>
+      </div>
+
+      <div class="term-sep"></div>
+
+      <!-- SELF-EVOLUTION: NEW HEAD WAKES -->
+      <div class="term-panel" style="">
+        <div class="term-avatar" style="border-color:var(--gold);color:var(--gold)">
+          <span> *✦*✦* </span>
+          <span>(*!*!*)</span>
+          <span> )**(  </span>
+          <span>  |||  </span>
+          <span>  ~~~  </span>
+          <div class="badge" style="color:var(--gold)">[ * new ]</div>
+        </div>
+        <div class="term-msg" style="border-color:var(--gold)">
+          <span style="color:var(--gold)">A new eye opens.</span><br>
+          <span class="dim">Skill drafted → </span><code>skills/sleep-log.md</code><span class="dim"> · branch </span><code>skill/sleep-log</code><br>
+          <span class="dim">Awaiting your approval. </span><code>make skill-check</code><span class="dim"> → open PR when ready.</span>
+        </div>
+      </div>
+
+      <div class="term-sep"></div>
+
+      <!-- INPUT EDITOR -->
+      <div class="term-panel term-input">
+        <div class="term-avatar">
+          <span style="color:var(--indigo)">  ,_,  </span>
+          <span style="color:var(--indigo)"> (o.·) </span>
+          <span style="color:var(--indigo)">  |@|  </span>
+          <span style="color:var(--indigo)"> / | \ </span>
+          <span style="color:var(--indigo)">  |||  </span>
+          <div class="badge" style="color:var(--indigo)">[ cico ]</div>
+        </div>
+        <div class="term-msg">
+          <span class="prompt">› </span><span style="color:var(--fg)">approve the sleep-log skill</span><span style="color:var(--gold);animation:blink 1s step-end infinite">▌</span>
+        </div>
+      </div>
+
+      <!-- FOOTER -->
+      <div class="term-footer">
+        <span><span class="mark">Nazar</span></span>
+        <span>
+          <span class="trust">local/private</span>
+          <span class="dim"> | qwen3.6-35b | </span>
+          <span class="warn">git:main*</span>
+          <span class="dim"> | 14 tools | ctx </span>
+          <span class="bar">[<span style="color:var(--teal)">====</span><span style="color:var(--hair)">------</span>]</span>
+          <span class="dim"> 38%</span>
+        </span>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="stitch" style="margin:32px 0 24px"></div>
+
+  <!-- SPRITE CATALOG -->
+  <h3 style="font-family:var(--font-mono);font-size:14px;color:var(--muted);margin-bottom:16px">Sprite catalog — ASCII portrait mode (NAZAR_AVATAR_MODE=both)</h3>
+  <div class="sprite-grid">
+
+    <div class="sprite-card">
+      <span class="sprite-art" style="color:var(--indigo)">  ,_,
+ (o.o)
+  |@|
+ / | \
+  |||  </span>
+      <div class="sprite-name">@ — User</div>
+      <div class="sprite-role">player / you</div>
+      <div class="sprite-color" style="color:var(--indigo)">indigo</div>
+    </div>
+
+    <div class="sprite-card">
+      <span class="sprite-art" style="color:var(--gold)"> ^\^/^
+(°B°ó)
+ )|||(
+  |||
+  ~~~  </span>
+      <div class="sprite-name">B — Nazar</div>
+      <div class="sprite-role">idle / answering</div>
+      <div class="sprite-color" style="color:var(--gold)">gold</div>
+    </div>
+
+    <div class="sprite-card">
+      <span class="sprite-art" style="color:var(--teal)">  ^~^
+ (?~?)
+  )?(
+  |||
+  ~~~  </span>
+      <div class="sprite-name">? — Weighing</div>
+      <div class="sprite-role">thinking state</div>
+      <div class="sprite-color" style="color:var(--teal)">teal</div>
+    </div>
+
+    <div class="sprite-card">
+      <span class="sprite-art" style="color:var(--ember)">  ▲T▲
+ [===]
+ [T-T]
+  |||
+  ---  </span>
+      <div class="sprite-name">T — Maker</div>
+      <div class="sprite-role">tool use / acting</div>
+      <div class="sprite-color" style="color:var(--ember)">ember</div>
+    </div>
+
+    <div class="sprite-card">
+      <span class="sprite-art" style="color:var(--teal)">  [M]
+ (|~|)
+  |M|
+  ---
+       </span>
+      <div class="sprite-name">M — Keeper</div>
+      <div class="sprite-role">memory · life tracking</div>
+      <div class="sprite-color" style="color:var(--teal)">teal</div>
+    </div>
+
+    <div class="sprite-card">
+      <span class="sprite-art" style="color:#7fcf6a">  [+]
+ (+++)
+ | + |
+  ---
+       </span>
+      <div class="sprite-name">+ — Warden</div>
+      <div class="sprite-role">doctor · health check</div>
+      <div class="sprite-color" style="color:#7fcf6a">good / teal</div>
+    </div>
+
+    <div class="sprite-card">
+      <span class="sprite-art" style="color:var(--gold)"> *✦*✦*
+(*!*!*)
+ )**(
+  |||
+  ~~~  </span>
+      <div class="sprite-name">* — New Eye</div>
+      <div class="sprite-role">self-evolution · skill approved</div>
+      <div class="sprite-color" style="color:var(--gold)">gold (pulsing)</div>
+    </div>
+
+  </div>
+
+  <!-- TOOL ICON STATES -->
+  <h3 style="font-family:var(--font-mono);font-size:14px;color:var(--muted);margin:4px 0 14px">Tool panel states — color carries execution state</h3>
+  <div class="component-row" style="gap:10px">
+    <div style="background:var(--surface);border:2px solid var(--gold);border-radius:var(--radius);padding:8px 14px;font-family:var(--font-mono);font-size:12px;color:var(--gold)">● pending</div>
+    <div style="background:var(--surface);border:2px solid #f5f0e6;border-radius:var(--radius);padding:8px 14px;font-family:var(--font-mono);font-size:12px;color:var(--fg)">● running</div>
+    <div style="background:var(--surface);border:2px solid var(--teal);border-radius:var(--radius);padding:8px 14px;font-family:var(--font-mono);font-size:12px;color:var(--teal)">● success</div>
+    <div style="background:var(--surface);border:2px solid var(--ember-red);border-radius:var(--radius);padding:8px 14px;font-family:var(--font-mono);font-size:12px;color:var(--ember-red)">● error</div>
+  </div>
+
+</div></section>
+
+<!-- ── THE HEADS ─────────────────────────────────────────────────── -->
+<section id="eyes"><div class="wrap">
+  <div class="section-label">// 04 — The Eyes</div>
+  <h2 class="section-title">One companion, many domains</h2>
+  <p class="section-sub">Heads are facets of one agent — never separate AIs. Each skill Nazar learns is a new eye that watches one more domain of your life. Heads are flavor for UI microcopy and skill cards; the voice is always Nazar's.</p>
+
+  <div class="head-grid">
+
+    <div class="head-card head-nazar">
+      <div class="sprite" style="color:var(--gold);font-family:var(--font-mono)">B</div>
+      <div class="head-name">Nazar</div>
+      <div class="head-sprite" style="color:var(--gold)">sprite: B · gold</div>
+      <div class="head-domain">The whole companion — the voice you talk to. Handles everything not owned by a specific head.</div>
+      <div class="head-status shipped">● CORE · always active</div>
+    </div>
+
+    <div class="head-card head-keeper">
+      <div class="sprite" style="color:var(--teal);font-family:var(--font-mono)">M</div>
+      <div class="head-name">the Keeper</div>
+      <div class="head-sprite" style="color:var(--teal)">sprite: M · teal</div>
+      <div class="head-domain">Memory and life record: journal, diet, sport, facts. Writes and recalls from the vault.</div>
+      <div class="head-status shipped">● SHIPPED · memory_write / memory_search</div>
+    </div>
+
+    <div class="head-card head-maker">
+      <div class="sprite" style="color:var(--ember);font-family:var(--font-mono)">T</div>
+      <div class="head-name">the Maker</div>
+      <div class="head-sprite" style="color:var(--ember)">sprite: T · ember</div>
+      <div class="head-domain">Tool use and acting on the world. Reads files, edits code, runs bash, searches the web.</div>
+      <div class="head-status shipped">● SHIPPED · all tool calls</div>
+    </div>
+
+    <div class="head-card head-newhead">
+      <div class="sprite" style="color:var(--violet);font-family:var(--font-mono)">*</div>
+      <div class="head-name">the New Eye</div>
+      <div class="head-sprite" style="color:var(--violet)">sprite: * · gold (pulsing)</div>
+      <div class="head-domain">Self-evolution: an eye opens when you approve a new skill in git. Proposes, branches, waits.</div>
+      <div class="head-status shipped">● SHIPPED · skill_write / git-gated</div>
+    </div>
+
+    <div class="head-card head-warden">
+      <div class="sprite" style="color:#7fcf6a;font-family:var(--font-mono)">+</div>
+      <div class="head-name">the Warden</div>
+      <div class="head-sprite" style="color:#7fcf6a">sprite: + · good</div>
+      <div class="head-domain">System health. Runs /skill:doctor, checks tooling, reports status.</div>
+      <div class="head-status shipped">● SHIPPED · /skill:doctor</div>
+    </div>
+
+    <div class="head-card head-thinking">
+      <div class="sprite" style="color:var(--teal);font-family:var(--font-mono)">?</div>
+      <div class="head-name">Weighing</div>
+      <div class="head-sprite" style="color:var(--teal)">sprite: ? · teal</div>
+      <div class="head-domain">A mood state, not an eye — shown during the thinking animation. Replaced once the answer streams.</div>
+      <div class="head-status shipped" style="color:var(--muted)">MOOD STATE · transient</div>
+    </div>
+
+  </div>
+
+  <div class="stitch" style="margin:8px 0 28px"></div>
+
+  <!-- GROWTH VIZ -->
+  <h3 style="font-family:var(--font-mono);font-size:14px;color:var(--muted);margin-bottom:14px">New skill, new eye — the growth moment</h3>
+
+  <div class="growth-strip">
+    <div class="growth-head">
+      <span class="gh-sprite" style="color:var(--gold)">B</span>
+      <div class="gh-name">Nazar</div>
+      <div class="gh-state" style="color:var(--gold)">core</div>
+    </div>
+    <div class="growth-head">
+      <span class="gh-sprite" style="color:var(--teal)">M</span>
+      <div class="gh-name">the Keeper</div>
+      <div class="gh-state">memory</div>
+    </div>
+    <div class="growth-head">
+      <span class="gh-sprite" style="color:var(--ember)">T</span>
+      <div class="gh-name">the Maker</div>
+      <div class="gh-state">tools</div>
+    </div>
+    <div class="growth-head">
+      <span class="gh-sprite" style="color:#7fcf6a">+</span>
+      <div class="gh-name">the Warden</div>
+      <div class="gh-state">health</div>
+    </div>
+    <div class="growth-head new-head">
+      <span class="gh-sprite" style="color:var(--gold)">*</span>
+      <div class="gh-name">Sleep Head</div>
+      <div class="gh-state" style="color:var(--gold)">just approved</div>
+    </div>
+  </div>
+
+  <div class="stitch" style="margin:28px 0 24px"></div>
+
+  <!-- SELF-EVOLUTION FLOW -->
+  <h3 style="font-family:var(--font-mono);font-size:14px;color:var(--muted);margin-bottom:14px">Git-gated self-evolution — Stage 0</h3>
+  <div class="flow-steps">
+    <div class="flow-step">
+      <div class="fs-num">01</div>
+      <div class="fs-title">Nazar notices</div>
+      <div class="fs-desc">Recurring need — e.g. "you ask about sleep daily." Proposes a skill.</div>
+    </div>
+    <div class="flow-step">
+      <div class="fs-num">02</div>
+      <div class="fs-title">Drafts on branch</div>
+      <div class="fs-desc"><code>skill_write</code> → <code>skills/sleep-log.md</code> on <code>skill/sleep-log</code></div>
+    </div>
+    <div class="flow-step">
+      <div class="fs-num">03</div>
+      <div class="fs-title">Human approves</div>
+      <div class="fs-desc">You review the diff, merge the PR. One click, full visibility.</div>
+    </div>
+    <div class="flow-step">
+      <div class="fs-num">04</div>
+      <div class="fs-title">Head wakes</div>
+      <div class="fs-desc"><code>/reload</code> → Pi discovers the new skill. New head, new domain, same companion.</div>
+    </div>
+  </div>
+
+  <div class="stitch" style="margin:28px 0 24px"></div>
+
+  <!-- DESIGN RULES QUICK-REF -->
+  <h3 style="font-family:var(--font-mono);font-size:14px;color:var(--muted);margin-bottom:14px">Design rules for any Nazar surface</h3>
+  <div class="grid-2">
+    <div class="note-box"><div class="note-icon">✓</div>
+      <b>Companion-first copy.</b> Lead with the wise companion (help, memory, growth). Privacy / local-first is the quiet second beat.
+    </div>
+    <div class="note-box"><div class="note-icon">✓</div>
+      <b>Woven, not rendered.</b> Pixel-hard edges, 2px borders, hard shadows. No glassmorphism, no AI gradients, no rounded blobs.
+    </div>
+    <div class="note-box"><div class="note-icon">✓</div>
+      <b>Plain technical truth.</b> Only describe what's shipped. The honesty ledger is §7 of <code>design/identity.md</code>.
+    </div>
+    <div class="note-box"><div class="note-icon">✓</div>
+      <b>One voice.</b> Heads are flavor, not separate agents. The terminal voice is always Nazar's — warm, wise, never hypey.
+    </div>
+    <div class="note-box" style="color:var(--ember-red)"><div class="note-icon" style="color:var(--ember-red)">✗</div>
+      <b>Don't imply separate AIs.</b> Heads are domains, not agents. Don't write "activate the Keeper" or "Keeper replies."
+    </div>
+    <div class="note-box" style="color:var(--ember-red)"><div class="note-icon" style="color:var(--ember-red)">✗</div>
+      <b>No hoard/vault/treasure copy.</b> Nazar is a companion who protects — not a charm that trades on fear of the evil eye. Lead with help.
+    </div>
+  </div>
+
+</div></section>
+
+<div class="folk-band" style="margin-top:60px"></div>
+<div class="wrap" style="padding:18px clamp(18px,5vw,48px);font-family:var(--font-mono);font-size:12px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
+  <span>BASM DESIGN SYSTEM · NAZAR · AGPL-3.0</span>
+  <span>design/basm.md · design/identity.md · design/tokens.css</span>
+</div>
+
+<style>
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+</style>
+<script>
+(function(){
+  var root=document.documentElement,m=document.querySelector('.t-moon'),s=document.querySelector('.t-sun');
+  try{if(localStorage.getItem('nazar-theme')==='light')root.classList.replace('dark','light');}catch(e){}
+  function sync(){var l=root.classList.contains('light');m.style.display=l?'none':'block';s.style.display=l?'block':'none';}
+  sync();
+  document.getElementById('t').addEventListener('click',function(){
+    var l=root.classList.toggle('light');root.classList.toggle('dark',!l);
+    try{localStorage.setItem('nazar-theme',l?'light':'dark');}catch(e){}
+    sync();
+  });
+})();
+</script>
+</body>
+</html>

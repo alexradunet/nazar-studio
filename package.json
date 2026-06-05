@@ -1,13 +1,79 @@
 {
-  "name": "nazar-workspace",
+  "name": "pi-nazar-studio",
   "version": "0.1.0",
-  "private": true,
+  "description": "Nazar — a self-contained Pi extension: a sovereign, local-first personal agent with Markdown memory, persona, terminal avatar/design, and a self-hosted llamafile runtime.",
+  "license": "AGPL-3.0-or-later",
   "type": "module",
-  "workspaces": [
-    "packages/*"
+  "homepage": "https://nazar.studio",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alexradunet/pi-nazar-studio.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alexradunet/pi-nazar-studio/issues"
+  },
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-extension",
+    "agent",
+    "local-first",
+    "llamafile",
+    "memory",
+    "sovereign"
   ],
+  "engines": {
+    "node": ">=23.4.0"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions"
+    ],
+    "skills": [
+      "./skills"
+    ],
+    "themes": [
+      "./themes"
+    ]
+  },
   "scripts": {
-    "test": "npm --workspaces --if-present test",
-    "pack:dry": "npm --workspaces --if-present run pack:dry"
-  }
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "smoke": "tsx smoke.ts",
+    "reindex": "tsx scripts/reindex.ts",
+    "skill-check": "tsx scripts/skill-validate.ts",
+    "build:avatars": "tsx scripts/build-ansi-avatar-assets.ts",
+    "prepublishOnly": "npm run typecheck && npm run test"
+  },
+  "dependencies": {
+    "@earendil-works/pi-tui": "^0.78.1",
+    "typebox": "1.1.38"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.78.1"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.78.1",
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.24.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  },
+  "files": [
+    "extensions",
+    "lib",
+    "skills",
+    "themes",
+    "assets",
+    "models.json",
+    "AGENTS.md",
+    "SYSTEM.md",
+    "smoke.ts",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "comment": "This package IS a Pi package: the `pi` manifest auto-loads Nazar's extensions, native skills, and theme when installed via `pi install npm:pi-nazar-studio`. The local llamafile provider is registered in-process by extensions/local-llm.ts and the persona is injected by extensions/personality.ts — nothing is hand-seeded into the Pi config."
 }

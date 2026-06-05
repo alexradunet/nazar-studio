@@ -1,0 +1,119 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Nazar branding for the terminal TUI (avatar + design). No-ops cleanly when Pi is running
+// without UI. Installed as a Pi package via `pi install npm:pi-nazar-studio`, so package/extension
+// management is the host `pi` CLI's native job — this extension no longer shells out to a
+// vendored bin/pi wrapper.
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { uiCapabilitySummary } from "../lib/ui/design.ts";
+import { patchRpgAvatars } from "../lib/ui/avatars.ts";
+import { footerFactory } from "../lib/ui/footer.ts";
+import { headerFactory } from "../lib/ui/header.ts";
+
+function applyNazarUI(pi: ExtensionAPI, ctx: ExtensionContext, onTui?: (tui: any) => void) {
+  if (!ctx?.hasUI) return; // no terminal UI to brand
+  try { ctx.ui.setTitle?.("Nazar"); } catch { /* ignore */ }
+  try { ctx.ui.setHeader?.(headerFactory); } catch { /* ignore */ }
+  try { ctx.ui.setWidget?.("nazar", undefined); } catch { /* clear old widget on /reload */ }
+  try { ctx.ui.setWidget?.("nazar-thinking", undefined); } catch { /* remove legacy thinking widget */ }
+  try { ctx.ui.setFooter?.(footerFactory(pi, ctx, onTui)); } catch { /* ignore */ }
+  try { ctx.ui.setEditorComponent?.(undefined); } catch { /* keep Pi's default editor */ }
+  try { ctx.ui.setToolsExpanded?.(false); } catch { /* less visual noise by default */ }
+}
+
+export default function (pi: ExtensionAPI) {
+  patchRpgAvatars();
+
+  let renderTui: any;
+  const activeToolAnimations = new Set<string>();
+  let toolAnimationTicker: ReturnType<typeof setInterval> | undefined;
+
+  function startToolAnimationTicker() {
+    if (toolAnimationTicker || !renderTui) return;
+    toolAnimationTicker = setInterval(() => {
+      try { renderTui?.requestRender?.(); } catch { /* ignore */ }
+    }, 180);
+  }
+
+  function stopToolAnimationTicker() {
+    if (!toolAnimationTicker) return;
+    clearInterval(toolAnimationTicker);
+    toolAnimationTicker = undefined;
+  }
+
+  function trackToolAnimation(id: unknown) {
+    if (typeof id !== "string" || !id) return;
+    activeToolAnimations.add(id);
+    startToolAnimationTicker();
+  }
+
+  function untrackToolAnimation(id: unknown) {
+    if (typeof id === "string") activeToolAnimations.delete(id);
+    if (activeToolAnimations.size === 0) stopToolAnimationTicker();
+  }
+
+
+  pi.on("session_start", async (_event: unknown, ctx: any) => {
+    applyNazarUI(pi, ctx, (tui) => { renderTui = tui; });
+  });
+
+  pi.on("model_select", async (_event: unknown, _ctx: any) => {
+    try { renderTui?.requestRender?.(); } catch { /* ignore */ }
+  });
+
+  pi.on("message_update", async (event: any) => {
+    if (event?.message?.role === "assistant" && Array.isArray(event.message.content)) {
+      for (const part of event.message.content) {
+        if (part?.type === "toolCall") trackToolAnimation(part.id);
+      }
+      try { renderTui?.requestRender?.(); } catch { /* ignore */ }
+    }
+  });
+
+  pi.on("tool_execution_start", async (event: any) => {
+    trackToolAnimation(event?.toolCallId);
+  });
+
+  pi.on("tool_execution_end", async (event: any) => {
+    untrackToolAnimation(event?.toolCallId);
+  });
+
+  pi.on("agent_end", async (_event: unknown) => {
+    activeToolAnimations.clear();
+    stopToolAnimationTicker();
+  });
+
+  pi.on("session_shutdown", async (_event: unknown) => {
+    activeToolAnimations.clear();
+    stopToolAnimationTicker();
+  });
+
+  pi.registerCommand("nazar-ui", {
+    description: "Show Nazar's canonical ANSI UI status.",
+    handler: async (args: string, ctx: any) => {
+      const requested = args.trim().split(/\s+/).filter(Boolean)[0]?.toLowerCase();
+      const validInputs = new Set(["", "ansi", "status", "show", "help", "--help"]);
+
+      if (requested && !validInputs.has(requested)) {
+        try { ctx.ui.notify("Usage: /nazar-ui [status]. Nazar UI is ANSI-only.", "error"); } catch { /* ignore */ }
+        return;
+      }
+
+      const note = `Look: ANSI-only. Nazar uses truecolor SGR panels and generated ANSI pixel avatars. ${uiCapabilitySummary()}`;
+      try { ctx.ui.notify(note, "info"); } catch { /* ignore */ }
+      try { renderTui?.requestRender?.(); } catch { /* ignore */ }
+    },
+  });
+
+
+  pi.registerCommand("nazar", {
+    description: "About Nazar",
+    handler: async (_args: string, ctx: any) => {
+      const msg =
+        "Nazar — your personal wise companion, installed as a Pi package. Local-first by default; " +
+        "frontier models only when deliberately switched. Memory and life-tracking stay in your " +
+        "Markdown vault. Manage the package with the host CLI: pi list · pi update npm:pi-nazar-studio, " +
+        "then /reload.";
+      try { ctx.ui.notify(msg, "info"); } catch { /* ignore */ }
+    },
+  });
+}

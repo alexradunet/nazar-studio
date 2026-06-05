@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!--
+  Nazar — landing page. Hand-rolled, no framework, no build step (Bun/suckless ethos).
+  Palette + type mirror design/tokens.css (the canonical source). Dark-first; .light toggles.
+  Marks: ./logo.png (compact, top bar + favicon) and ./crest.png (hero emblem).
+  Fonts: self-hosted in ./fonts/ via fonts.css — no third-party calls.
+-->
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nazar — your personal wise companion that grows with you</title>
+<meta name="description" content="Your personal wise companion: a self-hosted AI assistant that lives on your own box, remembers what matters, grows new skills over time, and keeps your data and information your own.">
+<link rel="icon" type="image/png" href="./logo.png">
+<meta property="og:title" content="Nazar — your personal wise companion that grows with you">
+<meta property="og:description" content="Your personal wise companion that lives on your own box, remembers what matters, and opens a new eye for every skill it learns.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="./crest.png">
+<link rel="stylesheet" href="./fonts.css">
+<style>
+/* ── Canonical tokens (mirror design/tokens.css) ─────────────────── */
+:root{
+  --gold:#f2c14e; --gold-deep:#b8862a; --ember:#ff6a2b; --ember-deep:#c2410c; --ember-red:#e5484d;
+  --teal:#2dd4bf; --teal-deep:#0d9488; --folkred:#e0563b; --indigo:#a8c0f0; --violet:#c084fc;
+  --bg:#0b1310; --surface:#11201b; --surface-2:#172a23; --surface-3:#1f352c;
+  --fg:#eae4d6; --on-surface:#f5f0e6; --muted:#93a59b; --hair:#233530;
+  --font-display:'Pixelify Sans',system-ui,sans-serif;
+  --font-pixel:'Silkscreen',monospace;
+  --font-body:'Work Sans',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+  --radius:3px; --maxw:1080px;
+}
+:root.light{
+  --gold:#8a6d12; --gold-deep:#6b5410; --ember:#c2410c; --ember-deep:#9a3410; --ember-red:#b42318;
+  --teal:#00656b; --teal-deep:#024a4f; --folkred:#983f20; --indigo:#1e3a8a;
+  --bg:#f5f1e8; --surface:#fffdf7; --surface-2:#ece6d7; --surface-3:#e3dcc9;
+  --fg:#18221d; --on-surface:#121b16; --muted:#5c6e63; --hair:#d8d0bf;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font-family:var(--font-body); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  background-image:
+    radial-gradient(circle at 12% -8%, rgba(45,212,191,.05), transparent 42%),
+    radial-gradient(circle at 92% -2%, rgba(255,106,43,.06), transparent 44%);
+}
+h1,h2,h3,h4{font-family:var(--font-display); color:var(--on-surface); margin:0}
+a{color:var(--ember); text-decoration:none}
+a:hover{color:var(--gold)}
+code{font-family:var(--font-mono)}
+.pixel{image-rendering:pixelated; image-rendering:crisp-edges}
+.wrap{max-width:var(--maxw); margin:0 auto; padding:0 clamp(20px,6vw,48px)}
+section{padding:clamp(48px,9vw,96px) 0}
+.eyebrow{font-family:var(--font-pixel); font-size:11px; letter-spacing:.04em; color:var(--teal); text-transform:uppercase; margin-bottom:12px}
+.kicker{font-family:var(--font-pixel); font-size:12px; letter-spacing:.04em; color:var(--gold); text-transform:uppercase; margin-bottom:16px}
+.lede{font-family:var(--font-display); font-size:clamp(21px,3vw,30px); line-height:1.25; color:var(--fg); max-width:46ch}
+.body-copy{font-size:17px; line-height:1.65; color:var(--muted); max-width:65ch}
+.body-copy b, .body-copy strong{color:var(--on-surface)}
+.accent{color:var(--teal)}
+.codepill{font-family:var(--font-mono); font-size:.86em; padding:2px 6px; border-radius:var(--radius); background:var(--surface-2); color:var(--teal)}
+.section-title{font-family:var(--font-display); font-size:clamp(30px,4.6vw,52px); line-height:1.05; color:var(--on-surface); margin-bottom:14px}
+
+/* topbar */
+.topbar{position:sticky; top:0; z-index:30; backdrop-filter:blur(8px); background:color-mix(in srgb, var(--bg) 82%, transparent); border-bottom:2px solid var(--hair)}
+.topbar .row{display:flex; align-items:center; gap:16px; padding:12px 0}
+.brandmark{width:30px; height:30px; border:2px solid var(--hair); border-radius:var(--radius)}
+.brandword{font-family:var(--font-pixel); font-size:15px; color:var(--on-surface); letter-spacing:.02em}
+.spacer{flex:1}
+.navlink{font-family:var(--font-mono); font-size:12.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted)}
+.navlink:hover{color:var(--on-surface)}
+.themebtn{width:34px; height:34px; display:grid; place-items:center; border:2px solid var(--hair); border-radius:var(--radius); background:transparent; color:var(--muted); cursor:pointer}
+.themebtn:hover{color:var(--on-surface); border-color:var(--teal)}
+
+/* buttons — pixel-hard */
+.btn{display:inline-flex; align-items:center; gap:9px; font-family:var(--font-mono); font-size:13px; font-weight:500; text-transform:uppercase; letter-spacing:.06em; padding:12px 18px; border-radius:var(--radius); border:2px solid var(--on-surface); transition:transform .08s, box-shadow .08s; cursor:pointer}
+.btn-primary{background:var(--ember); color:#1a0e07; box-shadow:5px 5px 0 var(--ember-deep)}
+.btn-ghost{background:var(--surface); color:var(--on-surface); box-shadow:5px 5px 0 var(--hair)}
+.btn:hover{transform:translate(1px,1px)}
+.btn:active{transform:translate(5px,5px); box-shadow:0 0 0}
+
+/* hero */
+.hero{display:grid; grid-template-columns:1.05fr .95fr; gap:48px; align-items:center; padding:clamp(40px,7vw,80px) 0 28px}
+.hero h1{font-family:var(--font-display); font-weight:700; font-size:clamp(58px,12vw,96px); line-height:.86; color:var(--on-surface); text-shadow:4px 4px 0 var(--ember-deep)}
+.hero .tag{font-family:var(--font-display); font-size:clamp(20px,2.6vw,26px); color:var(--ember); line-height:1.2; margin:12px 0}
+.hero-meta{display:flex; flex-wrap:wrap; gap:8px; margin-top:24px; font-family:var(--font-mono); font-size:11.5px; color:var(--muted)}
+.crestframe{border:2px solid var(--hair); border-radius:var(--radius); background:var(--surface-2); padding:12px; box-shadow:8px 8px 0 var(--outline-2, #0d1714)}
+.crestframe img{width:100%; display:block; border-radius:2px}
+
+/* folk band */
+.folk-band{height:14px; border-top:2px solid var(--on-surface); border-bottom:2px solid var(--on-surface);
+  background:repeating-linear-gradient(135deg, var(--folkred) 0 8px, var(--gold) 8px 16px, var(--teal) 16px 24px, var(--ember-deep) 24px 32px);
+  image-rendering:pixelated}
+
+/* grids */
+.grid{display:grid; gap:20px}
+.cols-3{grid-template-columns:repeat(3,1fr)}
+.cols-2{grid-template-columns:repeat(2,1fr)}
+.cols-3b{grid-template-columns:repeat(3,1fr); gap:24px 40px}
+@media(max-width:880px){ .hero{grid-template-columns:1fr; gap:32px} .cols-3,.cols-3b{grid-template-columns:1fr 1fr} }
+@media(max-width:560px){ .cols-3,.cols-2,.cols-3b{grid-template-columns:1fr} }
+
+/* cards */
+.card{position:relative; background:var(--surface); border:2px solid var(--hair); border-radius:var(--radius); padding:22px 20px; transition:transform .12s, border-color .12s}
+.card:hover{transform:translateY(-2px); border-color:var(--teal)}
+.card::after{content:''; position:absolute; top:0; right:0; width:7px; height:7px; background:var(--gold)}
+.card h3{font-family:var(--font-display); font-size:19px; color:var(--on-surface); margin-bottom:8px}
+.card p{font-size:14.5px; line-height:1.55; color:var(--muted)}
+.ico{font-family:var(--font-pixel); font-size:22px; color:var(--gold); margin-bottom:12px}
+
+/* principle / statement / steps / tags / roadmap */
+.statement-list{list-style:none; padding:0; margin:0; display:grid; grid-template-columns:1fr 1fr; gap:10px 40px; max-width:60rem}
+.statement-list li{font-size:16px; line-height:1.55; color:var(--muted); border-bottom:1px dashed var(--hair); padding-bottom:10px}
+.principle{border-left:3px solid var(--teal); padding:4px 0 4px 16px}
+.principle h3{font-family:var(--font-display); font-size:17px; color:var(--on-surface); margin-bottom:4px}
+.principle p{font-size:15px; line-height:1.55; color:var(--muted)}
+.tag{font-family:var(--font-mono); font-size:12px; padding:6px 12px; border-radius:999px; border:2px solid var(--hair); background:var(--surface); color:var(--muted)}
+.tag code{color:var(--teal)}
+.step .n{font-family:var(--font-pixel); color:var(--gold); font-size:14px; margin-bottom:8px}
+.step h4{font-family:var(--font-display); font-size:19px; color:var(--on-surface); margin-bottom:4px}
+.step p{font-size:15px; line-height:1.55; color:var(--muted)}
+.stop{background:var(--surface); border:2px solid var(--hair); border-radius:var(--radius); padding:18px}
+.stop .head{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; gap:10px}
+.stop h3{font-family:var(--font-display); font-size:18px; color:var(--on-surface)}
+.stop p{font-size:15px; line-height:1.55; color:var(--muted)}
+.pill{font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:.05em; padding:3px 9px; border-radius:999px; white-space:nowrap}
+.pill-done{background:rgba(45,212,191,.16); color:var(--teal)}
+.pill-now{background:rgba(242,193,78,.16); color:var(--gold)}
+.pill-next{background:rgba(168,192,240,.16); color:var(--indigo)}
+.pill-later{border:2px solid var(--hair); color:var(--muted)}
+.flex{display:flex; flex-wrap:wrap; gap:12px}
+.center{text-align:center}
+.mt{margin-top:32px}
+footer{border-top:2px solid var(--hair)}
+footer .row{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; padding:28px 0; font-family:var(--font-mono); font-size:12px; color:var(--muted)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important; scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<div class="topbar"><div class="wrap row">
+  <img class="brandmark pixel" src="./logo.png" alt="Nazar mark">
+  <span class="brandword">NAZAR</span>
+  <span class="spacer"></span>
+  <a class="navlink" href="#what">What</a>
+  <a class="navlink" href="#features">Features</a>
+  <a class="navlink" href="#philosophy">Philosophy</a>
+  <a class="navlink" href="#roadmap">Roadmap</a>
+  <a class="navlink" href="https://github.com/alexradunet/pi-nazar-studio" target="_blank" rel="noopener noreferrer">GitHub</a>
+  <button id="themeBtn" class="themebtn" aria-label="Toggle light and dark">
+    <svg class="t-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    <svg class="t-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+  </button>
+</div></div>
+
+<div class="wrap">
+  <div class="hero">
+    <div>
+      <div class="kicker">★ WISE COMPANION · LOCAL-FIRST · GROWS WITH YOU ★</div>
+      <h1>NAZAR</h1>
+      <p class="tag">Your personal wise companion that grows with you.</p>
+      <p class="body-copy">A wise companion that lives on your own box. It remembers the facts of your life in durable Markdown <span class="accent">memory</span>, learns <span class="accent">skills</span> that act on them, and keeps everything in open files you own. Each new skill is a new eye — it grows with you.</p>
+      <div class="flex" style="margin-top:24px">
+        <a class="btn btn-primary" href="https://github.com/alexradunet/pi-nazar-studio" target="_blank" rel="noopener noreferrer">▶ View on GitHub</a>
+        <a class="btn btn-ghost" href="#now">What is live ↓</a>
+      </div>
+      <div class="hero-meta">
+        <span class="accent">● local-first</span><span>·</span><span>AGPL-3.0</span><span>·</span><span>whenToUse recall</span><span>·</span><span>git-native growth</span>
+      </div>
+    </div>
+    <div class="crestframe">
+      <img class="pixel" src="./crest.png" alt="Nazar crest — a watchful blue eye (nazar) over a glowing teal data-orb in a woven folk frame">
+    </div>
+  </div>
+</div>
+
+<div class="folk-band" role="presentation"></div>
+
+<section id="what"><div class="wrap">
+  <div class="eyebrow">// WHAT IS IT</div>
+  <p class="lede" style="max-width:62ch">Most personal AI is rented memory in someone else's cloud. Nazar is the opposite: a wise companion whose source of truth is a vault you own.</p>
+  <div class="mt" style="display:grid; gap:16px">
+    <p class="body-copy">It runs <span class="accent">host-native</span> on the box — a local model served by <span class="accent">llamafile</span> (Qwen3.6 by default), a branded Pi terminal, durable Markdown memory, and life-tracking for journal, diet, and sport. No containers, no cloud.</p>
+    <p class="body-copy">Knowledge splits cleanly onto two rails. <span class="accent">Facts</span> are private Markdown pages under <span class="codepill">vault/memory/</span>, indexed by a disposable <span class="accent">SQLite FTS5</span> accelerator and auto-recalled each turn by relevance (keystone: <span class="codepill">whenToUse</span>). <span class="accent">Procedures</span> are <span class="accent">Pi-native skills</span> under <span class="codepill">skills/</span> — Pi itself discovers, injects, and invokes them with <span class="codepill">/skill:name</span>.</p>
+    <p class="body-copy">It's named for the <span class="accent">nazar</span> — the watchful blue eye of old fairy tales. Yours is a wise companion that keeps the record of your life, and opens a new eye for every skill it learns.</p>
+  </div>
+</div></section>
+
+<div class="folk-band" role="presentation"></div>
+
+<section id="statement"><div class="wrap">
+  <div class="eyebrow">// THE STATEMENT</div>
+  <h2 class="section-title">Your life is not a product.</h2>
+  <p class="lede" style="max-width:62ch; margin-bottom:24px">The record of your life — what you ate, where you walked, what you felt, who you love — should answer to you alone.</p>
+  <ul class="statement-list">
+    <li><b style="color:var(--on-surface)">Your data lives on hardware you control</b> — never as the price of admission to your own memory.</li>
+    <li><b style="color:var(--on-surface)">Open formats only.</b> Plain files you can read, move, and delete. No hostage-taking.</li>
+    <li><b style="color:var(--on-surface)">Open standards over private APIs;</b> open source over closed clouds.</li>
+    <li><b style="color:var(--on-surface)">Private by default</b> — your personal context never trains anyone's model.</li>
+    <li><b style="color:var(--on-surface)">European by conviction,</b> not by compliance — your ownership as the starting point.</li>
+    <li><b style="color:var(--on-surface)">Free at the core, forever.</b> You should never have to buy back your own autonomy.</li>
+  </ul>
+</div></section>
+
+<div class="folk-band" role="presentation"></div>
+
+<section id="features"><div class="wrap">
+  <div class="eyebrow">// WHAT IT DOES FOR YOU</div>
+  <h2 class="section-title">Yours by construction</h2>
+  <div class="grid cols-3 mt">
+    <div class="card"><div class="ico">⌂</div><h3>Your data, your box</h3><p>Journal, diet, sport, and durable facts live as plain Markdown in a vault you can read, grep, back up, and move.</p></div>
+    <div class="card"><div class="ico">☉</div><h3>Local model first</h3><p>The terminal defaults to the local model. Personal context stays on the box unless you deliberately switch in the terminal.</p></div>
+    <div class="card"><div class="ico">◇</div><h3>Facts you can grep</h3><p>Memory is plain Markdown under <code class="codepill">vault/memory/</code>, indexed by a disposable FTS5 accelerator over title, body, tags, and <code class="codepill">whenToUse</code>.</p></div>
+    <div class="card"><div class="ico">◆</div><h3>Recall every turn</h3><p>Pinned pages are always present; the most relevant facts are auto-recalled into each local prompt before the model answers.</p></div>
+    <div class="card"><div class="ico">☊</div><h3>Skills grow as eyes</h3><p>Approved procedures become Pi-native skills under <code class="codepill">skills/</code> — discovered, injected, and invocable with <code class="codepill">/skill:name</code>.</p></div>
+    <div class="card"><div class="ico">⌬</div><h3>Terminal-first core</h3><p>No separate gateway service: one live Pi session, one model indicator, and future channels as extensions.</p></div>
+  </div>
+</div></section>
+
+<div class="folk-band" role="presentation"></div>
+
+<section id="philosophy"><div class="wrap">
+  <div class="eyebrow">// HOW IT'S BUILT</div>
+  <h2 class="section-title">Build the smallest thing that's truly yours.</h2>
+  <p class="body-copy" style="margin-bottom:32px">Nazar is shaped by a few hard-won principles: local-first by default, files over platforms, and growth by explicit approval. Pareto, KISS, YAGNI, made operational.</p>
+  <div class="grid cols-3b">
+    <div class="principle"><h3>Files over platforms</h3><p>Facts and procedures are plain Markdown in a repo and a vault you own — versioned in git, never an opaque memory service.</p></div>
+    <div class="principle"><h3>Two rails, one ethos</h3><p>Facts ride Nazar's FTS5 memory; procedures ride Pi's own skill system. Each on the simplest rail that fits — no custom index to maintain.</p></div>
+    <div class="principle"><h3><code class="codepill">whenToUse</code> retrieval</h3><p>A natural-language “use this when…” hint makes organic pages findable without forcing a rigid body schema.</p></div>
+    <div class="principle"><h3>Pinned context</h3><p>Core pages can be pinned into every turn; the rest surface only when relevant, keeping context small and intentional.</p></div>
+    <div class="principle"><h3>Suggest → approve</h3><p>The agent proposes new skills or consolidations. The human approves. Git records the change. No silent self-modification.</p></div>
+    <div class="principle"><h3>Woven, not rendered</h3><p>A storybook, hand-built look in tactile pixel-art. Craftsmanship you can see is craftsmanship you can trust.</p></div>
+  </div>
+</div></section>
+
+<section id="now"><div class="wrap">
+  <div class="eyebrow">// LIVE NOW</div>
+  <h2 class="section-title">Each skill is a new eye.</h2>
+  <p class="lede" style="max-width:62ch; margin-bottom:24px">“When Nazar learns a procedure, Nazar opens another eye — one more watcher for one more domain of your life.”</p>
+  <p class="body-copy">Nazar ships as a <span class="accent">Pi package</span>: install it and its extensions, native skills, and theme load themselves. Memory tools — <code class="codepill">memory_write</code>, <code class="codepill">memory_search</code>, <code class="codepill">memory_get</code>, <code class="codepill">memory_duplicates</code> — work over the FTS5 vault and inject <strong>relevant notes</strong> before the local model answers, while <code class="codepill">skill_write</code> grows a new Pi-native head. The whole thing edits, tests, commits, and reloads <em>itself</em> behind your approval.</p>
+</div></section>
+
+<div class="folk-band" role="presentation"></div>
+
+<section><div class="wrap">
+  <div class="eyebrow">// THE WEAVE</div>
+  <h2 class="section-title">Built from small, sharp, FOSS tools</h2>
+  <p class="body-copy" style="margin-bottom:32px">No frameworks for their own sake. Each piece does one thing, speaks a simple boundary, and can be swapped out.</p>
+  <div class="flex">
+    <span class="tag">Pi terminal runtime</span><span class="tag">Bun</span><span class="tag">host-native llamafile</span>
+    <span class="tag">Pi terminal</span><span class="tag">llamafile · Qwen3</span><span class="tag">Markdown vault</span>
+    <span class="tag">SQLite FTS5 memory</span><span class="tag">Pi-native skills</span><span class="tag"><code>whenToUse</code> recall</span>
+    <span class="tag">git-native growth</span><span class="tag">Restic + Syncthing backup</span><span class="tag">Signal / WhatsApp / web next</span>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="eyebrow">// RAISE YOUR OWN</div>
+  <h2 class="section-title">Three steps to your companion</h2>
+  <div class="grid cols-3 mt">
+    <div class="step"><div class="n">01</div><h4>Install</h4><p>Run the one-line installer on your Linux box. It installs Bun, clones the repo, seeds Pi config, and wires the local model. No discrete GPU required.</p></div>
+    <div class="step"><div class="n">02</div><h4>Configure</h4><p>Set your terminal name/avatar, vault path, and optional local model overrides in <code class="codepill">.env</code>. No container stack.</p></div>
+    <div class="step"><div class="n">03</div><h4>Talk</h4><p>Use the <code class="codepill">pi</code> terminal with the Nazar package loaded; relevant memory is recalled automatically on local/private model turns.</p></div>
+  </div>
+</div></section>
+
+<div class="folk-band" role="presentation"></div>
+
+<section id="roadmap"><div class="wrap">
+  <div class="eyebrow">// THE ROAD</div>
+  <h2 class="section-title">Where Nazar is headed.</h2>
+  <p class="body-copy" style="margin-bottom:32px">Built in the open, in phases — each piece pulled in only when it earns its keep.</p>
+  <div class="grid cols-2">
+    <div class="stop"><div class="head"><h3>Local foundation</h3><span class="pill pill-done">Done</span></div><p>Terminal-first host-native setup, local llamafile model, Markdown vault, life-tracking, and a self-maintenance loop.</p></div>
+    <div class="stop"><div class="head"><h3>Pi package + clean knowledge split</h3><span class="pill pill-done">Done</span></div><p>Nazar installs as a Pi package; facts-only FTS5 memory; Pi-native skills under <code class="codepill">skills/</code>; no separate gateway service.</p></div>
+    <div class="stop"><div class="head"><h3>Practice self-evolution</h3><span class="pill pill-now">Now</span></div><p>Use the suggest→approve loop in real workflows: add skills, refine them, and consolidate duplicate memory as the vault grows.</p></div>
+    <div class="stop"><div class="head"><h3>Channels</h3><span class="pill pill-next">Next</span></div><p>Signal, web, or HTTP bridges as Pi extensions attached to one long-lived terminal/tmux session.</p></div>
+    <div class="stop" style="grid-column:1/-1"><div class="head"><h3>The weave widens</h3><span class="pill pill-later">Later</span></div><p>Calendar, contacts, files, and photos through open standards (CalDAV / CardDAV / Immich) — pulled in only when they earn their keep.</p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap center">
+  <h2 class="section-title">Grow your companion deliberately.</h2>
+  <p class="body-copy" style="margin:0 auto 28px">Nazar is built in the open, in Brașov. Star it, self-host it, or help shape the next head — memory and skills in plain files, approved by the human who owns the vault.</p>
+  <div class="flex" style="justify-content:center">
+    <a class="btn btn-primary" href="https://github.com/alexradunet/pi-nazar-studio" target="_blank" rel="noopener noreferrer">★ Star on GitHub</a>
+    <a class="btn btn-ghost" href="https://github.com/alexradunet/pi-nazar-studio/blob/main/README.md" target="_blank" rel="noopener noreferrer">Read the docs</a>
+  </div>
+</div></section>
+
+<footer><div class="wrap row">
+  <span>NAZAR · your wise companion · local-first · many-eyed skills</span>
+  <span>AGPL-3.0 · <a href="https://github.com/alexradunet/pi-nazar-studio" target="_blank" rel="noopener noreferrer">github.com/alexradunet/pi-nazar-studio</a></span>
+</div></footer>
+
+<script>
+(function(){
+  var root=document.documentElement;
+  var moon=document.querySelector('.t-moon'), sun=document.querySelector('.t-sun');
+  try{ if(localStorage.getItem('nazar-theme')==='light') root.classList.replace('dark','light'); }catch(e){}
+  function sync(){ var light=root.classList.contains('light'); moon.style.display=light?'none':'block'; sun.style.display=light?'block':'none'; }
+  sync();
+  document.getElementById('themeBtn').addEventListener('click',function(){
+    var light=root.classList.toggle('light'); root.classList.toggle('dark',!light);
+    try{ localStorage.setItem('nazar-theme', light?'light':'dark'); }catch(e){}
+    sync();
+  });
+})();
+</script>
+</body>
+</html>

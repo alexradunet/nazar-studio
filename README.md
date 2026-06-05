@@ -1,180 +1,113 @@
 # Nazar
 
-> *The studio for your life.*
+> **Your personal wise companion that grows with you.**
 
-**Nazar** is an OS-agnostic [Pi.Dev](https://github.com/earendil-works/pi-coding-agent) extension suite for building a personal AI assistant that knows what you keep, remembers what matters, and helps you orchestrate your life. It runs on whatever operating system you want — Linux, Windows, macOS, immutable distros, hobby boards — and stores everything in a portable Obsidian vault you own.
+![CI](https://github.com/alexradunet/pi-nazar-studio/actions/workflows/ci.yml/badge.svg) · AGPL-3.0 · a self-contained [Pi](https://pi.dev) extension (Node)
 
-Memory and your knowledge base — woven together as a single personal world.
+A sovereign, local-first AI companion that installs into Pi as a **single extension package**. It
+runs on your own box, remembers what matters in a Markdown vault, grows a new skill — a new eye —
+for every procedure you teach it, and serves its own local model. Your data stays yours.
 
----
+→ **[nazar.studio](https://nazar.studio)** · [Design](design/README.md)
 
-## Overview
+## Install
 
-Nazar is a TypeScript Pi.Dev extension product currently shipped as two canonical Pi packages: `@nazar/core` and `@nazar/memory`. Memory is part of the default Nazar product experience, but it remains separately packaged so core stays a small setup shell and future capabilities can stay modular. It is intentionally:
+Nazar is a Pi package. Install Pi, then add Nazar:
 
-- **OS-agnostic.** No NixOS, no Fedora, no Docker host assumptions. Install dependencies through the package manager of your platform. The extensions stay portable.
-- **Local-first.** Your memory and generated state live on your machine in a portable Obsidian vault. Networked integrations are deferred until they are essential.
-- **Pi-native.** Built on the Pi.Dev coding-agent extension API. The agent is a first-class part of your environment, not a chatbot bolted on the side.
-- **Privacy-first.** Private memory, OAuth tokens, and runtime state stay out of git by default.
+```bash
+# 1. Install Pi (the terminal coding harness)
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 
----
+# 2. Install Nazar
+pi install npm:pi-nazar-studio
 
-## What's in the suite
-
-Two Pi packages, with setup and memory-maintenance Agent Skills:
-
-### Extensions
-
-| Extension | Commands | What it does |
-| --- | --- | --- |
-| **`@nazar/core`** | `/nazar setup`, `/nazar onboard`, `/nazar status`, `/nazar-setup`, `/nazar-status` | Post-install setup/status shell, synced Pi session setup, and shared helpers. |
-| **`@nazar/memory`** | `/memory`, `memory_status`, `memory_search` | Durable memory, generated rollups, searchable project knowledge. Ships with the integrated `memory-janitor` Agent Skill. |
-
-### Skills
-
-- **`termux-setup`** — Agent Skill bundled with `@nazar/core` for agent-guided Termux setup, audit, and repair.
-- **`memory-janitor`** — Agent Skill bundled with `@nazar/memory` for memory-vault curation and durable knowledge hygiene.
-
----
-
-## Quick start
-
-### 1. Install Pi.Dev
-
-Nazar runs as a set of extensions inside the [Pi.Dev coding agent](https://github.com/earendil-works/pi-coding-agent). Install Pi first per its docs. For Android, see the [Termux setup guide](docs/termux.md).
-
-### 2. Install Nazar
-
-```sh
-pi install npm:@nazar/core
-pi install npm:@nazar/memory
+# 3. Run Pi — Nazar's extensions, skills, theme, persona, and local model load automatically
+pi
 ```
 
-Install both canonical packages for the local-first memory appliance.
+Requires **Node 23.4+ (Node 24 LTS recommended)**: Nazar's memory index uses the built-in
+`node:sqlite` (FTS5), which is flag-free from Node 23.4 and stable in Node 24.
 
-### 3. Point Nazar at your memory vault
+Update or remove later:
 
-Nazar uses an Obsidian-style vault as its long-term memory backend. Set `NAZAR_HOME` to your vault root:
-
-```sh
-export NAZAR_HOME="$HOME/NazarVault"
+```bash
+pi update npm:pi-nazar-studio
+pi remove npm:pi-nazar-studio
 ```
 
-Then run setup inside the agent:
+## What it gives you
 
-```
-/nazar setup all
-```
+- **Local/private model by default** — Mozilla `llamafile` (Qwen3-14B Q4) on `127.0.0.1:8082`,
+  registered as the `llamafile` provider in-process. Manage it with `/local-llm status|start|doctor`.
+- **Manual opt-in frontier models** via `/login` + `/model`.
+- **Markdown memory** backed by `node:sqlite` FTS5 — `memory_write`, `memory_search`, `memory_get`,
+  `memory_duplicates`.
+- **Life tracking** — `journal_add`, `diet_add`, `sport_add` into a Markdown vault you own.
+- **Self-evolution** — turn a recurring procedure into a Pi-native skill with `skill_write`.
+- **Persona + operating rules** injected automatically (the guardian eye voice).
+- **Terminal avatar + design** — a compact ANSI UI and the Nazar theme.
+- **Self-hosted speech** — local transcription via Mozilla `whisperfile`.
 
-For memory-only setup, use `/nazar setup memory`. For synced Pi conversations, use `/nazar setup sessions`; this configures Pi's `sessionDir`, adds host-local shell exports for `NAZAR_HOME` and `PI_CODING_AGENT_SESSION_DIR`, and adds a `nazar` shortcut pointing at your checkout. For agent-guided Termux setup or audit, invoke the `termux-setup` skill.
+## Where your data lives
 
-Nazar will scaffold a PARA-style vault structure if one doesn't exist:
+- **Vault** (`$VAULT_PATH`, default `~/.local/share/nazar`) — private Markdown: `memory/`,
+  `journal/`, `diet/`, `sport/`, plus the disposable `node:sqlite` index under `.sqlite/`.
+- **Runtimes & models** (`~/.local/share/nazar/`) — the local `llamafile`/`whisperfile` binaries
+  and GGUF models, downloaded on first use.
 
-```
-NazarVault/
-├── 00_Inbox/           # shared human/AI capture
-├── 01_Projects/        # human-owned
-├── 02_Areas/           # human-owned
-├── 03_Resources/       # human-owned
-├── 04_Archive/         # cold storage (excluded from search)
-└── 05_Nazar/           # AI/system control plane
-    ├── llm-wiki/
-    │   └── wiki/       # Karpathy-style compiled wiki
-    ├── runtime/        # generated state and rollups
-    ├── session/        # Pi JSONL conversations when /nazar setup sessions is enabled
-    └── pinned-memory.md  # human-curated long-term facts (when using vault layout)
-```
+Nothing is written into your global Pi config — the package registers its provider and injects its
+persona at load.
 
-### 4. Verify
+## Package layout
 
-```
-/nazar status
-```
-
-You should see setup status for the installed Nazar packages.
-
----
-
-## Architecture
-
-Nazar is opinionated about *where things live* but agnostic about *how the host machine is configured*.
-
-**The Pi.Dev agent is the runtime.** Nazar registers commands and skills with the Pi extension API. There is no separate daemon, no service to install, no OS layer to provision.
-
-**Your Obsidian vault is the database.** Personal memory (Projects, Areas, Resources) is yours and lives in your vault. The `05_Nazar/` directory is the AI/system control plane — generated runtime state, rollups, and the compiled "llm-wiki" knowledge layer.
-
-**Packages are TypeScript modules.** Each package ships raw `.ts` Pi extensions plus optional skills/assets. Add or remove capabilities by installing or removing the corresponding Pi package.
-
-**Host setup is your problem.** Nazar does not ship installers, container images, or OS configuration. Install Node.js and any optional tools you personally need through your platform's package manager (`apt`, `dnf`, `brew`, `winget`, `nix-env`). Runtime assumptions belong in extension code, settings, or environment variables.
-
----
-
-## Configuration
-
-Common environment variables (set in your shell profile):
-
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `NAZAR_HOME` | (none) | Root of the private Obsidian vault; memory paths derive from it |
-
-If `NAZAR_HOME` and setup config are unset in a source checkout, Nazar may create a local `memory/` development fallback. That folder is ignored by git and is not part of the public package.
-
-Extension-specific configuration is set through the respective setup flows. No secrets are stored in git.
-
-### Synced sessions
-
-Run `/nazar setup sessions` on each host that should share Pi conversation history. It writes host-local Pi settings and a managed shell-profile block equivalent to:
-
-```sh
-export NAZAR_HOME="$HOME/Nazar"
-export PI_CODING_AGENT_SESSION_DIR="$NAZAR_HOME/05_Nazar/session"
-alias nazar='cd "$HOME/src/nazar" && pi'
+```text
+extensions/      memory · vault (journal/diet/sport) · personality · brand (avatar/design) · local-llm
+lib/             memory engine (node:sqlite FTS5), paths, provider, terminal UI
+skills/          Pi-native Markdown skills (doctor, open-websearch)
+themes/          the Nazar theme
+assets/          avatars + fonts
+models.json      local llamafile provider/model catalog (registered in-process)
+AGENTS.md SYSTEM.md   persona + operating rules (injected each turn by extensions/personality.ts)
 ```
 
-The same setup also maintains host-local context files under `~/.pi/agent/`:
+## Develop
 
-- `AGENTS.md` — standard Nazar host-context instructions loaded by Pi.
-- `current_host.md` — the current machine's local environment, role, constraints, paths, and sync notes. This file is intentionally outside the synced vault and is not shared between devices.
+```bash
+git clone https://github.com/alexradunet/pi-nazar-studio.git
+cd nazar
+npm install
+npm test          # vitest: memory FTS5, terminal UI, skill gate
+npm run typecheck # tsc --noEmit
+npm run smoke     # Pi SDK import check
+npm run reindex   # rebuild the vault memory FTS index
+```
 
-Nazar core appends `current_host.md` to the system prompt when present, while `AGENTS.md` points assistants to the file for host-specific decisions.
+Try your local checkout in Pi without installing it (loads the package for one run):
 
-Use Syncthing to sync the whole `NAZAR_HOME` vault between devices, not only the session folder, and enable file versioning. Avoid actively continuing the same live Pi session on two devices at once; let sync settle, then resume elsewhere.
+```bash
+pi -e .
+```
 
----
+Inside the terminal:
 
-## Privacy and safety
+```txt
+/reload          reload extensions/skills/theme/prompts
+/model           switch model
+/login           optional frontier login
+/local-llm       manage the local llamafile + whisperfile runtime
+/skill:doctor    run the doctor playbook
+```
 
-Nazar is built around a strict public-private boundary:
+## Docs
 
-- **In git:** code, tests, docs, website files, templates, and public product documentation.
-- **Out of git (always):** memory pages, generated rollups, copied reports, OAuth tokens, runtime credentials, and personal Obsidian vaults.
+- [Install](docs/INSTALL.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Self-maintenance](docs/SELF_MAINTENANCE.md)
+- [Self-evolution](docs/SELF_EVOLUTION.md)
+- [Design](design/README.md)
 
-Do not commit secrets. Do not commit raw session transcripts. Do not expose SSH/RDP services to the internet without an explicit VPN/tunnel plan.
+## Privacy stance
 
----
-
-## Status
-
-Nazar is in **active development**. The core and memory packages work end-to-end on Linux, Windows, and macOS. The Obsidian-backed memory layer is the current focus; roadmap items include richer multi-vault support and a managed-installer experience for non-developers.
-
----
-
-## Background
-
-Nazar is built by [Alex Radu](https://alexradu.net) as the studio I want to live and work in — a private, sovereign, AI-augmented personal environment that respects the data it learns from.
-
-- Project home: [nazar.studio](https://nazar.studio) *(coming soon)*
-- Source: [github.com/alexradunet/nazar-studio](https://github.com/alexradunet/nazar-studio)
-- Author: [@alexradunet](https://github.com/alexradunet) · [alexradu.net](https://alexradu.net)
-
----
-
-## Contributing
-
-Issues, PRs, and ideas welcome. The codebase prefers KISS, inspectable, and reversible solutions. See `AGENTS.md` for working-style conventions used by both human and AI contributors.
-
----
-
-## License
-
-UNLICENSED. Public source for inspection and contribution; please ask before using in commercial products.
+Personal data stays in the vault by default. The local model is the default. Frontier models are
+manual and opt-in; private memory is auto-recalled only on local models. Set `NAZAR_PERSONA=0` to
+skip persona injection on a given run.

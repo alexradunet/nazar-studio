@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<!--
+  Nazar social/OG card — 1280×640 (GitHub social preview + Twitter/OG).
+  Self-contained; images inlined via data URIs. Basm design system.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@700&family=Silkscreen:wght@400;700&family=Work+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1280px;height:640px;overflow:hidden}
+  body{
+    background:#0b1310;
+    font-family:'Work Sans',system-ui,sans-serif;
+    display:flex;
+    position:relative;
+    /* subtle atmospheric glow */
+    background-image:
+      radial-gradient(ellipse 60% 80% at 2% 50%, rgba(45,212,191,.09), transparent),
+      radial-gradient(ellipse 50% 70% at 105% 50%, rgba(255,106,43,.10), transparent);
+  }
+  /* left: text */
+  .left{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding:64px 0 64px 72px;
+    gap:0;
+    position:relative;
+    z-index:2;
+  }
+  /* top stitch line */
+  .stitch{
+    position:absolute;
+    top:0;left:0;right:0;
+    height:2px;
+    background-image:linear-gradient(to right, #f2c14e 50%, transparent 50%);
+    background-size:12px 2px;
+    background-repeat:repeat-x;
+  }
+  /* bottom stitch */
+  .stitch-b{top:auto;bottom:0}
+  /* folk band */
+  .folk{
+    position:absolute;
+    left:0;bottom:0;width:100%;
+    height:12px;
+    border-top:2px solid #eae4d6;
+    background:repeating-linear-gradient(135deg,#e0563b 0 8px,#f2c14e 8px 16px,#2dd4bf 16px 24px,#c2410c 24px 32px);
+    image-rendering:pixelated;
+    z-index:10;
+  }
+  .kicker{
+    font-family:'Silkscreen',monospace;
+    font-size:12px;
+    letter-spacing:.08em;
+    color:#2dd4bf;
+    text-transform:uppercase;
+    margin-bottom:18px;
+  }
+  .kicker span{ color:#f2c14e; margin:0 4px; }
+  h1{
+    font-family:'Pixelify Sans',system-ui,sans-serif;
+    font-weight:700;
+    font-size:108px;
+    line-height:.82;
+    color:#f5f0e6;
+    text-shadow:5px 5px 0 #c2410c;
+    letter-spacing:-.01em;
+    margin-bottom:24px;
+  }
+  .tag{
+    font-family:'Pixelify Sans',system-ui,sans-serif;
+    font-size:26px;
+    color:#ff6a2b;
+    line-height:1.2;
+    margin-bottom:20px;
+    max-width:36ch;
+  }
+  .sub{
+    font-family:'Work Sans',system-ui,sans-serif;
+    font-size:17px;
+    color:#93a59b;
+    line-height:1.5;
+    max-width:38ch;
+    margin-bottom:32px;
+  }
+  .sub b{color:#eae4d6}
+  .pills{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .pill{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    padding:5px 12px;
+    border-radius:2px;
+    border:2px solid;
+  }
+  .pill-teal{color:#2dd4bf;border-color:#2dd4bf;background:rgba(45,212,191,.09)}
+  .pill-gold{color:#f2c14e;border-color:#f2c14e;background:rgba(242,193,78,.09)}
+  .pill-muted{color:#93a59b;border-color:#233530;background:rgba(255,255,255,.03)}
+  /* right: crest */
+  .right{
+    width:560px;
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:40px 56px 48px 24px;
+    position:relative;
+    z-index:2;
+  }
+  .crest-frame{
+    border:2px solid #233530;
+    border-radius:3px;
+    background:#172a23;
+    padding:14px;
+    box-shadow:10px 10px 0 #0d1714;
+    /* gold notch */
+    position:relative;
+  }
+  .crest-frame::before{
+    content:'';
+    position:absolute;
+    top:0;right:0;
+    width:10px;height:10px;
+    background:#f2c14e;
+  }
+  .crest-frame img{
+    width:400px;
+    height:400px;
+    object-fit:cover;
+    display:block;
+    border-radius:2px;
+    image-rendering:pixelated;
+    image-rendering:crisp-edges;
+  }
+  /* vertical divider */
+  .divider{
+    position:absolute;
+    left:680px;top:40px;bottom:52px;
+    width:2px;
+    background-image:linear-gradient(to bottom,transparent,#233530 20%,#233530 80%,transparent);
+  }
+  /* domain badge */
+  .domain{
+    position:absolute;
+    top:26px;right:72px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+    color:#5c6e63;
+    letter-spacing:.04em;
+  }
+</style>
+</head>
+<body>
+  <div class="stitch"></div>
+  <div class="divider"></div>
+  <div class="domain">nazar.studio</div>
+
+  <div class="left">
+    <div class="kicker">★<span>wise companion</span>·<span>local-first</span>·<span>grows with you</span>★</div>
+    <h1>NAZAR</h1>
+    <p class="tag">Your personal wise companion<br>that grows with you.</p>
+    <p class="sub">A self-hosted AI assistant on your own box.<br>
+      <b>Remembers what matters.</b> Learns new skills over time.<br>Your data stays yours.</p>
+    <div class="pills">
+      <span class="pill pill-teal">local-first</span>
+      <span class="pill pill-gold">AGPL-3.0</span>
+      <span class="pill pill-muted">Node + Pi + llamafile</span>
+      <span class="pill pill-muted">self-hosted</span>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="crest-frame">
+      <img id="crest" src="" alt="Nazar — watchful blue eye — Nazar">
+    </div>
+  </div>
+
+  <div class="folk"></div>
+</body>
+</html>
