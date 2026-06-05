@@ -167,14 +167,23 @@ export function nameplateRow(
 }
 
 /**
- * Compute the body column width for a given panel width and avatar width.
- * Mirrors the column math used inside `composeMessagePanel`; exposed so
- * adapters can pre-tell Pi to wrap body text into our narrower column
- * rather than emitting full-width rows that we'd have to truncate.
+ * Compute the width Pi should wrap message body text to.
+ *
+ * Mirrors the column math used inside `composeMessagePanel`, with one extra
+ * cell shaved off for the body row's 1-col leading inset (the " " in
+ * paintBodyRow). Adapters call Pi with this width so Pi pads to it; the
+ * composer then prepends one inset space, landing at the full body-cell
+ * width exactly. This avoids the off-by-one that caused every Pi-padded
+ * row to get truncated and decorated with a trailing "..." ellipsis.
  */
 export function bodyColumnWidth(panelWidth: number, avatarWidth: number, options: { outerPadX?: number } = {}): number {
   const PAD = Math.max(0, options.outerPadX ?? DEFAULT_OUTER_PAD_X);
-  return Math.max(8, panelWidth - PAD * 2 - Math.max(1, avatarWidth) - COLUMN_GAP);
+  return Math.max(8, panelWidth - PAD * 2 - Math.max(1, avatarWidth) - COLUMN_GAP - 1);
+}
+
+/** Body cell width (the column the nameplate band + body rows occupy). */
+function bodyCellWidth(panelWidth: number, avatarWidth: number, outerPadX: number): number {
+  return Math.max(8, panelWidth - outerPadX * 2 - Math.max(1, avatarWidth) - COLUMN_GAP);
 }
 
 // ── Panel compositor (two-column) ──────────────────────────────────────────
@@ -239,8 +248,7 @@ export function composeMessagePanel(
 
   const PAD = Math.max(0, options.outerPadX ?? DEFAULT_OUTER_PAD_X);
   const AVW = Math.max(1, avatar.width);
-  const GAP = COLUMN_GAP;
-  const BODYW = Math.max(8, width - PAD * 2 - AVW - GAP);
+  const BODYW = bodyCellWidth(width, AVW, PAD);
   const field = style.portraitField;
 
   const hasNameplate = Boolean(title);
@@ -251,7 +259,7 @@ export function composeMessagePanel(
 
   // Row 0: portrait field + nameplate (or empty band if no title)
   const padL = " ".repeat(PAD);
-  const padG = " ".repeat(GAP);
+  const padG = " ".repeat(COLUMN_GAP);
 
   if (hasNameplate) {
     linesOut.push(`${padL}${paintPortraitFieldRow(AVW, field)}${padG}${nameplateRow(title!, BODYW, style, meta)}`);
