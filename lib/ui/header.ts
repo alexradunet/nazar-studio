@@ -13,7 +13,9 @@
 // NAZAR_FOLK_BAND=off if you'd rather have plain space.
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { compact } from "./ansi.ts";
+import { renderChapterDivider } from "./divider.ts";
 import { panelStyle } from "./panel-style.ts";
+import { currentSessionInfo, formatSessionTime } from "./session-info.ts";
 import { COLOR, hexToRgb, type Rgb } from "./tokens.ts";
 import { nameplateRow } from "./turn-composer.ts";
 
@@ -94,7 +96,18 @@ export function headerFactory(_tui: any, theme: Theme) {
 
       const rows = [padded(nameplateRow(title, bandWidth, style, meta))];
       if (folkBandEnabled()) rows.push(renderFolkBand(width));
-      rows.push(" ".repeat(Math.max(0, width)));
+
+      // Third row: a chapter divider that marks the session opening
+      // moment ("─── ✦ session opened · 23:45 ✦ ───"). When no session
+      // info has been recorded yet (e.g. tests, ad-hoc renders), the row
+      // falls back to a plain blank so the header height is stable.
+      const info = currentSessionInfo();
+      if (info && bandWidth > 0) {
+        const label = `session ${info.status} · ${formatSessionTime()}`;
+        rows.push(padded(renderChapterDivider({ width: bandWidth, label, style })));
+      } else {
+        rows.push(" ".repeat(Math.max(0, width)));
+      }
       return rows;
     },
   };

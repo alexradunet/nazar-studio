@@ -199,12 +199,13 @@ Implementation: [`../lib/ui/editor.ts`](../lib/ui/editor.ts).
 
 The header is a single gold nameplate plaque built on the same
 `nameplateRow` primitive as message panels, followed by a 1-row
-Romanian-carpet "folk band" motif and a trailing blank row:
+Romanian-carpet "folk band" motif and a **chapter divider** marking
+the session opening:
 
 ```txt
   ✦ B A L A U R · woven, not rendered          local-first · private · sovereign · FOSS
   ▓▓▓▒▒▒░░░▒▒▒▓▓▓▓▒▒▒░░░▒▒▒▓▓▓▓▒▒▒░░░▒▒▒▓▓▓▓▒▒▒░░░▒▒▒▓▓▓▓▒▒▒░░░▒▒▒  ← folk band
-  (blank)
+  ──── ✦ session opened · 23:27 ✦ ──────────────────────────────────  ← chapter divider
 ```
 
 Width-adaptive:
@@ -215,14 +216,55 @@ Width-adaptive:
   `local-first · private · FOSS`.
 - < 46 cells → `NAZAR` on the left; tagline trims to `private · FOSS`.
 
+The chapter-divider row uses the **chapter-divider primitive** documented
+below, with the label `session ${status} · HH:MM`. `status` is
+`"opened"` for a fresh session and `"resumed"` when restoring (set via
+the `recordSessionStart()` hook in `lib/ui/session-info.ts`, fired from
+the `session_start` extension event). On `/reload` the timestamp updates.
+
 Rules:
 
 - Always exactly three lines, never more.
 - The folk band may be disabled via `NAZAR_FOLK_BAND=off`.
-- No box-drawing characters — the plaque is a bg fill, the band is bg
-  paint with literal spaces. Copy-safe end-to-end.
+- The third row falls back to a plain blank when no session info has
+  been recorded yet (ad-hoc renders, unit tests).
+- No box-drawing characters beside body text — every visual element is
+  either a background fill (plaque, folk band) or a quiet `─` rule row
+  (chapter divider). Copy-safe end-to-end.
 
 Implementation: [`../lib/ui/header.ts`](../lib/ui/header.ts).
+
+## Chapter dividers
+
+Thin Basm-motif rows that mark meaningful moments in the conversation:
+session opened/resumed in the header, and (later) compaction boundaries
+or branch markers inside the conversation flow itself.
+
+Two primitives in [`../lib/ui/divider.ts`](../lib/ui/divider.ts):
+
+- `renderChapterDivider({ width, label, glyph, style })` — full-width
+  centred divider with optional label + flanking accent glyph:
+
+  ```txt
+  ──── ✦ session opened · 23:27 ✦ ───────────────────────────────────
+  ```
+
+  Rule chars (`─`) in muted, glyph (`✦`) in accent, label in title.
+  When the label can't fit the width, falls back to a plain rule.
+
+- `renderStitchLine({ width, style })` — quieter alternating-rule line
+  for sub-breaks inside a panel:
+
+  ```txt
+  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+  ```
+
+Both lines are themed through `PanelStyle`, so callers pick the role
+hue (assistant gold for session moments, teal for thinking transitions,
+smoke for system neutrality). The session-info module exposes
+`recordSessionStart(status)` (called from `extensions/brand.ts` on the
+`session_start` event) so the header always knows the current session
+metadata without each render having to re-derive it.
 
 ## Footer
 
