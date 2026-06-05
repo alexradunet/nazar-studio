@@ -1,34 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Truthful one-line runtime footer for Nazar's Pi terminal.
-import { spawnSync } from "node:child_process";
+// Slim Nazar-brand footer.
+//
+// The runtime status (model · git · tools · ctx) used to live here on the
+// right. It's been moved into the input editor's nameplate meta slot, so
+// the footer is now a quiet brand-mark line: "Nazar" on the left, an
+// optional context-warning pip on the right when usage gets high.
 import type { ExtensionAPI, ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
 import { compact, visibleWidth } from "./ansi.ts";
-import { paintPanelBorderPart, panelStyle, type PanelStyle } from "./panel-style.ts";
+import { panelStyle } from "./panel-style.ts";
 
 const FOOTER_HORIZONTAL_PADDING = 1;
-
-function isLocalModel(model: any): boolean {
-  const baseUrl = String(model?.baseUrl || "");
-  return /^(https?:\/\/)?(127\.0\.0\.1|localhost)(:|\/|$)/.test(baseUrl);
-}
-
-function modelModeLabel(model: any): string {
-  if (!model) return "no model";
-  return isLocalModel(model) ? "local/private" : "frontier/opt-in";
-}
-
-function shortModelLabel(model: any): string {
-  const raw = String(model?.name || model?.id || "no-model");
-  return raw
-    .replace(/^qwen_/, "qwen/")
-    .replace(/_/g, "/")
-    .replace(/\bQwen[_/]/i, "qwen/");
-}
-
-function joinStyled(parts: string[], style: PanelStyle): string {
-  const separator = " | ";
-  return parts.join(paintPanelBorderPart(style, "separator", separator));
-}
 
 function padFooter(line: string, width: number): string {
   const totalPadding = FOOTER_HORIZONTAL_PADDING * 2;
@@ -39,97 +20,36 @@ function padFooter(line: string, width: number): string {
   return `${" ".repeat(FOOTER_HORIZONTAL_PADDING)}${inner}${" ".repeat(rightFill + FOOTER_HORIZONTAL_PADDING)}`;
 }
 
-function contextLabel(usage: any, width: number): string | undefined {
-  if (usage?.percent == null) return undefined;
-  const percent = Math.max(0, Math.min(100, Math.round(usage.percent)));
-  if (width < 80) return `ctx ${percent}%`;
-  // ▰▱ mana-bar gauge — compact RPG context meter
-  const cells = 8;
-  const filled = Math.max(0, Math.min(cells, Math.round((percent / 100) * cells)));
-  const bar = `${"▰".repeat(filled)}${"▱".repeat(cells - filled)}`;
-  return `ctx ${bar} ${percent}%`;
+function contextWarningPip(usage: any, theme: Theme): string | undefined {
+  const percent = usage?.percent;
+  if (percent == null || percent < 85) return undefined;
+  const role = percent >= 95 ? "error" : "warning";
+  const label = `ctx ${Math.round(percent)}% — running tight`;
+  return theme.fg(role, label);
 }
 
-function contextColor(percent: number | null | undefined): "dim" | "warning" | "error" {
-  if (percent == null) return "dim";
-  if (percent >= 95) return "error";
-  if (percent >= 85) return "warning";
-  return "dim";
-}
-
-function repoDirty(cwd: string | undefined): boolean {
-  try {
-    const result = spawnSync("git", ["--no-optional-locks", "status", "--porcelain", "--untracked-files=normal"], {
-      cwd: cwd || process.cwd(),
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-      timeout: 500,
-    });
-    return result.status === 0 && result.stdout.trim().length > 0;
-  } catch {
-    return false;
-  }
-}
-
-export function footerFactory(pi: ExtensionAPI, ctx: ExtensionContext, onTui?: (tui: any) => void) {
-  let dirtyCached = false;
-  let dirtyCheckedAt = 0;
-
-  function cachedRepoDirty(): boolean {
-    const now = Date.now();
-    if (now - dirtyCheckedAt < 2500) return dirtyCached;
-    dirtyCheckedAt = now;
-    dirtyCached = repoDirty((ctx as any).cwd);
-    return dirtyCached;
-  }
-
+export function footerFactory(_pi: ExtensionAPI, ctx: ExtensionContext, onTui?: (tui: any) => void) {
   return (tui: any, theme: Theme, footerData: any) => {
     onTui?.(tui);
-    const unsubscribe = footerData.onBranchChange?.(() => {
-      dirtyCheckedAt = 0;
-      tui.requestRender?.();
-    });
 
     return {
-      dispose() { unsubscribe?.(); },
+      dispose() {},
       invalidate() {},
       render(width: number): string[] {
-        const toolCount = (() => {
-          try { return pi.getActiveTools()?.length || pi.getAllTools()?.length || 0; }
-          catch { return 0; }
-        })();
-        const branch = footerData.getGitBranch?.();
-        const dirty = Boolean(branch) && cachedRepoDirty();
-        const usage = ctx.getContextUsage?.();
-        const innerWidth = Math.max(1, width - FOOTER_HORIZONTAL_PADDING * 2);
-        const context = contextLabel(usage, innerWidth);
-
-        const model = (ctx as any).model;
-        const style = panelStyle("system", isLocalModel(model) ? "idle" : "warning");
+        const style = panelStyle("system");
         const left = style.paint.title(theme.bold("Nazar"));
-        const mode = model
-          ? theme.fg(isLocalModel(model) ? "success" : "warning", modelModeLabel(model))
-          : theme.fg("dim", modelModeLabel(model));
-        const branchText = branch
-          ? theme.fg(dirty ? "warning" : "dim", `git:${branch}${dirty ? "*" : ""}`)
-          : undefined;
-        const contextText = context
-          ? theme.fg(contextColor(usage?.percent), context)
-          : undefined;
 
-        const rightParts = [
-          mode,
-          theme.fg("dim", shortModelLabel(model)),
-          branchText,
-          toolCount ? theme.fg("dim", `${toolCount} tools`) : undefined,
-          contextText,
-        ].filter(Boolean) as string[];
-        const right = joinStyled(rightParts, style);
+        // Only surface a footer pip when context is genuinely tight.
+        // Otherwise the right side stays empty — runtime info lives in
+        // the editor meta now, no need to repeat it down here.
+        const usage = ctx.getContextUsage?.();
+        const warning = contextWarningPip(usage, theme) ?? "";
 
-        const gap = innerWidth - visibleWidth(left) - visibleWidth(right);
+        const innerWidth = Math.max(1, width - FOOTER_HORIZONTAL_PADDING * 2);
+        const gap = innerWidth - visibleWidth(left) - visibleWidth(warning);
         const line = gap <= 1
-          ? compact(`${left} ${right}`, innerWidth)
-          : compact(left + " ".repeat(gap) + right, innerWidth);
+          ? compact(`${left} ${warning}`, innerWidth)
+          : compact(left + " ".repeat(gap) + warning, innerWidth);
         return [padFooter(line, width)];
       },
     };

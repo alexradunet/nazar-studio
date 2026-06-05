@@ -115,12 +115,76 @@ export function analyzeTextCells(lines: string[]): MessageTextCell[] {
 
 // ── Background-fill helpers ────────────────────────────────────────────────
 
-/** Fill `text` (plus trailing spaces) with a background colour up to `width`. */
+/**
+ * Pull every Kitty graphics APC and iTerm2 image OSC out of a line. The
+ * image transmission sequences carry base64-encoded image data and are
+ * fragile — any byte manipulation (truncation, replacement, sandwiching
+ * inside a bg-paint frame) can corrupt them. We extract them up-front so
+ * they can be emitted verbatim BEFORE the rest of the line goes through
+ * normal paint/wrap. The terminal receives the APC first → stores the
+ * image; the placeholder cells in `rest` then match it for overlay.
+ */
+export function extractImageSequences(text: string): { apc: string; rest: string } {
+  let apc = "";
+  let rest = text;
+  let changed = true;
+  while (changed) {
+    changed = false;
+    // Kitty APC: ESC _ G ... ESC backslash
+    const kitty = rest.match(/\x1b_G[\s\S]*?\x1b\\/);
+    if (kitty && kitty.index !== undefined) {
+      apc += kitty[0];
+      rest = rest.slice(0, kitty.index) + rest.slice(kitty.index + kitty[0].length);
+      changed = true;
+      continue;
+    }
+    // iTerm2 inline image OSC: ESC ] 1337 ; File = ... BEL
+    const iterm = rest.match(/\x1b\]1337;File=[\s\S]*?\x07/);
+    if (iterm && iterm.index !== undefined) {
+      apc += iterm[0];
+      rest = rest.slice(0, iterm.index) + rest.slice(iterm.index + iterm[0].length);
+      changed = true;
+    }
+  }
+  return { apc, rest };
+}
+
+/**
+ * Fill `text` (plus trailing spaces) with a background colour up to `width`.
+ *
+ * Two concerns the wrapper has to handle:
+ *
+ * 1. **bg-reset holes.** Body content from Pi (notably the editor's
+ *    CustomEditor output) can carry embedded `\x1b[49m` (bg-reset) or
+ *    `\x1b[0m` (full-reset) sequences. If we wrapped the strip as plain
+ *    `bg-open ... bg-close`, those internal resets would punch holes in
+ *    our painted bg — the user sees a black gap where the panel ambient
+ *    should be. We rewrite the internal resets to re-open our bg, so
+ *    the strip stays uniformly painted from edge to edge.
+ *
+ * 2. **Image protocol survival.** Kitty / iTerm2 image transmission
+ *    sequences carry base64 image data and must reach the terminal
+ *    untouched. We pull them out of `text` first and emit them BEFORE
+ *    the bg-paint frame — the terminal stores the image, then receives
+ *    the painted placeholders (which match by image ID) and overlays.
+ */
 export function paintBgStrip(text: string, background: AvatarBackground | undefined, width: number): string {
-  const padded = padVisible(text, width);
-  if (!background) return padded;
+  const { apc, rest } = extractImageSequences(text);
+  const padded = padVisible(rest, width);
+  if (!background) return apc + padded;
   const [r, g, b] = background;
-  return `\x1b[48;2;${r};${g};${b}m${padded}\x1b[49m`;
+  const bgOpen = `\x1b[48;2;${r};${g};${b}m`;
+  // Internal `\x1b[49m` (bg-reset) → re-open our bg.
+  // Internal `\x1b[0m` (full-reset) → keep the fg-reset semantics by emitting
+  // `\x1b[39m` (fg-only reset) followed by our bg re-open, so embedded styling
+  // can still clear its own fg without tearing the strip.
+  const safe = padded
+    .replace(/\x1b\[0m/g, `\x1b[39m${bgOpen}`)
+    .replace(/\x1b\[49m/g, bgOpen);
+  // APC sequences come first (image transmission), then the painted strip.
+  // Putting APC OUTSIDE the bg frame keeps the image data away from any
+  // future colour-manipulation pass over `safe`.
+  return `${apc}${bgOpen}${safe}\x1b[49m`;
 }
 
 // ── Nameplate band ─────────────────────────────────────────────────────────
