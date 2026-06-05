@@ -43,59 +43,76 @@ This document is the reusable visual system for Nazar. It is written for LLM age
 
 ## 3. Color tokens
 
+> **Single source of truth.** All Nazar colours live in
+> [`../lib/ui/tokens.ts`](../lib/ui/tokens.ts) (the typed token module). The
+> Pi terminal theme ([`../themes/nazar.json`](../themes/nazar.json)), the web
+> CSS variables ([`tokens.css`](tokens.css)), the terminal panel palette, and
+> the avatar field backgrounds are all derived from it.
+>
+> Run `npm run build:tokens` after touching `tokens.ts` to regenerate the
+> theme JSON and the CSS file. CI rejects drift via the guard test in
+> `lib/ui/tokens.test.ts`.
+>
+> The blocks below mirror the canonical values for at-a-glance reference.
+> If they ever disagree with `tokens.ts`, `tokens.ts` wins.
+
 ### Dark theme — default
 
 ```css
 :root {
-  --bg: #0e1613;
-  --surface: #15201c;
-  --surface-2: #1b2924;
-  --surface-3: #22332c;
+  --bg: #0b1310;
+  --surface: #11201b;
+  --surface-2: #172a23;
+  --surface-3: #1f352c;
 
-  --on-bg: #eee8da;
-  --on-surface: #f4efe4;
-  --muted: #9db0a5;
+  --fg: #eae4d6;          /* warm cream body text */
+  --on-surface: #f5f0e6;  /* headings / strong foreground */
+  --muted: #93a59b;       /* secondary copy, metadata */
+  --hair: #233530;        /* hairlines, borders */
+  --outline-2: #1a2823;
 
-  --primary: #ff8a4c;
-  --primary-strong: #c2410c;
-  --on-primary: #1a0e07;
-
-  --gold: #e9c267;
-  --teal: #76d5dc;
+  --gold: #f2c14e;
+  --gold-deep: #b8862a;
+  --ember: #ff6a2b;
+  --ember-deep: #c2410c;
+  --ember-red: #e5484d;
+  --teal: #2dd4bf;
+  --teal-deep: #0d9488;
   --folkred: #e0563b;
   --indigo: #a8c0f0;
+  --violet: #c084fc;
 
-  --outline: #36473f;
-  --outline-2: #212d27;
-  --good: #7fcf6a;
+  --ok: var(--teal);
+  --warn: var(--gold);
+  --err: var(--ember-red);
 }
 ```
 
 ### Light theme
 
 ```css
-:root.theme-light {
+:root.light {
   --bg: #f5f1e8;
   --surface: #fffdf7;
   --surface-2: #ece6d7;
   --surface-3: #e3dcc9;
 
-  --on-bg: #1a2a23;
-  --on-surface: #13201a;
+  --fg: #18221d;
+  --on-surface: #121b16;
   --muted: #5c6e63;
-
-  --primary: #c2410c;
-  --primary-strong: #9a3410;
-  --on-primary: #fff8f3;
+  --hair: #d8d0bf;
+  --outline-2: #e2dccb;
 
   --gold: #8a6d12;
+  --gold-deep: #6b5410;
+  --ember: #c2410c;
+  --ember-deep: #9a3410;
+  --ember-red: #b42318;
   --teal: #00656b;
+  --teal-deep: #024a4f;
   --folkred: #983f20;
   --indigo: #1e3a8a;
-
-  --outline: #cdc5b3;
-  --outline-2: #ded6c4;
-  --good: #3f6f2f;
+  --violet: #7c3aed;
 }
 ```
 
@@ -104,16 +121,20 @@ This document is the reusable visual system for Nazar. It is written for LLM age
 - `--bg`: page background.
 - `--surface`: cards, top bar, framed areas.
 - `--surface-2`: tags, icon boxes, code backgrounds.
-- `--on-bg`: main body text and strong borders.
+- `--fg`: main body text and strong borders.
 - `--on-surface`: headings and foreground text on cards.
 - `--muted`: secondary copy, metadata, descriptions.
-- `--primary`: main call-to-action, links, active states, emphasis.
-- `--primary-strong`: hard shadows and deep orange-red accents.
-- `--gold`: folk accent, small square notches, kicker text.
-- `--teal`: secondary accent, folk stripes, technical/sovereign accents.
-- `--folkred`: heritage/embroidery accent.
-- `--indigo`: optional folk palette accent.
-- `--good`: status indicator for “building”, “done”, “healthy”.
+- `--ember`: main call-to-action, links, active states, emphasis.
+- `--ember-deep`: hard shadows and deep orange-red accents.
+- `--gold`: brand accent, kicker text, the nameplate plaque hue in the
+  terminal (assistant role), small square notches.
+- `--teal`: secondary accent, folk stripes, technical/sovereign accents;
+  also the thinking-state hue in the terminal.
+- `--folkred`: heritage/embroidery accent, folk-band stripe.
+- `--indigo`: the user-role hue in the terminal; folk palette accent.
+- `--violet`: rare accent (numbers, syntax).
+- `--ok` / `--warn` / `--err`: semantic status aliases, paired with text
+  labels — never colour-only.
 
 ## 4. Typography
 
@@ -165,6 +186,11 @@ nav/button/tag: 11–13px JetBrains Mono uppercase;
 ### Folk band
 
 A horizontal Romanian-carpet stripe used to divide major page sections.
+The web variant is a diagonal repeating-gradient (below); the terminal
+variant is a row of background-painted spaces cycling the same four
+hues — see `renderFolkBand()` in `lib/ui/header.ts`. Both lift the same
+four tokens (folkred / gold / teal / ember-deep), so the carpet feels
+the same across surfaces.
 
 ```css
 .folk-band {
@@ -175,10 +201,10 @@ A horizontal Romanian-carpet stripe used to divide major page sections.
     var(--folkred) 0 8px,
     var(--gold) 8px 16px,
     var(--teal) 16px 24px,
-    var(--primary-strong) 24px 32px
+    var(--ember-deep) 24px 32px
   );
-  border-top: 2px solid var(--on-bg);
-  border-bottom: 2px solid var(--on-bg);
+  border-top: 2px solid var(--fg);
+  border-bottom: 2px solid var(--fg);
   image-rendering: pixelated;
 }
 ```
@@ -242,18 +268,18 @@ Buttons are squared, uppercase, mono, with 2px border and hard pixel shadow.
   letter-spacing: .06em;
   padding: 13px 20px;
   border-radius: var(--radius);
-  border: 2px solid var(--on-bg);
+  border: 2px solid var(--on-surface);
   transition: transform .08s, box-shadow .08s;
 }
 .btn-primary {
-  background: var(--primary);
-  color: var(--on-primary);
-  box-shadow: 5px 5px 0 var(--primary-strong);
+  background: var(--ember);
+  color: #1a0e07;
+  box-shadow: var(--shadow-hard) var(--ember-deep);
 }
 .btn-ghost {
   background: var(--surface);
   color: var(--on-surface);
-  box-shadow: 5px 5px 0 var(--outline);
+  box-shadow: var(--shadow-hard) var(--hair);
 }
 .btn:hover { transform: translate(1px, 1px); }
 .btn:active { transform: translate(5px, 5px); box-shadow: 0 0 0; }
@@ -276,7 +302,7 @@ h1.title {
   font-size: clamp(58px, 12vw, 104px);
   line-height: .86;
   color: var(--on-surface);
-  text-shadow: 4px 4px 0 var(--primary-strong);
+  text-shadow: 4px 4px 0 var(--ember-deep);
 }
 ```
 
@@ -409,45 +435,57 @@ When creating a new Nazar visual surface, ensure it has:
 
 ## 13. Minimal CSS starter
 
+For new surfaces, link the canonical token file instead of copy-pasting
+the palette:
+
+```html
+<link rel="stylesheet" href="/path/to/design/tokens.css">
+```
+
+Then write only the structure / component CSS. Reference for ad-hoc cases:
+
 ```css
 :root {
-  --bg:#0e1613; --surface:#15201c; --surface-2:#1b2924;
-  --on-bg:#eee8da; --on-surface:#f4efe4; --muted:#9db0a5;
-  --primary:#ff8a4c; --primary-strong:#c2410c; --on-primary:#1a0e07;
-  --gold:#e9c267; --teal:#76d5dc; --folkred:#e0563b;
-  --outline:#36473f; --outline-2:#212d27; --good:#7fcf6a;
+  /* Surfaces (dark) */
+  --bg:#0b1310; --surface:#11201b; --surface-2:#172a23; --surface-3:#1f352c;
+  --fg:#eae4d6; --on-surface:#f5f0e6; --muted:#93a59b; --hair:#233530;
+  /* Brand accents */
+  --gold:#f2c14e; --gold-deep:#b8862a;
+  --ember:#ff6a2b; --ember-deep:#c2410c; --ember-red:#e5484d;
+  --teal:#2dd4bf; --teal-deep:#0d9488;
+  --folkred:#e0563b; --indigo:#a8c0f0; --violet:#c084fc;
+  /* Type */
   --font-display:'Pixelify Sans',system-ui,sans-serif;
   --font-pixel:'Silkscreen',monospace;
   --font-body:'Work Sans',system-ui,sans-serif;
-  --font-mono:'JetBrains Mono',monospace;
-  --radius:3px; --maxw:1080px; --margin:6vw;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+  /* Layout */
+  --radius:3px; --maxw:1080px; --margin:6vw; --shadow-hard:5px 5px 0;
 }
 
 body {
   margin: 0;
   background: var(--bg);
-  color: var(--on-bg);
+  color: var(--fg);
   font-family: var(--font-body);
   font-size: 17px;
   line-height: 1.6;
 }
 
 .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 var(--margin); }
-
 h1, h2, h3 { font-family: var(--font-display); color: var(--on-surface); }
-
-a { color: var(--primary); text-decoration: none; }
-
+a { color: var(--ember); text-decoration: none; }
 .pixel { image-rendering: pixelated; image-rendering: crisp-edges; }
 
 .card {
   position: relative;
   background: var(--surface);
-  border: 2px solid var(--outline);
+  border: 2px solid var(--hair);
   border-radius: var(--radius);
   padding: 22px 20px;
 }
 .card::after {
+  /* signature 7×7 gold notch in the top-right corner */
   content: '';
   position: absolute;
   top: 0;

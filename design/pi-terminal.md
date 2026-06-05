@@ -158,52 +158,91 @@ Rules:
 
 ## Input editor
 
-The text input should use the same restrained RPG panel language as chat turns, including the user's avatar on the left so it visually becomes the next user message when submitted:
+The editor renders as if it WERE the next user-message panel — same
+two-column composer, same indigo plaque, same mage avatar on the right
+(mirroring the user-message side of the chat). Submitting a draft flows
+seamlessly into the next user turn: the panel below visually inherits
+the same plaque, the same portrait position, the same column geometry.
 
 ```txt
- ╔══════════╗ ╔═◆ input ◆════════╗
- ║          ║ ║ > draft message   ║
- ║ avatar   ║ ║                   ║
- ║ avatar   ║ ║                   ║
- ║          ║ ║                   ║
- ╚══════════╝ ╚═══════════════════╝
+PAD │  ⛨ CICO · you                 ctx ▰▱▱▱▱▱▱▱ 36% · GPT-5.5 · git:main* · 15 tools  │ GAP │ portrait field │ PAD
+PAD │  > draft message…                                                       drafting…│ GAP │ portrait pixel │ PAD
+PAD │                                                                                  │ GAP │ portrait pixel │ PAD
 ```
 
-Rules:
+Differences from a submitted user message — there are only two:
 
-- One-column outer padding, matching chat and thinking panels.
-- Left cell always shows the generated ANSI user avatar.
-- User/input border comes from the user panel palette, so the draft panel reads as the next user-side message while staying in the same family as chat panels.
-- Gold `input` label; teal `> ` prompt.
-- Animate the user avatar subtly while text changes in the editor; stop when empty.
-- Preserve Pi editor behavior: history, autocomplete, paste handling, submit shortcuts, cursor.
-- Autocomplete content may render inside the input panel; do not introduce a second visual language.
+1. **Body ambient is slightly cooler/lifted** than a submitted user
+   panel, so editor ≠ message at a glance even when empty.
+2. **Right-side meta carries the live runtime status**
+   (`ctx ▰▱ % · model · git · N tools`). The footer no longer shows
+   any of that; it sits where the user's eye is during drafting.
+   While the input has text, the meta also reports `drafting…`.
+
+Other rules:
+
+- Pi's internal `paddingX` is forced to 0 so the two-column composer
+  owns all outer padding — no double-pad.
+- The mage's typing animation cycles frames 1–8 only while the input
+  has text. When the input clears, the static idle portrait shows.
+- Pi editor behaviour is preserved through the base class: history,
+  autocomplete, bracketed paste, submit shortcuts, cursor. Internal
+  `\x1b[0m` and `\x1b[49m` resets emitted by the editor are rewritten
+  by the composer so the painted bg never tears or leaks
+  reverse-video state.
+- Autocomplete content renders inside the panel using the same visual
+  language; no second style.
+
+Implementation: [`../lib/ui/editor.ts`](../lib/ui/editor.ts).
 
 ## Header
 
-Header should be compact, width-aware, and Basm-framed. Target shape:
+The header is a single gold nameplate plaque built on the same
+`nameplateRow` primitive as message panels, followed by a 1-row
+Romanian-carpet "folk band" motif and a trailing blank row:
 
 ```txt
-╔═◆ B A L A U R ◆═══════════════╗
-║ local-first | private | FOSS   ║
-╚═ woven, not rendered ═════════╝
+  ✦ B A L A U R · woven, not rendered          local-first · private · sovereign · FOSS
+  ▓▓▓▒▒▒░░░▒▒▒▓▓▓▓▒▒▒░░░▒▒▒▓▓▓▓▒▒▒░░░▒▒▒▓▓▓▓▒▒▒░░░▒▒▒▓▓▓▓▒▒▒░░░▒▒▒  ← folk band
+  (blank)
 ```
 
-The header may truncate to terminal width, but must not exceed three lines. On wide terminals it may use the third line for the Basm motto: `woven, not rendered`.
+Width-adaptive:
+
+- ≥ 90 cells → `BALAUR · woven, not rendered` on the left, full trust
+  tagline (`local-first · private · sovereign · FOSS`) on the right.
+- 56–89 cells → `BALAUR` only on the left; tagline trims to
+  `local-first · private · FOSS`.
+- < 46 cells → `NAZAR` on the left; tagline trims to `private · FOSS`.
+
+Rules:
+
+- Always exactly three lines, never more.
+- The folk band may be disabled via `NAZAR_FOLK_BAND=off`.
+- No box-drawing characters — the plaque is a bg fill, the band is bg
+  paint with literal spaces. Copy-safe end-to-end.
+
+Implementation: [`../lib/ui/header.ts`](../lib/ui/header.ts).
 
 ## Footer
 
-Footer should be one line:
+The footer is now a quiet brand-mark line — the live runtime status
+(`model · git · tools · ctx`) lives in the input editor's nameplate meta
+slot, adjacent to where the user is actively typing. The only thing the
+footer surfaces is an optional context-warning pip when usage gets tight:
 
 ```txt
-Nazar                         local/private | qwen/... | git:main* | 12 tools | ctx [===---] 42%
+ Nazar                                                            ctx 92% — running tight
 ```
 
 Rules:
 
-- Never claim `local/private` for frontier models.
-- Put identity left, runtime truth right.
-- Keep it dim except the Nazar mark, the local/frontier trust label, dirty git marker, and high context warnings.
+- Always one line.
+- Left: dim `Nazar` brand mark, bold.
+- Right: empty until ctx ≥ 85% — then a warning pip in `warning` or
+  `error` colour. Otherwise the right side stays clean.
+
+Implementation: [`../lib/ui/footer.ts`](../lib/ui/footer.ts).
 
 ## Typography
 
