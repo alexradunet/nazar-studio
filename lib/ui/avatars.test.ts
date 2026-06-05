@@ -18,15 +18,15 @@ test("message panels keep message rows free of decorative borders", () => {
 
   const textLine = stripAnsi(panel.find((line) => line.includes("copyable text")) ?? "");
   expect(textLine.trim()).toBe("copyable text");
-  expect(textLine).not.toMatch(/[║│|╔╗╚╝╭╮╰╯▗▖▝▘▄▀▐▌+]/);
+  expect(textLine).not.toMatch(/[║│|╔╗╚╝╭╮╰╯┏┓┗┛▗▖▝▘▄▀▐▌+]/);
 });
 
 test("message panels render portrait above copyable text rows", () => {
   const panel = __testing.composeMessagePanel(["answer"], 64).map(stripAnsi);
-  expect(panel[0]).toContain("╔");
+  expect(panel[0]).toContain("┏");
   expect(panel.at(-3)?.trim()).toBe("answer");
   expect(panel.at(-2)?.trim()).toBe("");
-  expect(panel.at(-1)).toContain("◆");
+  expect(panel.at(-1)).toBe("━".repeat(64));
 });
 
 test("message panels keep one-row vertical content padding", () => {

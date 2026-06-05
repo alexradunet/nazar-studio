@@ -253,13 +253,12 @@ function painter(colorValue: Rgb): PanelPaint {
   return (text) => color(colorValue, text);
 }
 
-export type PanelBorderPart = "base" | "vertical" | "corner" | "join" | "ornament" | "separator" | "shadow" | "pulse";
+export type PanelBorderPart = "base" | "vertical" | "corner" | "join" | "separator" | "shadow" | "pulse";
 
 export function paintPanelBorderPart(style: PanelStyle, part: PanelBorderPart, text: string): string {
   if (part === "shadow") return style.paint.shadow(text);
   if (part === "pulse") return style.paint.pulse(text);
   if (part === "separator") return style.paint.muted(text);
-  if (part === "ornament") return style.paint.accent(text);
   return style.paint.border(text);
 }
 
@@ -274,17 +273,13 @@ export function panelBottomHorizontal(style: PanelStyle, width: number, part: Pa
 export function panelRule(style: PanelStyle, width: number): string {
   const safeWidth = Math.max(0, Math.floor(width));
   if (safeWidth <= 0) return "";
-  if (safeWidth < 8) return panelHorizontal(style, safeWidth, "base");
-
-  const g = style.glyphs;
-  const middleWidth = safeWidth - 4;
-  return `${panelHorizontal(style, 1, "base")}${paintPanelBorderPart(style, "ornament", g.ornament)}${panelHorizontal(style, middleWidth, "base")}${paintPanelBorderPart(style, "ornament", g.ornament)}${panelHorizontal(style, 1, "base")}`;
+  return panelHorizontal(style, safeWidth, "base");
 }
 
 export function panelLabeledTop(style: PanelStyle, innerWidth: number, label: string | undefined): string {
   const g = style.glyphs;
   const plainTop = `${paintPanelBorderPart(style, "corner", g.topLeft)}${panelHorizontal(style, innerWidth, "base")}${paintPanelBorderPart(style, "corner", g.topRight)}`;
-  const title = label ? `${paintPanelBorderPart(style, "ornament", g.ornament)} ${label} ${paintPanelBorderPart(style, "ornament", g.ornament)}` : "";
+  const title = label ? ` ${label} ` : "";
   const titleWidth = visibleWidth(title);
   if (!title || titleWidth >= innerWidth) return plainTop;
   const left = Math.floor((innerWidth - titleWidth) / 2);

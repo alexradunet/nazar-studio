@@ -153,7 +153,7 @@ export class NazarEditor extends CustomEditor {
     const style = panelStyle("user", currentText.length > 0 ? "active" : "idle", { frame: this.typingFrame });
     const g = style.glyphs;
     const title = style.paint.title(spacedUpper("input"));
-    const titleWidth = visibleWidth(`${g.ornament} ${title} ${g.ornament}`);
+    const titleWidth = visibleWidth(` ${title} `);
     const innerWidth = Math.max(avatarInnerWidth, titleWidth + 2);
     const boxWidth = innerWidth + 2;
     const boxLeftColumn = headerLeftColumn(panelWidth, boxWidth);

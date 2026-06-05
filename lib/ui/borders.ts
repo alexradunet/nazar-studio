@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Shared terminal border glyphs for Nazar's ANSI RPG panels.
+// Shared terminal border glyphs for Nazar's ANSI panels.
 import { visibleWidth } from "./ansi.ts";
 
 export const PANEL_GAP = 1;
@@ -17,29 +17,27 @@ export type BorderGlyphs = {
   rightVertical: string;
   topJoin: string;
   bottomJoin: string;
-  ornament: string;
   shadow: string;
 };
 
-const RPG_BORDER: BorderGlyphs = {
-  topLeft: "╔",
-  topRight: "╗",
-  bottomLeft: "╚",
-  bottomRight: "╝",
-  horizontal: "═",
-  topHorizontal: "═",
-  bottomHorizontal: "═",
-  vertical: "║",
-  leftVertical: "║",
-  rightVertical: "║",
-  topJoin: "╦",
-  bottomJoin: "╩",
-  ornament: "◆",
+const HEAVY_BORDER: BorderGlyphs = {
+  topLeft: "┏",
+  topRight: "┓",
+  bottomLeft: "┗",
+  bottomRight: "┛",
+  horizontal: "━",
+  topHorizontal: "━",
+  bottomHorizontal: "━",
+  vertical: "┃",
+  leftVertical: "┃",
+  rightVertical: "┃",
+  topJoin: "┳",
+  bottomJoin: "┻",
   shadow: "░",
 };
 
 export function borderGlyphs(): BorderGlyphs {
-  return RPG_BORDER;
+  return HEAVY_BORDER;
 }
 
 export function horizontal(width: number, glyphs: BorderGlyphs = borderGlyphs()): string {
@@ -91,8 +89,8 @@ export function labeledTopRightSegment(
 ): string {
   const g = borderGlyphs();
   const targetWidth = Math.max(1, innerWidth + visibleWidth(g.topRight));
-  const prefix = `${g.topHorizontal}${g.ornament} `;
-  const suffix = ` ${g.ornament}`;
+  const prefix = `${g.topHorizontal} `;
+  const suffix = " ";
   const fillWidth = targetWidth
     - visibleWidth(prefix)
     - visibleWidth(label)
@@ -110,8 +108,8 @@ export function labeledSoloTop(
 ): string {
   const g = borderGlyphs();
   const targetWidth = Math.max(2, innerWidth + visibleWidth(g.topLeft) + visibleWidth(g.topRight));
-  const prefix = `${g.topLeft}${g.topHorizontal}${g.ornament} `;
-  const suffix = ` ${g.ornament}`;
+  const prefix = `${g.topLeft}${g.topHorizontal} `;
+  const suffix = " ";
   const fillWidth = targetWidth
     - visibleWidth(prefix)
     - visibleWidth(label)

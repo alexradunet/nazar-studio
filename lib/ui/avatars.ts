@@ -296,7 +296,7 @@ function composeMessagePanel(
   const panelWidth = messagePanelWidth(width);
   const { avatarInnerWidth, avatarContentWidth } = avatarBoxMetrics(avatarWidth);
   const g = style.glyphs;
-  const titleWidth = title ? visibleWidth(`${g.ornament} ${title} ${g.ornament}`) : 0;
+  const titleWidth = title ? visibleWidth(` ${title} `) : 0;
   const innerWidth = Math.max(avatarInnerWidth, titleWidth + 2);
   const boxWidth = innerWidth + 2;
   const boxLeftColumn = headerLeftColumn(panelWidth, boxWidth, align);

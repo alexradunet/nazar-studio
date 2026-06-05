@@ -28,6 +28,28 @@ pi
 Requires **Node 23.4+ (Node 24 LTS recommended)**: Nazar's memory index uses the built-in
 `node:sqlite` (FTS5), which is flag-free from Node 23.4 and stable in Node 24.
 
+### Preferred terminal setup
+
+Nazar Studio is designed for a modern terminal, not legacy ANSI fallbacks. The preferred setup is:
+
+- **kitty >= 0.35.0** — lets Nazar lean into kitty protocol support as the canonical terminal path.
+- **Truecolor ANSI** (`COLORTERM=truecolor`, non-`dumb` `$TERM`).
+- **Departure Mono** as the terminal font: https://departuremono.com/
+
+Kitty config example:
+
+```conf
+font_family      Departure Mono
+bold_font        auto
+italic_font      auto
+bold_italic_font auto
+font_size        13.0
+disable_ligatures never
+```
+
+The `/skill:doctor` health check includes this terminal experience check; Nazar does not show it
+as a startup notice.
+
 Update or remove later:
 
 ```bash

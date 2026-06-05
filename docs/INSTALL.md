@@ -78,14 +78,35 @@ curl -s http://127.0.0.1:8082/health
 /local-llm doctor
 ```
 
-## Terminal font (optional, source checkout)
+## Preferred terminal setup
+
+Nazar Studio targets modern terminal standards. The preferred setup is:
+
+- **kitty >= 0.35.0** — preferred terminal so Nazar can fully leverage the kitty protocol.
+- **Truecolor ANSI** (`COLORTERM=truecolor`, non-`dumb` `$TERM`).
+- **Departure Mono** as the terminal font: https://departuremono.com/
+
+Kitty config example:
+
+```conf
+font_family      Departure Mono
+bold_font        auto
+italic_font      auto
+bold_italic_font auto
+font_size        13.0
+disable_ligatures never
+```
+
+The `/skill:doctor` health check includes this terminal experience check; Nazar does not show it
+as a startup notice.
+
+## Terminal font installer (optional, source checkout)
 
 The vendored Cozette/Departure Mono fonts and their installer live in the repo (not the npm
 tarball). From a `git clone` of this repo:
 
 ```bash
 bash scripts/install-basm-terminal-fonts.sh
-NAZAR_TERMINAL_FONT="JetBrains Mono" bash scripts/install-basm-terminal-fonts.sh
 ```
 
 ## Useful commands inside Pi
