@@ -1,28 +1,30 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Nazar-styled input editor: same two-column RPG panel language as user
-// chat turns. The avatar sits on the right (mirroring user messages) so
-// submitting the draft visually flows into the next user turn — same
-// portrait, same nameplate plaque, same column geometry.
+// Nazar-styled input editor — renders as if it WERE the next user message
+// panel, so submitting flows seamlessly. The avatar, nameplate title, and
+// column geometry all match a submitted user turn; the only difference is
+// the live `drafting…` meta tag while you have text in the input.
+//
+// Visual continuity is the whole point: an empty editor looks identical
+// to an empty user message panel. As you type, the meta tag appears and
+// the mage avatar cycles its typing animation frames; on submit the meta
+// vanishes, the editor empties, and the submitted message appears below
+// the input with the same plaque, same portrait, same column alignment.
 import { CustomEditor, type KeybindingsManager } from "@earendil-works/pi-coding-agent";
 import { type EditorTheme, type TUI } from "@earendil-works/pi-tui";
 import { visibleWidth } from "./ansi.ts";
-import { panelStyle } from "./panel-style.ts";
+import { rolePanelStyle, roleTitle } from "./avatars.ts";
 import {
   emptyAvatarLine,
   renderRoleAvatar,
   renderUserTypingAvatar,
-  renderToolPixelAvatar,
   type AvatarBackground,
   type AvatarRenderLine,
   type RenderedAvatar,
 } from "./pixel-avatar.ts";
-import { userDisplayName, type SpriteRole } from "./sprites.ts";
 import { bodyColumnWidth, composeMessagePanel } from "./turn-composer.ts";
 
 const PROMPT = "> ";
 const CONTINUATION = "  ";
-const BOLD_ON = "\x1b[1m";
-const BOLD_OFF = "\x1b[22m";
 
 type AvatarCell = {
   height: number;
@@ -54,33 +56,26 @@ function portraitCell(portrait: RenderedAvatar): AvatarCell {
   };
 }
 
-function avatarCell(role: SpriteRole, typingFrame?: number): AvatarCell {
-  const portrait = role === "user" && typingFrame !== undefined
-    ? renderUserTypingAvatar(typingFrame)
-    : renderRoleAvatar(role);
-  return portraitCell(portrait!);
-}
-
-function quillAvatarCell(typingFrame: number, isTyping = false): AvatarCell {
-  // While the user is drafting, swap the static mage portrait for the
-  // animated quill tool sprite — a small visible "you are writing" cue.
-  const status = isTyping ? "running" : "pending";
-  const portrait = renderToolPixelAvatar("quill", status, typingFrame, "");
-  if (!portrait) {
-    return avatarCell("user", isTyping ? typingFrame : undefined);
-  }
-  return portraitCell(portrait);
-}
-
+/**
+ * The editor uses the SAME mage sprite as a submitted user message — same
+ * portrait, same background. While drafting we cycle the typing-animation
+ * frames (frames 1–8 of the user sheet); when the input is empty we render
+ * the idle frame 0, which is byte-identical to the user-message avatar
+ * pi-coding-agent would have produced anyway. Visual continuity preserved.
+ */
 function userAvatarCell(text: string, typingFrame: number): AvatarCell {
-  return quillAvatarCell(typingFrame, text.length > 0);
+  const drafting = text.length > 0;
+  const portrait = drafting
+    ? renderUserTypingAvatar(typingFrame)!
+    : renderRoleAvatar("user")!;
+  return portraitCell(portrait);
 }
 
 export class NazarEditor extends CustomEditor {
   private typingFrame = 0;
 
   setPaddingX(_padding: number): void {
-    // The two-column composer owns the outer padding; tell Pi to render the
+    // The two-column composer owns all outer padding. Tell Pi to render the
     // editor body flush so we don't double-pad on the left.
     super.setPaddingX(0);
   }
@@ -89,11 +84,10 @@ export class NazarEditor extends CustomEditor {
     const before = this.getText();
     super.handleInput(data);
     if (this.getText() !== before) {
-      // Advance a frame per input character so each typed letter can render
-      // a fresh quill stroke when writing is active.
+      // Advance one frame per typed character so the mage's typing animation
+      // ticks visibly as you write. Stops when the input is cleared.
       const incoming = Array.from(data).length;
-      const delta = Math.max(1, incoming);
-      this.typingFrame += delta;
+      this.typingFrame += Math.max(1, incoming);
     }
   }
 
@@ -101,10 +95,12 @@ export class NazarEditor extends CustomEditor {
     const currentText = this.getText();
     const isDrafting = currentText.length > 0;
     const avatar = userAvatarCell(currentText, this.typingFrame);
-    const style = panelStyle("user", isDrafting ? "active" : "idle", { frame: this.typingFrame });
+    // Style mirrors a user-message panel exactly — no `active` state pulse,
+    // no panel hue shift. The editor IS the next user message, visually.
+    const style = rolePanelStyle("user");
 
-    // Ask Pi to wrap the editor body to the narrower body column (matching
-    // the user-message panel geometry). Reserve room for the prompt marker.
+    // Ask Pi to wrap the editor body to the body column (matching user-message
+    // panel geometry). Reserve room for the prompt marker.
     const promptWidth = visibleWidth(PROMPT);
     const bodyWrapWidth = bodyColumnWidth(width, avatar.width);
     const editorWidth = Math.max(1, bodyWrapWidth - promptWidth);
@@ -113,7 +109,7 @@ export class NazarEditor extends CustomEditor {
     const bodyLines = raw.filter((line) => !isPlainEditorRule(line));
     const content = bodyLines.length > 0 ? bodyLines : [""];
 
-    // Prepend the prompt on the first row, a 2-col continuation indent on
+    // Prepend the prompt on the first row, 2-col continuation indent on
     // subsequent rows so multi-line drafts wrap legibly.
     const promptPaint = style.paint.accent;
     const continuationPaint = style.paint.border;
@@ -121,13 +117,11 @@ export class NazarEditor extends CustomEditor {
       i === 0 ? `${promptPaint(PROMPT)}${line}` : `${continuationPaint(CONTINUATION)}${line}`,
     );
 
-    // Title format mirrors user-message panels: ✦ INPUT · <username>. When
-    // the user submits, the panel below visually inherits the same plaque,
-    // same portrait position, same body column — only the body content
-    // changes from a live draft to the submitted message.
-    const name = userDisplayName();
-    const title = `${style.paint.title(`✦ ${BOLD_ON}INPUT${BOLD_OFF}`)} ${style.paint.muted(`· ${name.toLowerCase()}`)}`;
-    const meta = isDrafting ? style.paint.muted("drafting…") : style.paint.muted("ready");
+    // Title is IDENTICAL to a submitted user-message panel — same icon,
+    // same name, same descriptor. The only visible difference during a
+    // session is the meta tag (`drafting…` while live, empty when idle).
+    const title = roleTitle("user");
+    const meta = isDrafting ? style.paint.muted("drafting…") : "";
 
     return composeMessagePanel(
       decorated, avatar, avatar.width, width, 0,
