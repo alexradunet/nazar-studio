@@ -7,6 +7,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import { uiCapabilitySummary } from "../lib/ui/design.ts";
 import { setGraphicsQuality, type GraphicsQuality } from "../lib/ui/graphics-state.ts";
 import { patchRpgAvatars } from "../lib/ui/avatars.ts";
+import { editorFactory } from "../lib/ui/editor.ts";
 import { footerFactory } from "../lib/ui/footer.ts";
 import { headerFactory } from "../lib/ui/header.ts";
 
@@ -17,7 +18,7 @@ function applyNazarUI(pi: ExtensionAPI, ctx: ExtensionContext, onTui?: (tui: any
   try { ctx.ui.setWidget?.("nazar", undefined); } catch { /* clear old widget on /reload */ }
   try { ctx.ui.setWidget?.("nazar-thinking", undefined); } catch { /* remove legacy thinking widget */ }
   try { ctx.ui.setFooter?.(footerFactory(pi, ctx, onTui)); } catch { /* ignore */ }
-  try { ctx.ui.setEditorComponent?.(undefined); } catch { /* keep Pi's default editor */ }
+  try { ctx.ui.setEditorComponent?.(editorFactory); } catch { /* keep Pi's default editor */ }
   try { ctx.ui.setToolsExpanded?.(false); } catch { /* less visual noise by default */ }
 }
 
