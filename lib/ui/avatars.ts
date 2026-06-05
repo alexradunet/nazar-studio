@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Thin Pi adapter: patches the built-in message/tool render methods to use
 // Nazar's border-free RPG turn panels. All layout logic lives in turn-composer.ts.
-import { AssistantMessageComponent, ToolExecutionComponent, UserMessageComponent } from "@earendil-works/pi-coding-agent";
+import {
+  AssistantMessageComponent,
+  BranchSummaryMessageComponent,
+  CompactionSummaryMessageComponent,
+  SkillInvocationMessageComponent,
+  ToolExecutionComponent,
+  UserMessageComponent,
+} from "@earendil-works/pi-coding-agent";
 import {
   analyzeTextCells,
   AvatarCell,
@@ -24,6 +31,7 @@ import { AVATAR_FIELDS } from "./tokens.ts";
 import { panelStyle, type PanelState, type PanelStyle } from "./panel-style.ts";
 import { roleNameplate, type SpriteRole } from "./sprites.ts";
 import { nazarMarkdownTheme } from "./markdown-theme.ts";
+import { renderChapterDivider } from "./divider.ts";
 
 const AVATAR_ORIGINALS = Symbol.for("nazar.rpgAvatarOriginals");
 const DEFAULT_RICH_AVATAR_RECENT_LIMIT = 20;
@@ -389,4 +397,39 @@ export function patchRpgAvatars() {
       { meta: toolMeta(this, style) },
     );
   };
+
+  // ── Custom-message component patches ───────────────────────────────────
+  // CompactionSummary, BranchSummary, and SkillInvocation already use Pi's
+  // Box (bg fill, copy-safe). We only need to prepend a chapter-divider row
+  // that visually marks the conversation boundary. The original render()
+  // stays intact; we just wrap its output.
+
+  function prependChapterDivider(origRender: (this: any, w: number) => string[], label: string) {
+    return function patchedCustomRender(this: any, width: number): string[] {
+      const inner = origRender.call(this, width);
+      if (inner.length === 0) return inner;
+      const style = panelStyle("system");
+      const div = renderChapterDivider({ width, label, style, glyph: "✦" });
+      return [div, ...inner];
+    };
+  }
+
+  originals.compactionRender ??= CompactionSummaryMessageComponent.prototype.render;
+  originals.branchRender ??= BranchSummaryMessageComponent.prototype.render;
+  originals.skillRender ??= SkillInvocationMessageComponent.prototype.render;
+
+  CompactionSummaryMessageComponent.prototype.render = prependChapterDivider(
+    originals.compactionRender,
+    "context compacted",
+  );
+
+  BranchSummaryMessageComponent.prototype.render = prependChapterDivider(
+    originals.branchRender,
+    "branch summary",
+  );
+
+  SkillInvocationMessageComponent.prototype.render = prependChapterDivider(
+    originals.skillRender,
+    "skill invoked",
+  );
 }
