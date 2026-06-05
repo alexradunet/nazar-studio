@@ -42,10 +42,12 @@ function padFooter(line: string, width: number): string {
 function contextLabel(usage: any, width: number): string | undefined {
   if (usage?.percent == null) return undefined;
   const percent = Math.max(0, Math.min(100, Math.round(usage.percent)));
-  if (width < 92) return `ctx ${percent}%`;
-  const cells = 6;
+  if (width < 80) return `ctx ${percent}%`;
+  // ▰▱ mana-bar gauge — compact RPG context meter
+  const cells = 8;
   const filled = Math.max(0, Math.min(cells, Math.round((percent / 100) * cells)));
-  return `ctx [${"=".repeat(filled)}${"-".repeat(cells - filled)}] ${percent}%`;
+  const bar = `${"▰".repeat(filled)}${"▱".repeat(cells - filled)}`;
+  return `ctx ${bar} ${percent}%`;
 }
 
 function contextColor(percent: number | null | undefined): "dim" | "warning" | "error" {
