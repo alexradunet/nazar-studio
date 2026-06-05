@@ -1,60 +1,52 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Compact Basm/RPG header for Nazar's ANSI terminal UI.
+// Top-of-screen header for Nazar's Pi terminal — a single gold nameplate
+// band carrying the brand mark, the Basm motto, and the trust tagline.
+//
+// Consistent with the chat-panel system: the header uses the same
+// `nameplateRow` primitive as message panels, so the gold plaque, padding,
+// and typography all line up. No box-drawing chars beside body content,
+// fully copy-safe by construction.
 import type { Theme } from "@earendil-works/pi-coding-agent";
-import { compact, padVisible, visibleWidth } from "./ansi.ts";
-import { paintPanelBorderPart, panelBottomHorizontal, panelHorizontal, panelLabeledTop, panelStyle, type PanelStyle } from "./panel-style.ts";
+import { compact } from "./ansi.ts";
+import { panelStyle } from "./panel-style.ts";
+import { nameplateRow } from "./turn-composer.ts";
 
-type FrameEdge = "top" | "bottom";
-
-function framedLabel(edge: FrameEdge, text: string, innerWidth: number, _theme: Theme, style: PanelStyle): string {
-  if (edge === "top") return panelLabeledTop(style, innerWidth, text);
-
-  const g = style.glyphs;
-  const totalWidth = innerWidth + 2;
-  const prefix = `${paintPanelBorderPart(style, "corner", g.bottomLeft)}${panelBottomHorizontal(style, 1, "base")} `;
-  const suffix = " ";
-  const fill = totalWidth
-    - visibleWidth(prefix)
-    - visibleWidth(text)
-    - visibleWidth(suffix)
-    - visibleWidth(g.bottomRight);
-
-  if (fill < 0) {
-    return `${paintPanelBorderPart(style, "corner", g.bottomLeft)}${panelBottomHorizontal(style, innerWidth, "base")}${paintPanelBorderPart(style, "corner", g.bottomRight)}`;
-  }
-  return `${prefix}${text}${suffix}${panelBottomHorizontal(style, fill, "base")}${paintPanelBorderPart(style, "corner", g.bottomRight)}`;
-}
-
-function frameRule(edge: FrameEdge, innerWidth: number, _theme: Theme, style: PanelStyle): string {
-  const g = style.glyphs;
-  const left = edge === "top" ? g.topLeft : g.bottomLeft;
-  const right = edge === "top" ? g.topRight : g.bottomRight;
-  const body = edge === "top" ? panelHorizontal(style, innerWidth, "base") : panelBottomHorizontal(style, innerWidth, "base");
-  return `${paintPanelBorderPart(style, "corner", left)}${body}${paintPanelBorderPart(style, "corner", right)}`;
-}
+const HEADER_LEFT_PADDING = 2;
 
 export function headerFactory(_tui: any, theme: Theme) {
   return {
     invalidate() {},
     render(width: number): string[] {
-      const style = panelStyle("system", "idle");
-      const g = style.glyphs;
-      const titlePlain = width < 46 ? "NAZAR" : "B A L A U R";
-      const subtitlePlain = width < 56
-        ? "private | sovereign | FOSS"
-        : "local-first | private | sovereign | FOSS";
-      const innerWidth = Math.min(Math.max(width - 8, 26), width >= 90 ? 76 : 72);
-      const title = style.paint.title(theme.bold(titlePlain));
-      const subtitle = style.paint.muted(padVisible(subtitlePlain, innerWidth - 2));
+      // Use the assistant palette so the header band carries Nazar's gold
+      // brand hue — visually consistent with assistant panels downstream.
+      const style = panelStyle("assistant", "idle");
 
-      const bottom = width >= 82
-        ? framedLabel("bottom", style.paint.muted("woven, not rendered"), innerWidth, theme, style)
-        : frameRule("bottom", innerWidth, theme, style);
+      const bandWidth = Math.max(8, width - HEADER_LEFT_PADDING * 2);
+      const wide = width >= 90;
+      const medium = width >= 56;
+      const veryNarrow = width < 46;
+
+      const titlePlain = veryNarrow ? "NAZAR" : "B A L A U R";
+      const motto = "woven, not rendered";
+      const tagline = wide
+        ? "local-first · private · sovereign · FOSS"
+        : medium
+          ? "local-first · private · FOSS"
+          : "private · FOSS";
+
+      // Title format mirrors the panel-nameplate convention: icon + bold name
+      // + muted descriptor. Falls back to bare brand mark on narrow widths.
+      const titleSegment = `${style.paint.title(`✦ ${theme.bold(titlePlain)}`)}`;
+      const title = wide
+        ? `${titleSegment} ${style.paint.muted(`· ${motto}`)}`
+        : titleSegment;
+      const meta = style.paint.muted(tagline);
+
+      const padded = (line: string) => compact(`${" ".repeat(HEADER_LEFT_PADDING)}${line}`, width);
 
       return [
-        compact(`  ${framedLabel("top", title, innerWidth, theme, style)}`, width),
-        compact(`  ${paintPanelBorderPart(style, "vertical", `${g.leftVertical} `)}${subtitle}${paintPanelBorderPart(style, "vertical", ` ${g.rightVertical}`)}`, width),
-        compact(`  ${bottom}`, width),
+        padded(nameplateRow(title, bandWidth, style, meta)),
+        " ".repeat(Math.max(0, width)),
       ];
     },
   };
