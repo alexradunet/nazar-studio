@@ -59,7 +59,7 @@ full list. Common ones:
 | `NAZAR_DATA_DIR` | runtimes/models/logs/index dir; default same as vault |
 | `NAZAR_PERSONA` | set `0` to skip persona injection |
 | `NAZAR_USER_NAME` | name shown on the user avatar panel |
-| `NAZAR_LLM_CTX` | local model context window (default 8192) |
+| `NAZAR_LLM_CTX` | local model context window (default 32768) |
 | `LLAMA_LOCAL_KEY` | local endpoint key (auto-generated at `<data dir>/run/local-llm.key`) |
 
 ## Local model

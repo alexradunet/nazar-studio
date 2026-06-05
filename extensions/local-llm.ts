@@ -29,7 +29,7 @@ const MODEL_FILE = DEFAULT_MODEL_FILE;
 const MODEL_URL = `https://huggingface.co/${MODEL_HF}/resolve/main/${MODEL_FILE}`;
 const PORT = Number(process.env.NAZAR_LLM_PORT || "8082");
 const HOST = "127.0.0.1";
-const CTX = Number(process.env.NAZAR_LLM_CTX || "8192");
+const CTX = Number(process.env.NAZAR_LLM_CTX || "32768");
 const WHISPER_MODEL_FILE = process.env.NAZAR_WHISPER_MODEL_FILE || "ggml-base.bin";
 const WHISPER_MODEL_URL = process.env.NAZAR_WHISPER_MODEL_URL || `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${WHISPER_MODEL_FILE}`;
 
