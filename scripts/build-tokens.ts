@@ -89,9 +89,53 @@ export function renderThemeJson(): string {
   return `${JSON.stringify(theme, null, 2)}\n`;
 }
 
+/**
+ * Compact inline CSS block for web/index.html — a minified :root { } +
+ * :root.light { } pair without the full CSS file comments.
+ * GitHub Pages serves the page from the web/ directory, so we can't
+ * reference ../design/tokens.css with a <link>; the palette is embedded
+ * inline and regenerated here from the same token source.
+ */
+export function renderWebInlineCss(): string {
+  const darkVars: string[] = [];
+  for (const [name, key] of CSS_BRAND) darkVars.push(`  --${name}:${COLOR[key as ColorKey]};`);
+  for (const [name, key] of CSS_SURFACE) darkVars.push(`  --${name}:${COLOR[key as ColorKey]};`);
+  darkVars.push(
+    `  --font-display:${FONT.display};`,
+    `  --font-pixel:${FONT.pixel};`,
+    `  --font-body:${FONT.body};`,
+    `  --font-mono:${FONT.mono};`,
+    `  --radius:${LAYOUT.radius}; --maxw:${LAYOUT.maxw};`,
+  );
+
+  const lightVars: string[] = [];
+  for (const [name, key] of CSS_BRAND) lightVars.push(`  --${name}:${LIGHT_COLOR[key as ColorKey]};`);
+  for (const [name, key] of CSS_SURFACE) lightVars.push(`  --${name}:${LIGHT_COLOR[key as ColorKey]};`);
+
+  return [
+    "/* GENERATED FROM lib/ui/tokens.ts — DO NOT EDIT. Run `npm run build:tokens`. */",
+    `:root{\n${darkVars.join("\n")}\n}`,
+    `:root.light{\n${lightVars.join("\n")}\n}`,
+  ].join("\n");
+}
+
+const WEB_INDEX = join(ROOT, "web", "index.html");
+const WEB_MARKER_START = "/* GENERATED TOKENS START */";
+const WEB_MARKER_END   = "/* GENERATED TOKENS END */";
+
+function renderWebIndex(): string {
+  const current = readFileSync(WEB_INDEX, "utf8");
+  const startIdx = current.indexOf(WEB_MARKER_START);
+  const endIdx = current.indexOf(WEB_MARKER_END);
+  if (startIdx === -1 || endIdx === -1) return current; // markers not present, leave unchanged
+  const next = renderWebInlineCss();
+  return current.slice(0, startIdx) + WEB_MARKER_START + "\n" + next + "\n" + current.slice(endIdx);
+}
+
 export const TOKEN_ARTIFACTS = [
   { path: join(ROOT, "design", "tokens.css"), render: renderTokensCss },
   { path: join(ROOT, "themes", "nazar.json"), render: renderThemeJson },
+  { path: WEB_INDEX, render: renderWebIndex },
 ];
 
 function main(): void {

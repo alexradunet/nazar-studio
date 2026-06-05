@@ -31,3 +31,19 @@ test("canonical brand colours come from the token source of truth", () => {
   expect(COLOR.gold).toBe("#f2c14e");
   expect(COLOR.teal).toBe("#2dd4bf");
 });
+
+test("web/index.html inline token block is in sync with tokens.ts (run npm run build:tokens)", async () => {
+  const { renderWebInlineCss } = await import("../../scripts/build-tokens.ts");
+  const { readFileSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const html = readFileSync(join(process.cwd(), "web/index.html"), "utf8");
+  const START = "/* GENERATED TOKENS START */";
+  const END   = "/* GENERATED TOKENS END */";
+  const startIdx = html.indexOf(START);
+  const endIdx = html.indexOf(END);
+  expect(startIdx, "web/index.html is missing GENERATED TOKENS START marker").toBeGreaterThan(-1);
+  expect(endIdx,   "web/index.html is missing GENERATED TOKENS END marker").toBeGreaterThan(-1);
+  const current = html.slice(startIdx + START.length, endIdx).trim();
+  const expected = renderWebInlineCss().trim();
+  expect(current).toBe(expected);
+});
