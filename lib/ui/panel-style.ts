@@ -23,6 +23,10 @@ export type PanelStyle = {
     text: PanelPaint;
   };
   background: Rgb | undefined;
+  /** Saturated themed background for the nameplate band (a brass/teal/indigo plaque). */
+  nameplateBg: Rgb;
+  /** Near-black, lightly hue-tinted background for the avatar column. */
+  portraitField: Rgb;
   supports: {
     ansi: boolean;
     shadow: boolean;
@@ -222,6 +226,14 @@ export function panelStyle(
   const palette = mixPalette(role, state);
   const activePulse = state === "active" || state === "running";
   const pulse = activePulse ? pulseColor(palette, options.frame) : palette.accent;
+  // Nameplate plaque: blend the saturated role hue toward the dark ambient so
+  // the band reads as an intentional, themed header (brass/teal/indigo) rather
+  // than the muddy near-black you get from lightening the ambient.
+  const nameplateBg = mixRgb(palette.border, palette.background, 0.66);
+  // Portrait field: near-black with a subtle role hue tint, sits beneath the
+  // avatar pixels so the left column reads as a portrait frame distinct from
+  // the body ambient.
+  const portraitField = mixRgb(palette.background, [0, 0, 0], 0.55);
   return {
     role,
     state,
@@ -236,6 +248,8 @@ export function panelStyle(
       text: painter(palette.text),
     },
     background: palette.background,
+    nameplateBg,
+    portraitField,
     supports: {
       ansi: true,
       shadow: false,

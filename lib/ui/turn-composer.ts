@@ -1,31 +1,28 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Border-free RPG turn panel compositor for Nazar's Pi terminal.
+// Two-column RPG turn panel compositor for Nazar's Pi terminal.
 //
-// Panel anatomy (portrait-over-text, copy-safe):
+// Panel anatomy (left avatar column + right nameplate-over-body column,
+// copy-safe by construction):
 //
-//   ╔═══════ nameplate band ════════════════════════════════════════════╗
-//   ║  [role-accent title]                                [muted meta] ║
-//   ╠═══════════════════════════════════════════════════════════════════╣
-//   ║  [portrait strip — background fill, avatar pixels, no box lines] ║
-//   ╠═══════════════════════════════════════════════════════════════════╣
-//   ║  [empty padding row — panel background]                          ║
-//   ║  [text body rows — copyable, background-filled]                  ║
-//   ║  [empty padding row]                                             ║
-//   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//   PAD │ portrait field │ GAP │ nameplate band (themed plaque)
+//   PAD │ portrait pixel │ GAP │ body row (ambient tint)
+//   PAD │ portrait pixel │ GAP │ body row
+//   PAD │ portrait pixel │ GAP │ body row
+//   PAD │ portrait field │ GAP │ body row
+//   ─── blank row gap ───
 //
-// Copy-safety principle: SGR color codes are never captured by terminal
-// selection — only glyphs are. All visual ornament lives in color (bg fills).
-// The only glyph characters in the output are:
-//   - ▀/▄/█/ (half-block pixels in the portrait strip)
-//   - ━ repeated once in the bottom rule (its own line, not beside body text)
-// Every other visual distinction (nameplate, portrait field, body tint) is
-// expressed through background fills that copy as blank space.
+// Copy-safety: SGR colour codes are never captured by terminal selection — only
+// glyphs are. All structural decoration (nameplate band, portrait field, body
+// ambient) lives in background fills. The only glyph characters that ever land
+// in the output are the half-block pixels (▀/▄/█) inside the portrait column.
+// Body text rows are background-filled but otherwise unadorned, so selecting
+// the conversation copies clean text with no box-drawing contamination.
 
 import { padVisible, visibleWidth } from "./ansi.ts";
 import { truecolorBg } from "./graphics-protocol.ts";
 import type { AvatarBackground, AvatarRenderLine } from "./pixel-avatar.ts";
 import { centerAvatarLine, emptyAvatarLine } from "./pixel-avatar.ts";
-import { panelRule, panelStyle, type PanelStyle } from "./panel-style.ts";
+import { panelStyle, type PanelStyle } from "./panel-style.ts";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -35,7 +32,10 @@ const OSC133_ZONE_FINAL = "\x1b]133;C\x07";
 
 export const PANEL_TOP_PADDING_ASSISTANT = 1;
 export const PANEL_TEXT_PADDING = 1;
-const PANEL_BOTTOM_PADDING = 0;
+const PANEL_BOTTOM_GAP = 1;
+
+const DEFAULT_OUTER_PAD_X = 2;
+const COLUMN_GAP = 2;
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -49,6 +49,15 @@ export type AvatarCell = {
 export type MessageTextCell = {
   controls: string;
   text: string;
+};
+
+export type ComposeOptions = {
+  /** Right-aligned meta string for the nameplate band (already styled). */
+  meta?: string;
+  /** Outer left/right padding columns. Default 2. */
+  outerPadX?: number;
+  /** Blank rows appended after the panel as a separator. Default 1. */
+  bottomGap?: number;
 };
 
 // ── OSC 133 helpers ────────────────────────────────────────────────────────
@@ -105,69 +114,82 @@ export function paintBgStrip(text: string, background: AvatarBackground | undefi
   return `\x1b[48;2;${r};${g};${b}m${padded}\x1b[49m`;
 }
 
-function paintPanelTextLine(
+// ── Nameplate band ─────────────────────────────────────────────────────────
+
+/**
+ * Render a nameplate band — a saturated, themed plaque carrying the role
+ * title (already styled) on the left and an optional meta string on the right.
+ *
+ * The band background is `style.nameplateBg` (the role hue blended toward the
+ * ambient: brass for Nazar, teal for tools, indigo for the user). Copy-safe:
+ * a select-all paste yields "  NAZAR · the oracle             1.2k tok · 2.4s"
+ * with no border-drawing glyphs.
+ *
+ * If `meta` is empty, the band fills the remaining width with the plaque bg.
+ */
+export function nameplateRow(
+  title: string,
+  width: number,
+  style: PanelStyle,
+  meta = "",
+): string {
+  const [r, g, b] = style.nameplateBg;
+  const open = truecolorBg([r, g, b]);
+  const titleVis = visibleWidth(title);
+  const metaVis = visibleWidth(meta);
+  if (metaVis > 0) {
+    // " title  <fill>  meta " — re-emit `open` after each styled segment to
+    // restore the bg in case the segment reset it. Painters in panel-style.ts
+    // only reset fg (\x1b[39m), not bg, so persistence is the default; the
+    // re-emit is belt-and-braces for any caller that uses \x1b[0m.
+    const fill = Math.max(1, width - titleVis - metaVis - 2);
+    return `${open} ${title}${open}${" ".repeat(fill)}${meta}${open} \x1b[49m`;
+  }
+  const fill = Math.max(0, width - titleVis - 2);
+  return `${open} ${title}${open}${" ".repeat(fill)} \x1b[49m`;
+}
+
+// ── Panel compositor (two-column) ──────────────────────────────────────────
+
+function paintPortraitFieldRow(width: number, field: AvatarBackground): string {
+  return paintBgStrip("", field, width);
+}
+
+function paintAvatarRow(line: AvatarRenderLine, width: number, startCol: number, field: AvatarBackground): string {
+  // centerAvatarLine handles fg-only painting; we need the cell bg to be the
+  // portrait field. Underpaint by emitting a bg-stripped empty row first.
+  const rendered = centerAvatarLine(line, width, startCol);
+  // The rendered string may carry its own bg (from the avatar renderer) for
+  // the avatar pixels themselves; we want the surrounding pad to use the
+  // portrait field. paintBgStrip wraps text + padding in the field colour.
+  return paintBgStrip(rendered, field, width);
+}
+
+function paintBodyRow(
   text: string,
   controls: string,
   width: number,
   style: PanelStyle,
-  fallbackBackground: AvatarBackground | undefined,
 ): string {
-  const painted = paintBgStrip(text, style.background ?? fallbackBackground, width);
+  // Inset by one column so body text doesn't kiss the column gap.
+  const inner = ` ${padVisible(text, Math.max(0, width - 1))}`;
+  const painted = paintBgStrip(inner, style.background, width);
   return `${controls}${style.paint.text(painted)}`;
 }
 
-// ── Nameplate band ─────────────────────────────────────────────────────────
-
-/** A slightly brighter surface for the nameplate vs the body ambient tint. */
-function nameplateBackground(bg: AvatarBackground): AvatarBackground {
-  return [
-    Math.min(255, Math.round(bg[0] * 1.55 + 10)),
-    Math.min(255, Math.round(bg[1] * 1.55 + 10)),
-    Math.min(255, Math.round(bg[2] * 1.55 + 10)),
-  ];
-}
-
 /**
- * Render a full-width nameplate band.
+ * Compose a complete two-column RPG turn panel.
  *
- * `title` may carry SGR color codes; the band itself is a bg-filled strip.
- * Copy result: "  NAZAR                                                    "
- * — the leading/trailing spaces and any filling are all whitespace, so a
- * select-all paste gives clean content without box-drawing contamination.
- */
-export function nameplateRow(title: string, panelWidth: number, style: PanelStyle): string {
-  const inner = ` ${title} `;
-  const titleVisibleWidth = visibleWidth(title);
-  const fill = Math.max(0, panelWidth - titleVisibleWidth - 2); // 1 leading + 1 trailing space
-  const full = `${inner}${" ".repeat(fill)}`;
-  const bg: AvatarBackground = style.background ?? [20, 30, 25];
-  const [r, g, b] = nameplateBackground(bg);
-  return `${truecolorBg([r, g, b])}${full}\x1b[49m`;
-}
-
-// ── Panel compositor ───────────────────────────────────────────────────────
-
-function messagePanelWidth(width: number): number {
-  return Math.max(8, width);
-}
-
-function separator(width: number, style: PanelStyle): string {
-  return panelRule(style, Math.max(1, width));
-}
-
-/**
- * Compose a complete border-free RPG turn panel.
+ * Layout per row:
  *
- * Row order (top → bottom):
- *   1. Nameplate band      — full-width bg fill, role title, no border glyphs
- *   2. Portrait strip      — bg-filled avatar columns, no box borders
- *   3. Padding row(s)
- *   4. Text body           — bg-filled, fully copyable
- *   5. Padding row(s)
- *   6. Bottom rule         — ━ × panelWidth (its own line, not beside body text)
+ *   PAD ┃ portrait column ┃ GAP ┃ right column (nameplate / body)
  *
- * The `align` parameter is accepted for backward compatibility but no longer
- * affects layout — the portrait is always rendered at the leading edge.
+ * Row 0 of the right column is the nameplate band (when `title` is supplied).
+ * The portrait column carries the avatar pixels for `avatar.height` rows,
+ * then continues with the portrait field background to match the body height.
+ *
+ * The legacy `_avatarWidth` parameter is kept for backward compatibility but
+ * the actual width is read from `avatar.width`.
  */
 export function composeMessagePanel(
   lines: string[],
@@ -177,52 +199,64 @@ export function composeMessagePanel(
   topPaddingLines = 0,
   title?: string,
   style: PanelStyle = panelStyle("system"),
-  _align?: string,
+  options: ComposeOptions = {},
 ): string[] {
   const content = trimOuterBlankLines(lines);
   const textCells = analyzeTextCells(content);
-  const panelWidth = messagePanelWidth(width);
+
+  const PAD = Math.max(0, options.outerPadX ?? DEFAULT_OUTER_PAD_X);
+  const AVW = Math.max(1, avatar.width);
+  const GAP = COLUMN_GAP;
+  const BODYW = Math.max(8, width - PAD * 2 - AVW - GAP);
+  const field = style.portraitField;
+
+  const hasNameplate = Boolean(title);
+  const meta = options.meta ?? "";
+
+  // Row collection
   const linesOut: string[] = [];
 
-  // 1. Nameplate band
-  if (title) {
-    linesOut.push(nameplateRow(title, panelWidth, style));
+  // Row 0: portrait field + nameplate (or empty band if no title)
+  const padL = " ".repeat(PAD);
+  const padG = " ".repeat(GAP);
+
+  if (hasNameplate) {
+    linesOut.push(`${padL}${paintPortraitFieldRow(AVW, field)}${padG}${nameplateRow(title!, BODYW, style, meta)}`);
   }
 
-  // 2. Portrait strip — background-filled, no box borders
-  for (let index = 0; index < avatar.height; index++) {
-    const avatarLine = avatar.content(index);
-    const avatarCols = avatar.width;
-    // avatarStartColumn = 1 (no outer padding; Kitty virtual placement aligns to col 1)
-    const avatarRendered = centerAvatarLine(avatarLine, avatarCols, 1);
-    const fillWidth = Math.max(0, panelWidth - avatarCols);
-    linesOut.push(
-      paintBgStrip(avatarRendered, avatar.background, avatarCols) +
-      paintBgStrip("", style.background, fillWidth),
-    );
+  // Compute total rows = max(avatar height, text rows + 2 padding rows)
+  const TEXT_PAD = PANEL_TEXT_PADDING;
+  const bodyRowsNeeded = textCells.length + TEXT_PAD * 2;
+  const portraitRows = avatar.height;
+  const innerRows = Math.max(portraitRows, bodyRowsNeeded);
+
+  // Avatar starts at column PAD + 1 (1-indexed), so kitty placeholder grids
+  // align to the correct cell when centerAvatarLine emits absolute-column moves.
+  const avatarStartColumn = PAD + 1;
+
+  for (let i = 0; i < innerRows; i++) {
+    // Avatar column
+    const avLine = i < portraitRows ? avatar.content(i) : null;
+    const avCell = avLine
+      ? paintAvatarRow(avLine, AVW, avatarStartColumn, field)
+      : paintPortraitFieldRow(AVW, field);
+
+    // Body column (one row of top text padding, then text cells, then one row bottom padding)
+    const textIdx = i - TEXT_PAD;
+    const cell = textIdx >= 0 && textIdx < textCells.length ? textCells[textIdx] : { controls: "", text: "" };
+    const bodyCell = paintBodyRow(cell.text, cell.controls, BODYW, style);
+
+    linesOut.push(`${padL}${avCell}${padG}${bodyCell}`);
   }
 
-  // 3. Top text padding
-  for (let i = 0; i < PANEL_TEXT_PADDING; i++) {
-    linesOut.push(paintPanelTextLine("", "", panelWidth, style, avatar.background));
-  }
-
-  // 4. Text body rows
-  for (const cell of textCells) {
-    linesOut.push(paintPanelTextLine(cell.text, cell.controls, panelWidth, style, avatar.background));
-  }
-
-  // 5. Bottom text padding
-  for (let i = 0; i < PANEL_TEXT_PADDING; i++) {
-    linesOut.push(paintPanelTextLine("", "", panelWidth, style, avatar.background));
-  }
-
-  // 6. Bottom rule
-  linesOut.push(separator(panelWidth, style));
+  // Bottom gap (separator between panels)
+  const bottomGap = Math.max(0, options.bottomGap ?? PANEL_BOTTOM_GAP);
+  const gapRows: string[] = [];
+  for (let i = 0; i < bottomGap; i++) gapRows.push(" ".repeat(width));
 
   return [
     ...Array(topPaddingLines).fill(" ".repeat(Math.max(0, width))),
     ...linesOut,
-    ...Array(PANEL_BOTTOM_PADDING).fill(" ".repeat(Math.max(0, width))),
+    ...gapRows,
   ];
 }

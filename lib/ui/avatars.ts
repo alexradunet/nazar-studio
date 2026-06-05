@@ -136,15 +136,56 @@ function buildCells(owner: unknown, renderedLines?: string[]) {
 
 // ── Role/tool styling helpers ──────────────────────────────────────────────
 
-function spacedUpper(text: string): string { return text.toUpperCase().split("").join(" "); }
+const BOLD_ON = "\x1b[1m";
+const BOLD_OFF = "\x1b[22m";
 
 function rolePanelStyle(role: SpriteRole): PanelStyle {
   return panelStyle(role === "user" ? "user" : "assistant");
 }
 
+/** Per-role icon glyph used in the nameplate band. */
+function roleIcon(role: SpriteRole): string {
+  return role === "user" ? "⛨" : "✦";
+}
+
+/** Per-role descriptor shown after the title (e.g. "the oracle"). */
+function roleDescriptor(role: SpriteRole): string {
+  return role === "user" ? "you" : "the oracle";
+}
+
+/**
+ * Format the nameplate title: `<icon> NAME · descriptor`.
+ * NAME is bold in the role title colour; descriptor is muted.
+ */
 function roleTitle(role: SpriteRole): string {
   const style = rolePanelStyle(role);
-  return style.paint.accent(spacedUpper(roleNameplate(role)));
+  const icon = roleIcon(role);
+  const name = roleNameplate(role).toUpperCase();
+  const sub = roleDescriptor(role);
+  return `${style.paint.title(`${icon} ${BOLD_ON}${name}${BOLD_OFF}`)} ${style.paint.muted(`· ${sub}`)}`;
+}
+
+/** Per-role meta string for the right side of the nameplate. */
+function roleMeta(role: SpriteRole, lastMessage: any): string {
+  const style = rolePanelStyle(role);
+  if (role === "user") return style.paint.muted("resumed session");
+  // Assistant: tokens (if available) + elapsed (if available).
+  const tokens = lastMessage?.usage?.output_tokens ?? lastMessage?.usage?.tokens;
+  const elapsedMs = lastMessage?.elapsedMs ?? lastMessage?.elapsed_ms;
+  const parts: string[] = [];
+  if (typeof tokens === "number") parts.push(`◇ ${formatTokens(tokens)}`);
+  if (typeof elapsedMs === "number") parts.push(formatElapsed(elapsedMs));
+  return parts.length ? style.paint.muted(parts.join(" · ")) : "";
+}
+
+function formatTokens(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k tok`;
+  return `${n} tok`;
+}
+
+function formatElapsed(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
 }
 
 function toolPanelState(status: ToolStatus): PanelState {
@@ -166,8 +207,29 @@ function toolDisplayName(name: string): string {
   return name.replace(/^functions[._-]/, "").replace(/^multi_tool_use[._-]/, "multi").trim() || "tool";
 }
 
+/** Format the tool nameplate title: `<icon> NAME · construct`. */
 function toolTitle(name: string, style: PanelStyle): string {
-  return toolAccent(style)(spacedUpper(toolDisplayName(name)));
+  const display = toolDisplayName(name).toUpperCase();
+  const sub = "construct";
+  return `${toolAccent(style)(`✦ ${BOLD_ON}${display}${BOLD_OFF}`)} ${style.paint.muted(`· ${sub}`)}`;
+}
+
+/** Per-tool meta string: exit/duration (ok/error) or `running` (pending/active). */
+function toolMeta(component: any, style: PanelStyle): string {
+  const status = toolStatus(component);
+  const elapsedMs = component?.elapsedMs ?? component?.elapsed_ms;
+  if (status === "ok") {
+    const exit = component?.result?.exitCode ?? 0;
+    const parts = [`exit ${exit}`];
+    if (typeof elapsedMs === "number") parts.push(formatElapsed(elapsedMs));
+    return style.paint.muted(parts.join(" · "));
+  }
+  if (status === "error") {
+    const exit = component?.result?.exitCode;
+    return style.paint.muted(typeof exit === "number" ? `error · exit ${exit}` : "error");
+  }
+  if (status === "running") return toolAccent(style)("running…");
+  return style.paint.muted("pending");
 }
 
 // ── Tool status helpers ────────────────────────────────────────────────────
@@ -241,7 +303,11 @@ export function patchRpgAvatars() {
   UserMessageComponent.prototype.render = function patchedUserRender(width: number): string[] {
     const lines = originals.userRender.call(this, messageTextWidth(width));
     const cells = buildCells(this, lines);
-    return composeMessagePanel(lines, cells.user, cells.width, width, 0, roleTitle("user"), rolePanelStyle("user"));
+    return composeMessagePanel(
+      lines, cells.user, cells.width, width, 0,
+      roleTitle("user"), rolePanelStyle("user"),
+      { meta: roleMeta("user", undefined) },
+    );
   };
 
   AssistantMessageComponent.prototype.updateContent = function patchedAssistantUpdateContent(message: any): void {
@@ -257,16 +323,23 @@ export function patchRpgAvatars() {
     const lines = originals.assistantRender.call(this, messageTextWidth(width));
     if (trimOuterBlankLines(lines).length === 0) return [];
     const cells = buildCells(this, lines);
-    return composeMessagePanel(lines, cells.nazar, cells.width, width, PANEL_TOP_PADDING_ASSISTANT, roleTitle("nazar"), rolePanelStyle("nazar"));
+    return composeMessagePanel(
+      lines, cells.nazar, cells.width, width, PANEL_TOP_PADDING_ASSISTANT,
+      roleTitle("nazar"), rolePanelStyle("nazar"),
+      { meta: roleMeta("nazar", (this as any).lastMessage) },
+    );
   };
 
   ToolExecutionComponent.prototype.render = function patchedToolRender(width: number): string[] {
     const tool = toolCell(this);
     const name = String((this as any)?.toolName || "tool").trim() || "tool";
-    const status = toolStatus(this);
     const lines = originals.toolRender.call(this, messageTextWidth(width));
     if (trimOuterBlankLines(lines).length === 0) return [];
-    const style = toolStyle(status);
-    return composeMessagePanel(lines, tool, tool.width, width, PANEL_TOP_PADDING_ASSISTANT, toolTitle(name, style), style);
+    const style = toolStyle(toolStatus(this));
+    return composeMessagePanel(
+      lines, tool, tool.width, width, PANEL_TOP_PADDING_ASSISTANT,
+      toolTitle(name, style), style,
+      { meta: toolMeta(this, style) },
+    );
   };
 }
