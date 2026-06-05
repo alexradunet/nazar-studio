@@ -3,13 +3,14 @@
 import type { Component, TUI } from "@earendil-works/pi-tui";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { compact, padVisible, visibleWidth } from "./ansi.ts";
-import { paintPanelBorderPart, panelHorizontal, panelLabeledTop, panelRule, panelStyle, type PanelStyle } from "./panel-style.ts";
+import { panelRule, panelStyle, type PanelStyle } from "./panel-style.ts";
 import {
   centerAvatarLine,
   emptyAvatarLine,
   renderThinkingAvatar,
 } from "./pixel-avatar.ts";
 import { roleNameplate } from "./sprites.ts";
+import { nameplateRow, paintBgStrip } from "./turn-composer.ts";
 
 const THINKING_WIDGET_KEY = "nazar-thinking";
 const THINKING_INTERVAL_MS = 180;
@@ -36,34 +37,6 @@ function panelWidths(_avatarInnerWidth: number): { width: number; previewWidth: 
 
 function spacedUpper(text: string): string {
   return text.toUpperCase().split("").join(" ");
-}
-
-function paintBg(text: string, background: readonly [number, number, number] | undefined, width = visibleWidth(text)): string {
-  const padded = `${text}${" ".repeat(Math.max(0, width - visibleWidth(text)))}`;
-  if (!background) return padded;
-  const [r, g, b] = background;
-  return `\x1b[48;2;${r};${g};${b}m${padded}\x1b[49m`;
-}
-
-function labeledHeaderTop(innerWidth: number, label: string, style: PanelStyle): string {
-  return panelLabeledTop(style, innerWidth, label);
-}
-
-const HEADER_SIDE_PADDING = 5;
-
-function headerLeftColumn(panelWidth: number, boxWidth: number): number {
-  return Math.max(0, panelWidth - boxWidth - HEADER_SIDE_PADDING);
-}
-
-function positionedHeaderTop(box: string, boxWidth: number, panelWidth: number): string {
-  return `${" ".repeat(headerLeftColumn(panelWidth, boxWidth))}${box}`;
-}
-
-function connectedHeaderBottom(innerWidth: number, boxWidth: number, panelWidth: number, style: PanelStyle, background?: readonly [number, number, number]): string {
-  const g = style.glyphs;
-  const leftWidth = headerLeftColumn(panelWidth, boxWidth);
-  const rightWidth = Math.max(0, panelWidth - boxWidth - leftWidth);
-  return `${panelHorizontal(style, leftWidth, "base")}${paintPanelBorderPart(style, "join", g.bottomRight)}${paintBg("", background, innerWidth)}${paintPanelBorderPart(style, "join", g.bottomLeft)}${panelHorizontal(style, rightWidth, "base")}`;
 }
 
 function withLeftPadding(lines: string[]): string {
@@ -166,32 +139,36 @@ export function renderThinkingPanel(
 ): string {
   const avatar = renderThinkingAvatar(frameIndex, options.loaderSafe ? { backend: "ansi" } : {})!;
   const style = panelStyle("thinking", "running", { frame: frameIndex });
-  const titlePaint = style.paint.title;
 
-  const avatarWidth = avatar.width;
-  const avatarInnerWidth = avatarWidth;
-  const avatarContentWidth = avatarWidth;
-  const { width: panelWidth, previewWidth } = panelWidths(avatarInnerWidth);
-  const g = style.glyphs;
+  const { width: panelWidth, previewWidth } = panelWidths(avatar.width);
   const avatarRows = avatar.lines.length;
-  const label = titlePaint(spacedUpper(roleNameplate("nazar", "thinking")));
-  const titleWidth = visibleWidth(` ${label} `);
-  const innerWidth = Math.max(avatarInnerWidth, titleWidth + 2);
-  const boxWidth = innerWidth + 2;
-  const boxLeftColumn = headerLeftColumn(panelWidth, boxWidth);
+  const label = style.paint.title(spacedUpper(roleNameplate("nazar", "thinking")));
   const previewLines = previewTextLines(options.preview ?? currentThinkingPreview, previewWidth, avatarRows, frameIndex);
-  const lines = [positionedHeaderTop(labeledHeaderTop(innerWidth, label, style), boxWidth, panelWidth)];
-  lines.push(`${" ".repeat(boxLeftColumn)}${paintPanelBorderPart(style, "vertical", g.leftVertical)}${paintBg("", avatar.background, innerWidth)}${paintPanelBorderPart(style, "vertical", g.rightVertical)}`);
 
-  const avatarStartColumn = THINKING_LEFT_PADDING + boxLeftColumn + 2;
+  const lines: string[] = [];
+
+  // Nameplate band (border-free, full-width bg fill)
+  lines.push(nameplateRow(label, panelWidth, style));
+
+  // Portrait strip (background-filled, no box borders)
+  // avatarStartColumn = THINKING_LEFT_PADDING + 1 (the left-padding prefix added by withLeftPadding)
+  const avatarStartColumn = THINKING_LEFT_PADDING + 1;
   for (let index = 0; index < avatarRows; index++) {
     const avatarLine = avatar.lines[index] ?? emptyAvatarLine(avatar.background);
-    lines.push(`${" ".repeat(boxLeftColumn)}${paintPanelBorderPart(style, "vertical", g.leftVertical)}${centerAvatarLine(avatarLine, innerWidth, avatarStartColumn)}${paintPanelBorderPart(style, "vertical", g.rightVertical)}`);
+    const avatarRendered = centerAvatarLine(avatarLine, avatar.width, avatarStartColumn);
+    const fillWidth = Math.max(0, panelWidth - avatar.width);
+    lines.push(
+      paintBgStrip(avatarRendered, avatar.background, avatar.width) +
+      paintBgStrip("", style.background, fillWidth),
+    );
   }
-  lines.push(connectedHeaderBottom(innerWidth, boxWidth, panelWidth, style, avatar.background));
-  lines.push(...previewLines.map((line) => paintBg(line, avatar.background, previewWidth)));
+
+  // Preview text rows (bg-filled)
+  lines.push(...previewLines.map((line) => paintBgStrip(line, avatar.background, previewWidth)));
+
+  // Bottom rule
   lines.push(panelRule(style, panelWidth));
-  if (style.supports.shadow) lines.push(style.paint.shadow(style.glyphs.shadow.repeat(panelWidth)));
+
   return withLeftPadding(lines);
 }
 

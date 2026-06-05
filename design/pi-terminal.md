@@ -300,3 +300,31 @@ See [`avatars.md`](avatars.md).
 ## Implementation notes
 
 Pi currently exposes custom renderers only for custom messages, not built-in user/assistant role messages. Nazar decorates Pi's exported `UserMessageComponent` and `AssistantMessageComponent` in [`../lib/ui/avatars.ts`](../lib/ui/avatars.ts). Keep this patch small, idempotent, and easy to remove if Pi adds official role-rendering hooks.
+
+## Border-free panel system (replaces the double/heavy-line box canon)
+
+The canonical terminal UI uses **background fills, not border-drawing characters**, for all turn
+panels. This is the copy-safe principle: terminal selection captures glyphs only, not SGR color
+codes. Border glyphs (`┃ ┏ ┗ ━ ╔ ║`) are real glyphs that contaminate clipboard pastes;
+background fills are invisible to copy.
+
+The turn panel anatomy is now:
+
+```
+[nameplate band — full-width bg fill, role-accent title, no border chars]
+[portrait strip — bg-filled avatar columns, no box borders               ]
+[empty padding row — panel ambient tint                                  ]
+[text body rows — fully copyable, bg-filled                              ]
+[empty padding row                                                       ]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+The bottom `━━━` rule is the only line that may contain a glyph character; it is its own line,
+never beside body text, so it does not contaminate a selected range of conversation.
+
+The `╔═◆ label ◆═╗` double-line box language described in earlier versions of this doc is
+**retired** for turn panels. It remains acceptable for narrow decorative header/footer frames
+(`lib/ui/header.ts`) where the user never selects text inside a frame.
+
+Layout source of truth: [`../lib/ui/turn-composer.ts`](../lib/ui/turn-composer.ts).
+Pi adapter: [`../lib/ui/avatars.ts`](../lib/ui/avatars.ts).
