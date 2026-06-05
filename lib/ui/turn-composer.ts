@@ -51,6 +51,8 @@ export type MessageTextCell = {
   text: string;
 };
 
+export type PanelAlignment = "left" | "right";
+
 export type ComposeOptions = {
   /** Right-aligned meta string for the nameplate band (already styled). */
   meta?: string;
@@ -58,6 +60,13 @@ export type ComposeOptions = {
   outerPadX?: number;
   /** Blank rows appended after the panel as a separator. Default 1. */
   bottomGap?: number;
+  /**
+   * Which side of the panel the avatar column sits on. "left" (default) is
+   * used for the AI / tools (assistant turns); "right" is used for user
+   * turns so the conversation reads like a chat: them on the left, you on
+   * the right. Body content stays left-aligned for readability either way.
+   */
+  align?: PanelAlignment;
 };
 
 // ── OSC 133 helpers ────────────────────────────────────────────────────────
@@ -250,19 +259,28 @@ export function composeMessagePanel(
   const AVW = Math.max(1, avatar.width);
   const BODYW = bodyCellWidth(width, AVW, PAD);
   const field = style.portraitField;
+  const align: PanelAlignment = options.align ?? "left";
 
   const hasNameplate = Boolean(title);
   const meta = options.meta ?? "";
 
   // Row collection
   const linesOut: string[] = [];
-
-  // Row 0: portrait field + nameplate (or empty band if no title)
   const padL = " ".repeat(PAD);
   const padG = " ".repeat(COLUMN_GAP);
 
+  // Compose a single row from its avatar cell and body cell, in the
+  // alignment-appropriate order. Body text stays left-aligned for
+  // readability regardless of which side the avatar lives on.
+  const composeRow = (avCell: string, bodyCell: string): string => {
+    return align === "right"
+      ? `${padL}${bodyCell}${padG}${avCell}`
+      : `${padL}${avCell}${padG}${bodyCell}`;
+  };
+
+  // Row 0: portrait field + nameplate band (or empty band if no title).
   if (hasNameplate) {
-    linesOut.push(`${padL}${paintPortraitFieldRow(AVW, field)}${padG}${nameplateRow(title!, BODYW, style, meta)}`);
+    linesOut.push(composeRow(paintPortraitFieldRow(AVW, field), nameplateRow(title!, BODYW, style, meta)));
   }
 
   // Compute total rows = max(avatar height, text rows + 2 padding rows)
@@ -271,9 +289,11 @@ export function composeMessagePanel(
   const portraitRows = avatar.height;
   const innerRows = Math.max(portraitRows, bodyRowsNeeded);
 
-  // Avatar starts at column PAD + 1 (1-indexed), so kitty placeholder grids
-  // align to the correct cell when centerAvatarLine emits absolute-column moves.
-  const avatarStartColumn = PAD + 1;
+  // Avatar's start column (1-indexed) for Kitty placeholder placement —
+  // on the left this is PAD + 1; on the right it's PAD + BODYW + GAP + 1.
+  const avatarStartColumn = align === "right"
+    ? PAD + BODYW + COLUMN_GAP + 1
+    : PAD + 1;
 
   for (let i = 0; i < innerRows; i++) {
     // Avatar column
@@ -282,12 +302,12 @@ export function composeMessagePanel(
       ? paintAvatarRow(avLine, AVW, avatarStartColumn, field)
       : paintPortraitFieldRow(AVW, field);
 
-    // Body column (one row of top text padding, then text cells, then one row bottom padding)
+    // Body column (top padding, then text cells, then bottom padding)
     const textIdx = i - TEXT_PAD;
     const cell = textIdx >= 0 && textIdx < textCells.length ? textCells[textIdx] : { controls: "", text: "" };
     const bodyCell = paintBodyRow(cell.text, cell.controls, BODYW, style);
 
-    linesOut.push(`${padL}${avCell}${padG}${bodyCell}`);
+    linesOut.push(composeRow(avCell, bodyCell));
   }
 
   // Bottom gap (separator between panels)

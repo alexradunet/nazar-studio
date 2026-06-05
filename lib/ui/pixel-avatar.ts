@@ -476,9 +476,12 @@ function avatarColumns(rows = avatarRows()): number {
 }
 
 function toolRows(): number {
+  // Tools render at the same size as role avatars so the avatar column is
+  // symmetric across all panel kinds (Nazar/Cico/Bash/etc all line up).
+  // NAZAR_TOOL_ROWS can still override (back-compat with the legacy half-size).
   const raw = envPositiveInteger("NAZAR_TOOL_ROWS");
   if (raw !== undefined) return Math.max(2, Math.min(8, raw));
-  return Math.max(2, Math.floor(avatarRows() / 2));
+  return avatarRows();
 }
 
 function ansiAvatar(frameId: string, rows = avatarRows()): RenderedAvatar {

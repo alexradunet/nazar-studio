@@ -302,10 +302,12 @@ export function patchRpgAvatars() {
     // two-column layout (causes pi-tui's width assertion to fire).
     const cells = buildCells(this);
     const lines = originals.userRender.call(this, bodyColumnWidth(width, cells.width));
+    // User messages render with the avatar on the RIGHT so the conversation
+    // reads like a chat: agent/tools on the left, you on the right.
     return composeMessagePanel(
       lines, cells.user, cells.width, width, 0,
       roleTitle("user"), rolePanelStyle("user"),
-      { meta: roleMeta("user", undefined) },
+      { meta: roleMeta("user", undefined), align: "right" },
     );
   };
 
