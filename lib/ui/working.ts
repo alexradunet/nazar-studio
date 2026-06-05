@@ -3,14 +3,16 @@
 import type { Component, TUI } from "@earendil-works/pi-tui";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { compact, padVisible, visibleWidth } from "./ansi.ts";
-import { panelRule, panelStyle, type PanelStyle } from "./panel-style.ts";
+import { panelStyle, type PanelStyle } from "./panel-style.ts";
 import {
-  centerAvatarLine,
   emptyAvatarLine,
   renderThinkingAvatar,
 } from "./pixel-avatar.ts";
 import { roleNameplate } from "./sprites.ts";
-import { nameplateRow, paintBgStrip } from "./turn-composer.ts";
+import { bodyColumnWidth, composeMessagePanel } from "./turn-composer.ts";
+
+const BOLD_ON = "\x1b[1m";
+const BOLD_OFF = "\x1b[22m";
 
 const THINKING_WIDGET_KEY = "nazar-thinking";
 const THINKING_INTERVAL_MS = 180;
@@ -139,37 +141,41 @@ export function renderThinkingPanel(
 ): string {
   const avatar = renderThinkingAvatar(frameIndex, options.loaderSafe ? { backend: "ansi" } : {})!;
   const style = panelStyle("thinking", "running", { frame: frameIndex });
+  const width = Math.max(32, process.stdout.columns || 80);
 
-  const { width: panelWidth, previewWidth } = panelWidths(avatar.width);
-  const avatarRows = avatar.lines.length;
-  const label = style.paint.title(spacedUpper(roleNameplate("nazar", "thinking")));
-  const previewLines = previewTextLines(options.preview ?? currentThinkingPreview, previewWidth, avatarRows, frameIndex);
+  // Title mirrors the assistant panel convention: ✦ NAME · descriptor.
+  // The role descriptor here is "weighing the matter" — a quiet Basm flourish
+  // for the thinking state (mythic seasoning per the identity guide).
+  const name = roleNameplate("nazar", "thinking").toUpperCase();
+  const title = `${style.paint.title(`✦ ${BOLD_ON}${name}${BOLD_OFF}`)} ${style.paint.muted("· weighing the matter")}`;
 
-  const lines: string[] = [];
+  // Preview text wraps into the body column. previewTextLines targets a row
+  // count matched to the avatar height so the panel renders as a balanced
+  // two-column block, not a tall body next to a short portrait.
+  const previewWidth = bodyColumnWidth(width, avatar.width);
+  const previewLines = previewTextLines(
+    options.preview ?? currentThinkingPreview,
+    previewWidth,
+    avatar.height,
+    frameIndex,
+  );
 
-  // Nameplate band (border-free, full-width bg fill)
-  lines.push(nameplateRow(label, panelWidth, style));
+  const cell = {
+    height: avatar.height,
+    width: avatar.width,
+    background: avatar.background,
+    content: (i: number) => avatar.lines[i] ?? emptyAvatarLine(avatar.background),
+  };
 
-  // Portrait strip (background-filled, no box borders)
-  // avatarStartColumn = THINKING_LEFT_PADDING + 1 (the left-padding prefix added by withLeftPadding)
-  const avatarStartColumn = THINKING_LEFT_PADDING + 1;
-  for (let index = 0; index < avatarRows; index++) {
-    const avatarLine = avatar.lines[index] ?? emptyAvatarLine(avatar.background);
-    const avatarRendered = centerAvatarLine(avatarLine, avatar.width, avatarStartColumn);
-    const fillWidth = Math.max(0, panelWidth - avatar.width);
-    lines.push(
-      paintBgStrip(avatarRendered, avatar.background, avatar.width) +
-      paintBgStrip("", style.background, fillWidth),
-    );
-  }
+  // bottomGap: 0 — the ThinkingWidget wrapper adds its own trailing blank
+  // line so the panel never feels glued to the input editor below it.
+  const panel = composeMessagePanel(
+    previewLines, cell, cell.width, width, 0,
+    title, style,
+    { align: "left", bottomGap: 0 },
+  );
 
-  // Preview text rows (bg-filled)
-  lines.push(...previewLines.map((line) => paintBgStrip(line, avatar.background, previewWidth)));
-
-  // Bottom rule
-  lines.push(panelRule(style, panelWidth));
-
-  return withLeftPadding(lines);
+  return panel.join("\n");
 }
 
 export class ThinkingWidget implements Component {

@@ -46,7 +46,8 @@ test("thinking widget auto-renders Kitty placeholder avatar when image protocol 
     const frame = lines.join("\n");
     expect(frame).toContain("\x1b_G");
     expect(frame).toContain("\u{10eeee}");
-    expect(plain(frame)).toContain("N A Z A R");
+    expect(plain(frame)).toContain("NAZAR");
+    expect(plain(frame)).toContain("weighing the matter");
     expect(plain(frame)).not.toContain("[ Nazar ]");
     expectLeftPadding(frame);
     expect(lines.at(-1)).toBe("");
@@ -61,7 +62,7 @@ test("thinking panel renders ANSI avatar when image rendering is unsupported", (
   setCapabilities({ images: null, trueColor: true, hyperlinks: false });
   const rawFrame = renderThinkingPanel(0);
   const frame = plain(rawFrame);
-  expect(frame).toContain("N A Z A R");
+  expect(frame).toContain("NAZAR");
   expect(frame).not.toContain("[ Nazar ]");
   expect(rawFrame).toContain("\x1b[48;2;");
   expectLeftPadding(rawFrame);
@@ -80,7 +81,7 @@ test("legacy badge/both modes are ignored; the avatar remains on", () => {
   for (const mode of ["badge", "both"]) {
     process.env.NAZAR_AVATAR_MODE = mode;
     const frame = plain(renderThinkingPanel(0));
-    expect(frame).toContain("N A Z A R");
+    expect(frame).toContain("NAZAR");
     expect(frame).not.toContain("[ Nazar ]");
   }
 });

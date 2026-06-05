@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Nazar-styled input editor: same quiet RPG panel language as chat turns.
+// Nazar-styled input editor: same two-column RPG panel language as user
+// chat turns. The avatar sits on the right (mirroring user messages) so
+// submitting the draft visually flows into the next user turn — same
+// portrait, same nameplate plaque, same column geometry.
 import { CustomEditor, type KeybindingsManager } from "@earendil-works/pi-coding-agent";
 import { type EditorTheme, type TUI } from "@earendil-works/pi-tui";
 import { visibleWidth } from "./ansi.ts";
-import { paintPanelBorderPart, panelHorizontal, panelLabeledTop, panelRule, panelStyle, type PanelStyle } from "./panel-style.ts";
+import { panelStyle } from "./panel-style.ts";
 import {
-  centerAvatarLine,
   emptyAvatarLine,
   renderRoleAvatar,
   renderUserTypingAvatar,
@@ -14,11 +16,13 @@ import {
   type AvatarRenderLine,
   type RenderedAvatar,
 } from "./pixel-avatar.ts";
-import type { SpriteRole } from "./sprites.ts";
+import { userDisplayName, type SpriteRole } from "./sprites.ts";
+import { bodyColumnWidth, composeMessagePanel } from "./turn-composer.ts";
 
-const OUTER_PADDING_X = 1;
 const PROMPT = "> ";
 const CONTINUATION = "  ";
+const BOLD_ON = "\x1b[1m";
+const BOLD_OFF = "\x1b[22m";
 
 type AvatarCell = {
   height: number;
@@ -37,17 +41,6 @@ function stripAnsi(text: string): string {
 function isPlainEditorRule(line: string): boolean {
   const clean = stripAnsi(line).trim();
   return clean.length > 0 && /^─+$/.test(clean);
-}
-
-function avatarBoxMetrics(avatarWidth: number) {
-  return {
-    avatarInnerWidth: Math.max(1, Math.floor(avatarWidth)),
-    avatarContentWidth: Math.max(1, Math.floor(avatarWidth)),
-  };
-}
-
-function messagePanelWidth(width: number): number {
-  return Math.max(12, width - OUTER_PADDING_X * 2);
 }
 
 function portraitCell(portrait: RenderedAvatar): AvatarCell {
@@ -69,6 +62,8 @@ function avatarCell(role: SpriteRole, typingFrame?: number): AvatarCell {
 }
 
 function quillAvatarCell(typingFrame: number, isTyping = false): AvatarCell {
+  // While the user is drafting, swap the static mage portrait for the
+  // animated quill tool sprite — a small visible "you are writing" cue.
   const status = isTyping ? "running" : "pending";
   const portrait = renderToolPixelAvatar("quill", status, typingFrame, "");
   if (!portrait) {
@@ -78,58 +73,24 @@ function quillAvatarCell(typingFrame: number, isTyping = false): AvatarCell {
 }
 
 function userAvatarCell(text: string, typingFrame: number): AvatarCell {
-  const hasText = text.length > 0;
-  return hasText
-    ? quillAvatarCell(typingFrame, true)
-    : quillAvatarCell(typingFrame, false);
-}
-
-function spacedUpper(text: string): string {
-  return text.toUpperCase().split("").join(" ");
-}
-
-function paintBg(text: string, background: AvatarBackground | undefined, width = visibleWidth(text)): string {
-  const padded = `${text}${" ".repeat(Math.max(0, width - visibleWidth(text)))}`;
-  if (!background) return padded;
-  const [r, g, b] = background;
-  return `\x1b[48;2;${r};${g};${b}m${padded}\x1b[49m`;
-}
-
-function labeledHeaderTop(innerWidth: number, title: string, style: PanelStyle): string {
-  return panelLabeledTop(style, innerWidth, title);
-}
-
-const HEADER_SIDE_PADDING = 5;
-
-function headerLeftColumn(panelWidth: number, boxWidth: number): number {
-  return Math.min(HEADER_SIDE_PADDING, Math.max(0, panelWidth - boxWidth));
-}
-
-function positionedHeaderTop(box: string, boxWidth: number, panelWidth: number): string {
-  return `${" ".repeat(headerLeftColumn(panelWidth, boxWidth))}${box}`;
-}
-
-function connectedHeaderBottom(innerWidth: number, boxWidth: number, panelWidth: number, style: PanelStyle, background?: AvatarBackground): string {
-  const g = style.glyphs;
-  const leftWidth = headerLeftColumn(panelWidth, boxWidth);
-  const rightWidth = Math.max(0, panelWidth - boxWidth - leftWidth);
-  return `${panelHorizontal(style, leftWidth, "base")}${paintPanelBorderPart(style, "join", g.bottomRight)}${paintBg("", background, innerWidth)}${paintPanelBorderPart(style, "join", g.bottomLeft)}${panelHorizontal(style, rightWidth, "base")}`;
+  return quillAvatarCell(typingFrame, text.length > 0);
 }
 
 export class NazarEditor extends CustomEditor {
   private typingFrame = 0;
 
   setPaddingX(_padding: number): void {
-    // Keep panel and internal input padding aligned to the configured column spacing.
-    super.setPaddingX(OUTER_PADDING_X);
+    // The two-column composer owns the outer padding; tell Pi to render the
+    // editor body flush so we don't double-pad on the left.
+    super.setPaddingX(0);
   }
 
   handleInput(data: string): void {
     const before = this.getText();
     super.handleInput(data);
     if (this.getText() !== before) {
-      // Advance a frame per input character, so each typed letter can render a fresh
-      // quill stroke when writing is active.
+      // Advance a frame per input character so each typed letter can render
+      // a fresh quill stroke when writing is active.
       const incoming = Array.from(data).length;
       const delta = Math.max(1, incoming);
       this.typingFrame += delta;
@@ -138,46 +99,44 @@ export class NazarEditor extends CustomEditor {
 
   render(width: number): string[] {
     const currentText = this.getText();
+    const isDrafting = currentText.length > 0;
     const avatar = userAvatarCell(currentText, this.typingFrame);
-    const avatarWidth = avatar.width;
-    const { avatarInnerWidth, avatarContentWidth } = avatarBoxMetrics(avatarWidth);
-    const panelWidth = messagePanelWidth(width);
+    const style = panelStyle("user", isDrafting ? "active" : "idle", { frame: this.typingFrame });
+
+    // Ask Pi to wrap the editor body to the narrower body column (matching
+    // the user-message panel geometry). Reserve room for the prompt marker.
     const promptWidth = visibleWidth(PROMPT);
-    const editorWidth = Math.max(1, panelWidth - promptWidth);
+    const bodyWrapWidth = bodyColumnWidth(width, avatar.width);
+    const editorWidth = Math.max(1, bodyWrapWidth - promptWidth);
 
     const raw = super.render(editorWidth);
     const bodyLines = raw.filter((line) => !isPlainEditorRule(line));
     const content = bodyLines.length > 0 ? bodyLines : [""];
 
-    const pad = " ".repeat(OUTER_PADDING_X);
-    const style = panelStyle("user", currentText.length > 0 ? "active" : "idle", { frame: this.typingFrame });
-    const g = style.glyphs;
-    const title = style.paint.title(spacedUpper("input"));
-    const titleWidth = visibleWidth(` ${title} `);
-    const innerWidth = Math.max(avatarInnerWidth, titleWidth + 2);
-    const boxWidth = innerWidth + 2;
-    const boxLeftColumn = headerLeftColumn(panelWidth, boxWidth);
-    const lines = [`${pad}${positionedHeaderTop(labeledHeaderTop(innerWidth, title, style), boxWidth, panelWidth)}${pad}`];
-    lines.push(`${pad}${" ".repeat(boxLeftColumn)}${paintPanelBorderPart(style, "vertical", g.leftVertical)}${paintBg("", avatar.background, innerWidth)}${paintPanelBorderPart(style, "vertical", g.rightVertical)}${pad}`);
+    // Prepend the prompt on the first row, a 2-col continuation indent on
+    // subsequent rows so multi-line drafts wrap legibly.
+    const promptPaint = style.paint.accent;
+    const continuationPaint = style.paint.border;
+    const decorated = content.map((line, i) =>
+      i === 0 ? `${promptPaint(PROMPT)}${line}` : `${continuationPaint(CONTINUATION)}${line}`,
+    );
 
-    const avatarStartColumn = OUTER_PADDING_X + boxLeftColumn + 2; // header box left border
-    for (let index = 0; index < avatar.height; index++) {
-      const avatarLine = avatar.content(index);
-      lines.push(`${pad}${" ".repeat(boxLeftColumn)}${paintPanelBorderPart(style, "vertical", g.leftVertical)}${centerAvatarLine(avatarLine, innerWidth, avatarStartColumn)}${paintPanelBorderPart(style, "vertical", g.rightVertical)}${pad}`);
-    }
-    lines.push(`${pad}${connectedHeaderBottom(innerWidth, boxWidth, panelWidth, style, avatar.background)}${pad}`);
+    // Title format mirrors user-message panels: ✦ INPUT · <username>. When
+    // the user submits, the panel below visually inherits the same plaque,
+    // same portrait position, same body column — only the body content
+    // changes from a live draft to the submitted message.
+    const name = userDisplayName();
+    const title = `${style.paint.title(`✦ ${BOLD_ON}INPUT${BOLD_OFF}`)} ${style.paint.muted(`· ${name.toLowerCase()}`)}`;
+    const meta = isDrafting ? style.paint.muted("drafting…") : style.paint.muted("ready");
 
-    for (let index = 0; index < content.length; index++) {
-      const marker = index === 0 ? style.paint.accent(PROMPT) : style.paint.border(CONTINUATION);
-      const line = paintBg(`${marker}${content[index] ?? ""}`, style.background ?? avatar.background, panelWidth);
-      lines.push(`${pad}${style.paint.text(line)}${pad}`);
-    }
-    lines.push(`${pad}${panelRule(style, panelWidth)}${pad}`);
-
-    return lines;
+    return composeMessagePanel(
+      decorated, avatar, avatar.width, width, 0,
+      title, style,
+      { meta, align: "right", bottomGap: 1 },
+    );
   }
 }
 
 export function editorFactory(tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager): NazarEditor {
-  return new NazarEditor(tui, theme, keybindings, { paddingX: OUTER_PADDING_X, autocompleteMaxVisible: 6 });
+  return new NazarEditor(tui, theme, keybindings, { paddingX: 0, autocompleteMaxVisible: 6 });
 }
