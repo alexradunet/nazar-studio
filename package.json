@@ -27,7 +27,12 @@
   },
   "pi": {
     "extensions": [
-      "./extensions"
+      "./extensions/brand.ts",
+      "./extensions/personality.ts",
+      "./extensions/memory.ts",
+      "./extensions/vault.ts",
+      "./extensions/local-llm.ts",
+      "./extensions/avatar.ts"
     ],
     "skills": [
       "./skills"
