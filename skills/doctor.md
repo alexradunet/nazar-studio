@@ -40,7 +40,7 @@ model; watch `~/.local/share/nazar/logs/local-llm.log`.
   `Departure Mono` (https://departuremono.com/) preferred. From a source checkout, the exact notice
   logic is covered by `npm test -- terminal-experience`.
 - Footer model matches the actual terminal model; `/model` switches back to
-  `llamafile / qwen3-14b-q4` for local/private.
+  `llamafile / qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled` for local/private.
 
 ## 5. Web search
 

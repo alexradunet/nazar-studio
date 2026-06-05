@@ -60,7 +60,7 @@ That means this Pi session was manually switched. Check or switch with:
 /model
 ```
 
-Choose `llamafile / qwen3-14b-q4` for local/private. Frontier use is opt-in.
+Choose `llamafile / qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled` for local/private. Frontier use is opt-in.
 
 ## 5 · Memory recall is empty
 

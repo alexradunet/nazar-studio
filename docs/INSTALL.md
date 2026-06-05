@@ -59,14 +59,13 @@ full list. Common ones:
 | `NAZAR_DATA_DIR` | runtimes/models/logs/index dir; default same as vault |
 | `NAZAR_PERSONA` | set `0` to skip persona injection |
 | `NAZAR_USER_NAME` | name shown on the user avatar panel |
-| `NAZAR_MODEL_ID` / `NAZAR_MODEL_HF` | local model alias / Hugging Face GGUF override |
 | `NAZAR_LLM_CTX` | local model context window (default 32768) |
 | `LLAMA_LOCAL_KEY` | local endpoint key (auto-generated at `<data dir>/run/local-llm.key`) |
 
 ## Local model
 
 On first run the `local-llm` extension lazily downloads Mozilla `llamafile`, `whisperfile`, and the
-configured GGUF model into the data dir, then serves `127.0.0.1:8082`. Check and manage it:
+supported GGUF model (`gopi87/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-Q4_K_M-GGUF`) into the data dir, then serves `127.0.0.1:8082`. Check and manage it:
 
 ```bash
 curl -s http://127.0.0.1:8082/health

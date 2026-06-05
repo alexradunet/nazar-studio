@@ -20,13 +20,13 @@ const LLAMAFILE_URL = `https://github.com/mozilla-ai/llamafile/releases/download
 const WHISPERFILE_URL = `https://github.com/mozilla-ai/llamafile/releases/download/${LLAMAFILE_VERSION}/whisperfile-${LLAMAFILE_VERSION}`;
 
 const PROVIDER = "llamafile";
-const DEFAULT_MODEL_ID = "qwen3-14b-q4";
-const DEFAULT_MODEL_HF = "unsloth/Qwen3-14B-GGUF:Q4_K_M";
-const DEFAULT_MODEL_FILE = "Qwen3-14B-Q4_K_M.gguf";
-const MODEL_ID = process.env.NAZAR_MODEL_ID || process.env.NAZAR_PRIVATE_MODEL || DEFAULT_MODEL_ID;
-const MODEL_HF = process.env.NAZAR_MODEL_HF || DEFAULT_MODEL_HF;
-const MODEL_FILE = process.env.NAZAR_MODEL_FILE || DEFAULT_MODEL_FILE;
-const MODEL_URL = process.env.NAZAR_MODEL_URL || `https://huggingface.co/unsloth/Qwen3-14B-GGUF/resolve/main/${MODEL_FILE}`;
+const DEFAULT_MODEL_ID = "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled";
+const DEFAULT_MODEL_HF = "gopi87/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-Q4_K_M-GGUF";
+const DEFAULT_MODEL_FILE = "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled-q4_k_m.gguf";
+const MODEL_ID = DEFAULT_MODEL_ID;
+const MODEL_HF = DEFAULT_MODEL_HF;
+const MODEL_FILE = DEFAULT_MODEL_FILE;
+const MODEL_URL = `https://huggingface.co/gopi87/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-Q4_K_M-GGUF/resolve/main/${MODEL_FILE}`;
 const PORT = Number(process.env.NAZAR_LLM_PORT || "8082");
 const HOST = "127.0.0.1";
 const CTX = Number(process.env.NAZAR_LLM_CTX || "32768");
@@ -294,7 +294,7 @@ export default function (pi: ExtensionAPI) {
       register.call(
         pi,
         PROVIDER,
-        llamafileProviderConfig({ apiKey: ensureKey(), baseUrl: `http://${HOST}:${PORT}/v1`, modelId: MODEL_ID }),
+        llamafileProviderConfig({ apiKey: ensureKey(), baseUrl: `http://${HOST}:${PORT}/v1` }),
       );
       log(pi, `[local-llm] registered provider ${PROVIDER} (models from models.json)`);
     } else {

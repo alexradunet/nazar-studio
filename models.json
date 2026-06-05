@@ -15,15 +15,7 @@
       },
       "models": [
         {
-          "id": "qwen3-14b-q4",
-          "reasoning": false,
-          "contextWindow": 32768,
-          "maxTokens": 8192,
-          "input": ["text"],
-          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
-        },
-        {
-          "id": "qwen3.6-35b-a3b-apex-i-compact",
+          "id": "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled",
           "reasoning": false,
           "contextWindow": 32768,
           "maxTokens": 8192,
@@ -33,5 +25,5 @@
       ]
     }
   },
-  "_notes": "Canonical local runtime is the pi/extensions/local-llm.ts extension: Mozilla llamafile serves the OpenAI-compatible local LLM endpoint on 127.0.0.1:8082, and Mozilla whisperfile handles local audio transcription. No native build/systemd fallback is canonical. The default model can be selected with NAZAR_MODEL_* / NAZAR_PRIVATE_MODEL in .env; keep qwen3-14b-q4 as the known-small fallback."
+  "_notes": "Canonical local runtime is the pi/extensions/local-llm.ts extension: Mozilla llamafile serves the OpenAI-compatible local LLM endpoint on 127.0.0.1:8082, and Mozilla whisperfile handles local audio transcription. No native build/systemd fallback is canonical. The only supported local LLM is Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled Q4_K_M (GGUF: gopi87/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-Q4_K_M-GGUF)."
 }

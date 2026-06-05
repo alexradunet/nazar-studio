@@ -37,7 +37,7 @@ const FALLBACK: ProviderConfig = {
   },
   models: [
     {
-      id: "qwen3-14b-q4",
+      id: "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled",
       reasoning: false,
       contextWindow: 32768,
       maxTokens: 8192,
@@ -47,22 +47,11 @@ const FALLBACK: ProviderConfig = {
   ],
 };
 
-function defaultModelEntry(id: string): Record<string, unknown> {
-  return {
-    id,
-    reasoning: false,
-    contextWindow: 32768,
-    maxTokens: 8192,
-    input: ["text"],
-    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-  };
-}
-
 /**
  * Read the bundled models.json llamafile provider entry, falling back to a built-in default,
  * then inject the live runtime API key (never the literal "$LLAMA_LOCAL_KEY").
  */
-export function llamafileProviderConfig(opts: { apiKey: string; baseUrl?: string; modelId?: string }): ProviderConfig {
+export function llamafileProviderConfig(opts: { apiKey: string; baseUrl?: string }): ProviderConfig {
   let base: ProviderConfig = FALLBACK;
   try {
     const raw = JSON.parse(readFileSync(join(packageRoot(), "models.json"), "utf8")) as {
@@ -78,8 +67,5 @@ export function llamafileProviderConfig(opts: { apiKey: string; baseUrl?: string
     baseUrl: opts.baseUrl || base.baseUrl,
     apiKey: opts.apiKey,
   };
-  if (opts.modelId && !cfg.models.some((m) => m.id === opts.modelId)) {
-    cfg.models = [defaultModelEntry(opts.modelId), ...cfg.models];
-  }
   return cfg;
 }

@@ -59,8 +59,8 @@ pi remove npm:pi-nazar-studio
 
 ## What it gives you
 
-- **Local/private model by default** — Mozilla `llamafile` (Qwen3-14B Q4) on `127.0.0.1:8082`,
-  registered as the `llamafile` provider in-process. Manage it with `/local-llm status|start|doctor`.
+- **Local/private model by default** — Mozilla `llamafile` (Qwen3.6-35B-A3B Claude/Opus Reasoning Distilled Q4_K_M GGUF) on `127.0.0.1:8082`,
+  registered as the only `llamafile` model in-process. Manage it with `/local-llm status|start|doctor`.
 - **Manual opt-in frontier models** via `/login` + `/model`.
 - **Markdown memory** backed by `node:sqlite` FTS5 — `memory_write`, `memory_search`, `memory_get`,
   `memory_duplicates`.
