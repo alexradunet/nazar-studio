@@ -42,7 +42,7 @@ test("thinking widget renders ANSI avatar even when image protocol is available"
     const frame = lines.join("\n");
     expect(frame).not.toContain("\x1b_G");
     expect(frame).toContain("\x1b[48;2;");
-    expect(plain(frame)).toContain("B A L A U R");
+    expect(plain(frame)).toContain("N A Z A R");
     expect(plain(frame)).not.toContain("[ Nazar ]");
     expectLeftPadding(frame);
     expect(lines.at(-1)).toBe("");
@@ -55,7 +55,7 @@ test("thinking panel renders ANSI avatar when image rendering is unsupported", (
   setCapabilities({ images: null, trueColor: true, hyperlinks: false });
   const rawFrame = renderThinkingPanel(0);
   const frame = plain(rawFrame);
-  expect(frame).toContain("B A L A U R");
+  expect(frame).toContain("N A Z A R");
   expect(frame).not.toContain("[ Nazar ]");
   expect(rawFrame).toContain("\x1b[48;2;");
   expectLeftPadding(rawFrame);
@@ -73,8 +73,8 @@ test("thinking panel stays ANSI for Loader/Text fallback", () => {
 test("legacy badge/both modes are ignored; the avatar remains on", () => {
   for (const mode of ["badge", "both"]) {
     process.env.NAZAR_AVATAR_MODE = mode;
-      const frame = plain(renderThinkingPanel(0));
-    expect(frame).toContain("B A L A U R");
+    const frame = plain(renderThinkingPanel(0));
+    expect(frame).toContain("N A Z A R");
     expect(frame).not.toContain("[ Nazar ]");
   }
 });

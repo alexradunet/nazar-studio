@@ -42,8 +42,8 @@ test("panel border primitives preserve visible width", () => {
 
   const rule = panelRule(style, 24);
   const plainRule = stripAnsi(rule);
-  expect(plainRule).toStartWith("═◆");
-  expect(plainRule).toEndWith("◆═");
+  expect(plainRule.startsWith("═◆")).toBe(true);
+  expect(plainRule.endsWith("◆═")).toBe(true);
   expect(visibleWidth(rule)).toBe(24);
 });
 

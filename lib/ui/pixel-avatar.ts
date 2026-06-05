@@ -88,11 +88,11 @@ const BACKGROUNDS = {
   toolError: [70, 30, 27],
 } satisfies Record<string, Rgb>;
 
-const SHEET_ASSETS: Record<SheetKey, SheetAsset> = Object.fromEntries([
+const SHEET_ASSETS = Object.fromEntries([
   ["mage", { path: join(ANSI_ASSET_DIR, "mage.png"), frame: ANSI_AVATAR_FRAME }],
   ["nazar", { path: join(ANSI_ASSET_DIR, "nazar.png"), frame: ANSI_AVATAR_FRAME }],
   ...TOOL_KINDS.map((kind) => [`tool:${kind}`, { path: join(ANSI_TOOL_ASSET_DIR, `${kind}.png`), frame: ANSI_TOOL_FRAME }]),
-] as [SheetKey, SheetAsset][]);
+] as [SheetKey, SheetAsset][]) as Record<SheetKey, SheetAsset>;
 
 const sheetCache = new Map<string, PngImage>();
 const frameCache = new Map<string, AvatarFrame>();
@@ -487,9 +487,14 @@ function ansiAvatar(frameId: string, rows = avatarRows()): RenderedAvatar {
   return { lines, width: columns, height: lines.length, backend: "ansi", background };
 }
 
+type RenderAvatarOptions = {
+  rows?: number;
+  backend?: AvatarRenderBackend;
+};
+
 function renderFrameAvatar(
   frameId: string,
-  options: { rows?: number } = {},
+  options: RenderAvatarOptions = {},
 ): RenderedAvatar | undefined {
   return ansiAvatar(frameId, options.rows ?? avatarRows());
 }
@@ -541,14 +546,14 @@ export function stringAvatarLine(text: string, background?: AvatarBackground): A
 
 export function renderRoleAvatar(
   role: SpriteRole,
-  options: { rows?: number } = {},
+  options: RenderAvatarOptions = {},
 ): RenderedAvatar | undefined {
   return renderFrameAvatar(role === "user" ? "user" : "nazar", options);
 }
 
 export function renderUserTypingAvatar(
   frameIndex = 0,
-  options: { rows?: number } = {},
+  options: RenderAvatarOptions = {},
 ): RenderedAvatar | undefined {
   const index = modIndex(frameIndex, AVATAR_FRAME_COUNT);
   return renderFrameAvatar(index === 0 ? "user" : `user-typing-${index}`, options);
@@ -556,7 +561,7 @@ export function renderUserTypingAvatar(
 
 export function renderThinkingAvatar(
   frameIndex = 0,
-  options: { rows?: number } = {},
+  options: RenderAvatarOptions = {},
 ): RenderedAvatar | undefined {
   return renderFrameAvatar(`nazar-thinking-${modIndex(frameIndex, AVATAR_FRAME_COUNT)}`, options);
 }
@@ -610,7 +615,7 @@ export function renderToolPixelAvatar(
   status: ToolAvatarStatus = "pending",
   frameIndex = Date.now() / 180,
   hintText = "",
-  options: { rows?: number } = {},
+  options: RenderAvatarOptions = {},
 ): RenderedAvatar | undefined {
   const effectiveFrame = status === "running" ? frameIndex : 0;
   return renderFrameAvatar(toolFrameId(toolName, status, hintText, effectiveFrame), { ...options, rows: toolRows() });

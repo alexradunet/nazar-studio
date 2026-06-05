@@ -20,6 +20,7 @@ import { Type } from "typebox";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { writeMemory, searchMemory, getMemory, findDuplicates, recallContext, reindexMemory } from "../lib/memory.ts";
+import { nodeSqliteUpgradePrompt } from "../lib/node-version.ts";
 import { moduleDir } from "../lib/paths.ts";
 
 /** Where Pi-native skill files live (declared in package.json `pi.skills`). */
@@ -38,12 +39,22 @@ function isLocalModel(model: any): boolean {
   return /^(https?:\/\/)?(127\.0\.0\.1|localhost)(:|\/|$)/.test(baseUrl);
 }
 
+function log(pi: ExtensionAPI, message: string): void {
+  (pi as unknown as { log?: (message: string) => void }).log?.(message);
+}
+
 export default function (pi: ExtensionAPI) {
   try {
     reindexMemory();
   } catch (err) {
-    pi.log?.(`[memory] reindex skipped: ${err instanceof Error ? err.message : String(err)}`);
+    log(pi, `[memory] reindex skipped: ${err instanceof Error ? err.message : String(err)}`);
   }
+
+  pi.on("session_start", async (_event, ctx) => {
+    const prompt = nodeSqliteUpgradePrompt();
+    if (!prompt || !ctx.hasUI) return;
+    try { ctx.ui.notify(prompt, "error"); } catch { /* ignore */ }
+  });
 
   pi.on("before_agent_start", (event, ctx) => {
     if (!isLocalModel(ctx.model)) return;
@@ -138,5 +149,5 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
-  pi.log?.("[memory] tools registered: memory_write, skill_write, memory_search, memory_get, memory_duplicates");
+  log(pi, "[memory] tools registered: memory_write, skill_write, memory_search, memory_get, memory_duplicates");
 }

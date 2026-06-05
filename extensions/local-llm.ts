@@ -279,6 +279,10 @@ async function validateChat(): Promise<string> {
   }
 }
 
+function log(pi: ExtensionAPI, message: string): void {
+  (pi as unknown as { log?: (message: string) => void }).log?.(message);
+}
+
 export default function (pi: ExtensionAPI) {
   // Register the canonical local llamafile provider + models IN-PROCESS. This replaces the old
   // seed-pi-config.sh step that copied models.json into ~/.pi/agent, so `pi install npm:pi-nazar-studio`
@@ -292,12 +296,12 @@ export default function (pi: ExtensionAPI) {
         PROVIDER,
         llamafileProviderConfig({ apiKey: ensureKey(), baseUrl: `http://${HOST}:${PORT}/v1`, modelId: MODEL_ID }),
       );
-      pi.log?.(`[local-llm] registered provider ${PROVIDER} (models from models.json)`);
+      log(pi, `[local-llm] registered provider ${PROVIDER} (models from models.json)`);
     } else {
-      pi.log?.("[local-llm] pi.registerProvider unavailable — skipping provider registration");
+      log(pi, "[local-llm] pi.registerProvider unavailable — skipping provider registration");
     }
   } catch (err) {
-    pi.log?.(`[local-llm] provider registration failed: ${err instanceof Error ? err.message : String(err)}`);
+    log(pi, `[local-llm] provider registration failed: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   pi.on("session_start", async (_event: unknown, ctx: any) => {
@@ -382,5 +386,5 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
-  pi.log?.(`[local-llm] canonical runtime registered: ${PROVIDER}/${MODEL_ID} via llamafile`);
+  log(pi, `[local-llm] canonical runtime registered: ${PROVIDER}/${MODEL_ID} via llamafile`);
 }

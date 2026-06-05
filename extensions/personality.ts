@@ -31,14 +31,18 @@ function personaBlock(): string {
   return [readDoc("SYSTEM.md"), readDoc("AGENTS.md")].filter(Boolean).join("\n\n---\n\n");
 }
 
+function log(pi: ExtensionAPI, message: string): void {
+  (pi as unknown as { log?: (message: string) => void }).log?.(message);
+}
+
 export default function (pi: ExtensionAPI) {
   if (process.env.NAZAR_PERSONA === "0") {
-    pi.log?.("[personality] persona injection disabled (NAZAR_PERSONA=0)");
+    log(pi, "[personality] persona injection disabled (NAZAR_PERSONA=0)");
     return;
   }
   const persona = personaBlock();
   if (!persona) {
-    pi.log?.("[personality] SYSTEM.md/AGENTS.md not found in package — skipping persona injection");
+    log(pi, "[personality] SYSTEM.md/AGENTS.md not found in package — skipping persona injection");
     return;
   }
 
@@ -49,5 +53,5 @@ export default function (pi: ExtensionAPI) {
     return { systemPrompt: `${persona}\n\n${base}` };
   });
 
-  pi.log?.("[personality] Nazar persona + operating rules will be injected each turn");
+  log(pi, "[personality] Nazar persona + operating rules will be injected each turn");
 }
