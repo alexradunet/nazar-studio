@@ -9,7 +9,7 @@ import {
 
 beforeEach(() => { process.env.VAULT_PATH = mkdtempSync(join(tmpdir(), "nazar-mem-")); });
 
-// ── memory pages (facts) ─────────────────────────────────────────────────────
+// ── memory pages ─────────────────────────────────────────────────────────────
 test("write + keyword recall", () => {
   writeMemory({ title: "Andreea", type: "people", content: "partner; lactose-sensitive; prefers trains over cars" });
   const hits = searchMemory("lactose");
@@ -93,7 +93,7 @@ test("search ignores stale index rows for deleted pages", () => {
   expect(hits.some((h) => h.title === "Current identity")).toBe(true);
 });
 
-// ── recall (pinned + most-relevant facts) ────────────────────────────────────
+// ── recall (pinned + relevant saved pages) ───────────────────────────────────
 test("recallContext surfaces matching memory as notes", () => {
   writeMemory({ title: "Andreea", type: "people", content: "partner; prefers trains over cars" });
   const block = recallContext("planning a trip with Andreea");

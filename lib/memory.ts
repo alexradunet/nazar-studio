@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
- * memory.ts — Nazar memory engine (facts).
+ * memory.ts — Nazar memory engine.
  *
- * Durable FACTS live as plain Markdown pages with YAML frontmatter under
+ * Durable memory lives as plain Markdown pages with YAML frontmatter under
  * vault/memory/<type>/<slug>.md — the SOURCE OF TRUTH — indexed by a disposable node:sqlite
- * FTS5 accelerator. A thin OPTIONAL frontmatter aids retrieval: the keystone `whenToUse`
- * (a natural-language "use this when…"), plus tags / pinned. The body is organic.
+ * FTS5 accelerator. Frontmatter is only an optional retrieval aid (`whenToUse`, tags, pinned).
+ * The body is user-shaped Markdown; Nazar must not impose a life/coding/project schema.
  *
  * SKILLS (procedures) are NOT here — they're Pi-native skill files (skills/*.md) that Pi
- * discovers + injects + invokes (/skill:name). Memory = facts; skills = Pi. See SELF_EVOLUTION.md.
+ * discovers + injects + invokes (/skill:name). Memory = saved pages; skills = Pi. See SELF_EVOLUTION.md.
  */
 import type { DatabaseSync } from "node:sqlite";
 import { mkdirSync, writeFileSync, readFileSync, readdirSync, statSync, existsSync } from "node:fs";
@@ -73,10 +73,10 @@ const cleanTags = (tags?: string[]): string[] =>
 export interface MemoryInput {
   title: string;
   content: string;
-  type?: string;        // people | projects | prefs | facts | daily | notes
+  type?: string;        // arbitrary folder/category slug; defaults to notes
   tags?: string[];
-  whenToUse?: string;   // the retrieval keystone — "use this when…"
-  pinned?: boolean;     // always-in-context (use sparingly)
+  whenToUse?: string;   // optional retrieval hint in the user's terms
+  pinned?: boolean;     // always-in-context; use only when explicitly requested
 }
 
 function indexRow(db: DatabaseSync, r: {
@@ -210,7 +210,7 @@ export function findDuplicates(): { title: string; paths: string[] }[] {
 }
 
 /**
- * Build a memory-recall block for a turn: pinned pages (always) + the most relevant facts.
+ * Build a memory-recall block for a turn: pinned pages (always) + relevant saved pages.
  * Returns "" when there's nothing. Callers must decide whether the current model is private
  * enough for automatic recall. (Skills are handled by Pi natively, not here.)
  */

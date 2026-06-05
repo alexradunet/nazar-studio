@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
- * memory.ts — Nazar Pi extension: durable MEMORY (facts) over the Markdown vault, plus a thin
+ * memory.ts — Nazar Pi extension: durable Markdown memory over the user's vault, plus a thin
  * bridge that turns an agreed procedure into a Pi-NATIVE skill.
  *
  * TWO kinds of knowledge, cleanly split (no custom unified index):
- *   - FACTS  → memory pages in vault/memory/ — engine in ../lib/memory.ts, indexed by a
- *              disposable FTS5 accelerator, recalled by relevance (keystone field: whenToUse).
+ *   - MEMORY → user-shaped pages in vault/memory/ — engine in ../lib/memory.ts, indexed by a
+ *              disposable FTS5 accelerator and recalled by relevance. The extension must not
+ *              impose life/coding/project categories; it preserves the user's wording.
  *              Tools: memory_write / memory_search / memory_get / memory_duplicates.
  *   - SKILLS → procedures as Pi-native skill files (skills/<name>.md, frontmatter
  *              name/description). Pi discovers, injects, and invokes them (/skill:name), so
  *              skill_write just writes the file — there is nothing to index. See SELF_EVOLUTION.md.
  *
- * On local/private models only, the extension injects the most relevant FACTS into the turn's
+ * On local/private models only, the extension injects relevant saved memory into the turn's
  * system prompt. It deliberately skips auto-recall on frontier models to avoid moving private
  * memory off the box without an explicit choice.
  */
@@ -67,14 +68,14 @@ export default function (pi: ExtensionAPI) {
     name: "memory_write",
     label: "remember",
     description:
-      "Save a durable FACT to long-term memory as a Markdown page. Use for things worth remembering across conversations — people, preferences, projects, decisions. Content is free-form; add a `whenToUse` hint so it surfaces at the right moment.",
+      "Save a user-approved durable memory as a Markdown page. Use only when the user explicitly asks to remember/save something or confirms it should persist. Do not infer a life/coding schema; preserve the user's wording. Content is free-form Markdown.",
     parameters: Type.Object({
       title: Type.String({ description: "Short page title; also the [[wikilink]] handle." }),
-      content: Type.String({ description: "The note body (Markdown; [[links]] welcome)." }),
-      type: Type.Optional(Type.String({ description: "people | projects | prefs | facts | daily | notes" })),
-      whenToUse: Type.Optional(Type.String({ description: "Natural-language 'use this when…' so recall surfaces it." })),
-      tags: Type.Optional(Type.Array(Type.String())),
-      pinned: Type.Optional(Type.Boolean({ description: "Always keep in context (use sparingly)." })),
+      content: Type.String({ description: "The memory body as free-form Markdown; preserve the user's wording and structure." }),
+      type: Type.Optional(Type.String({ description: "Optional arbitrary folder/category slug. Defaults to notes." })),
+      whenToUse: Type.Optional(Type.String({ description: "Optional retrieval hint in the user's terms; omit if not needed." })),
+      tags: Type.Optional(Type.Array(Type.String({ description: "Optional user-chosen tag." }))),
+      pinned: Type.Optional(Type.Boolean({ description: "Always keep in context; use only when explicitly requested." })),
     }),
     async execute(_id: string, p: any) {
       const r = writeMemory(p);
@@ -112,7 +113,7 @@ export default function (pi: ExtensionAPI) {
     name: "memory_search",
     label: "recall",
     description:
-      "Search long-term memory (keyword/full-text) and return the most relevant pages. Call before answering when prior context about the user might help.",
+      "Search long-term memory (keyword/full-text) and return the most relevant user-authored pages. Use when prior saved context may help; do not treat absence of memory as absence of user preference.",
     parameters: Type.Object({ query: Type.String(), k: Type.Optional(Type.Number()) }),
     async execute(_id: string, p: { query: string; k?: number }) {
       const hits = searchMemory(p.query, p.k ?? 5);
