@@ -98,6 +98,47 @@ test("Pi-padded body lines do not get a stray '...' ellipsis appended", async ()
   }
 });
 
+test("right-align layout places the avatar on the right of the body", async () => {
+  // The user-message render flips the avatar to the right of the panel
+  // (chat-style: them on the left, you on the right). We exercise the
+  // composer directly with align: "right" and assert that the column
+  // containing avatar half-block glyphs appears AFTER the body text.
+  const { composeMessagePanel } = await import("./turn-composer.ts");
+  const { renderRoleAvatar, emptyAvatarLine } = await import("./pixel-avatar.ts");
+  const { panelStyle } = await import("./panel-style.ts");
+
+  const av = renderRoleAvatar("user", { backend: "ansi" })!;
+  const cell = {
+    height: av.height,
+    width: av.width,
+    background: av.background,
+    content: (i: number) => av.lines[i] ?? emptyAvatarLine(av.background),
+  };
+  const panel = composeMessagePanel(
+    ["hello world"],
+    cell,
+    cell.width,
+    80,
+    0,
+    "CICO",
+    panelStyle("user"),
+    { align: "right" },
+  ).map((l) => l.replace(/\x1b\[[0-9;]*m/g, ""));
+
+  // Find the row that contains the body text.
+  const bodyRow = panel.find((r) => r.includes("hello world")) ?? "";
+  const bodyIdx = bodyRow.indexOf("hello world");
+  expect(bodyIdx).toBeGreaterThan(0);
+
+  // In the right-align layout, any half-block sprite glyphs (▀/▄/█) live
+  // strictly to the RIGHT of the body text column. Pick a row containing
+  // avatar pixels and check the glyph position.
+  const halfBlock = /[▀▄█▌▐]/;
+  const avatarRow = panel.find((r) => halfBlock.test(r)) ?? "";
+  const avatarPos = avatarRow.search(halfBlock);
+  expect(avatarPos).toBeGreaterThan(bodyIdx);
+});
+
 test("body text rows are free of box-drawing decoration", () => {
   const panel = __testing.composeMessagePanel(["test content"], 64, "Nazar").map(stripAnsi);
   // Every row may contain ▀/▄/█ sprite pixels in the avatar column, but no

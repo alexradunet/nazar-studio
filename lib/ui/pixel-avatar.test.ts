@@ -164,15 +164,20 @@ test("ANSI detail is always half-block", () => {
   expect(frame.join("\n")).toContain("▀");
 });
 
-test("tool avatars are half-size generated ANSI icons without exported backgrounds", () => {
+test("tool avatars are full-size generated ANSI icons matching role-avatar dimensions", () => {
+  // Tool avatars render at the same size as role (user/nazar) avatars so the
+  // avatar column is symmetric across all panel kinds — Nazar / Cico / Bash
+  // / Read / etc all share one consistent left/right gutter width.
   const read = renderToolAvatar("read", "pending", 0);
-  expect(read).toHaveLength(3);
-  expect(read.map((line) => visibleWidth(line))).toEqual([8, 8, 8]);
+  const ansiRows = read.length;
+  expect(ansiRows).toBeGreaterThanOrEqual(5);
+  const widths = read.map((line) => visibleWidth(line));
+  expect(new Set(widths).size).toBe(1); // all rows the same width
   expect(read.join("\n")).toContain("\x1b[48;2;");
 
   const bash = renderToolAvatar("bash", "pending", 0, '{"command":"git status"}');
-  expect(bash).toHaveLength(3);
-  expect(bash.map((line) => visibleWidth(line))).toEqual([8, 8, 8]);
+  expect(bash).toHaveLength(ansiRows);
+  expect(bash.map((line) => visibleWidth(line))).toEqual(widths);
   expect(bash.join("\n")).toContain("\x1b[48;2;");
   expect(plain(bash)).not.toEqual(plain(read));
 
@@ -180,8 +185,8 @@ test("tool avatars are half-size generated ANSI icons without exported backgroun
   const err = renderToolPixelAvatar("memory_search", "error", 0, "", { backend: "ansi" });
   expect(ok?.background).toBeUndefined();
   expect(err?.background).toBeUndefined();
-  expect(ok?.lines.map((line) => line.background)).toEqual([undefined, undefined, undefined]);
-  expect(err?.lines.map((line) => line.background)).toEqual([undefined, undefined, undefined]);
+  expect(ok?.lines.map((line) => line.background).every((b) => b === undefined)).toBe(true);
+  expect(err?.lines.map((line) => line.background).every((b) => b === undefined)).toBe(true);
 });
 
 test("tool avatars animate only while running", () => {
