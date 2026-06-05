@@ -18,7 +18,10 @@ function applyNazarUI(pi: ExtensionAPI, ctx: ExtensionContext, onTui?: (tui: any
   try { ctx.ui.setWidget?.("nazar", undefined); } catch { /* clear old widget on /reload */ }
   try { ctx.ui.setWidget?.("nazar-thinking", undefined); } catch { /* remove legacy thinking widget */ }
   try { ctx.ui.setFooter?.(footerFactory(pi, ctx, onTui)); } catch { /* ignore */ }
-  try { ctx.ui.setEditorComponent?.(editorFactory); } catch { /* keep Pi's default editor */ }
+  // Pass pi + ctx so the editor's nameplate meta can pull live runtime
+  // info (model · git · tools · ctx). When pi/ctx are unavailable the
+  // editor falls back to an empty meta — graceful degradation.
+  try { ctx.ui.setEditorComponent?.(editorFactory(pi, ctx)); } catch { /* keep Pi's default editor */ }
   try { ctx.ui.setToolsExpanded?.(false); } catch { /* less visual noise by default */ }
 }
 
