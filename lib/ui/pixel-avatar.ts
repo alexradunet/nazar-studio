@@ -61,10 +61,59 @@ const TOOL_KINDS = [
   "hourglass",
   "key",
   "bell",
+  // animated coloured globe placeholders — used as running-state animation overlays
+  // and as placeholders for future tool icons not yet illustrated
+  "globe-gold",
+  "globe-teal",
+  "globe-violet",
+  "globe-ember",
+  "globe-pearl",
+  "globe-indigo",
 ] as const;
+
+// Coloured globe to use for each tool category when the tool is running.
+// These globes have 9 distinct animation frames (pulsing glow) so the running
+// state actually animates rather than cycling through identical frames.
+const TOOL_RUNNING_GLOBE: Partial<Record<ToolAvatarKind, GlobeKind>> = {
+  // file / code tools → gold (warm, work-focused)
+  scroll: "globe-gold",
+  quill: "globe-gold",
+  needle: "globe-gold",
+  folder: "globe-gold",
+  // shell / build → ember (fire/energy)
+  anvil: "globe-ember",
+  hammer: "globe-ember",
+  // search / web → teal (cool, scanning)
+  lens: "globe-teal",
+  seer: "globe-teal",
+  // system / skill / meta → violet (arcane)
+  "new-head": "globe-violet",
+  warden: "globe-violet",
+  keeper: "globe-violet",
+  // domain life tools → pearl (calm, general)
+  journal: "globe-pearl",
+  dumbbell: "globe-pearl",
+  "plate-fork": "globe-pearl",
+  "heart-pulse": "globe-pearl",
+  "moon-stars": "globe-indigo",
+  calendar: "globe-pearl",
+  envelope: "globe-teal",
+  "map-pin": "globe-teal",
+  "coin-stack": "globe-gold",
+  "music-note": "globe-violet",
+  camera: "globe-pearl",
+  "pill-potion": "globe-teal",
+  brain: "globe-violet",
+  compass: "globe-indigo",
+  seedling: "globe-pearl",
+  hourglass: "globe-gold",
+  key: "globe-ember",
+  bell: "globe-teal",
+};
 
 type ToolAvatarStatus = "pending" | "running" | "ok" | "error";
 type ToolAvatarKind = typeof TOOL_KINDS[number];
+type GlobeKind = "globe-gold" | "globe-teal" | "globe-violet" | "globe-ember" | "globe-pearl" | "globe-indigo";
 type CharacterSheetKey = "mage" | "mage-female" | "mage-alien" | "nazar";
 type ToolSheetKey = `tool:${ToolAvatarKind}`;
 type SheetKey = CharacterSheetKey | ToolSheetKey;
@@ -123,6 +172,39 @@ const frameCache = new Map<string, AvatarFrame>();
 
 function modIndex(index: number, length: number): number {
   return Math.abs(Math.floor(index)) % length;
+}
+
+/**
+ * Resolve the character sheet for the user panel.
+ * Set NAZAR_USER_AVATAR=mage-female or NAZAR_USER_AVATAR=mage-alien to change
+ * the user avatar. Defaults to "mage" (male human face in globe).
+ */
+function userAvatarSheet(): CharacterSheetKey {
+  const raw = (process.env.NAZAR_USER_AVATAR ?? "").trim().toLowerCase();
+  if (raw === "mage-female" || raw === "female") return "mage-female";
+  if (raw === "mage-alien" || raw === "alien") return "mage-alien";
+  return "mage";
+}
+
+/**
+ * Whether the given globe asset exists on disk (guards against globes not yet
+ * downloaded — falls back to the globe-template placeholder).
+ */
+const _globeExistsCache = new Map<GlobeKind, boolean>();
+function globeExists(globe: GlobeKind, assets = SHEET_ASSETS): boolean {
+  const cached = _globeExistsCache.get(globe);
+  if (cached !== undefined) return cached;
+  const key = `tool:${globe}` as ToolSheetKey;
+  try {
+    const asset = assets[key];
+    if (!asset) { _globeExistsCache.set(globe, false); return false; }
+    readFileSync(asset.path); // cheap existence check
+    _globeExistsCache.set(globe, true);
+    return true;
+  } catch {
+    _globeExistsCache.set(globe, false);
+    return false;
+  }
 }
 
 function backgroundForFrame(id: string): Rgb {
@@ -246,11 +328,11 @@ function sheet(key: SheetKey, assets: Record<SheetKey, SheetAsset> = SHEET_ASSET
 function frameSource(id: string): FrameSource {
   const sourceId = sheetFrameId(id);
 
-  if (sourceId === "user") return { sheet: "mage", index: 0, id: sourceId };
+  if (sourceId === "user") return { sheet: userAvatarSheet(), index: 0, id: sourceId };
   const mageMatch = sourceId.match(/^user-typing-(\d+)$/);
   if (mageMatch) {
     const index = modIndex(Number(mageMatch[1]), AVATAR_FRAME_COUNT);
-    return { sheet: "mage", index, id: sourceId };
+    return { sheet: userAvatarSheet(), index, id: sourceId };
   }
 
   if (sourceId === "nazar") return { sheet: "nazar", index: 0, id: sourceId };
@@ -270,6 +352,19 @@ function frameSource(id: string): FrameSource {
   }
 
   throw new Error(`Unknown avatar frame: ${sourceId}`);
+}
+
+/**
+ * For a running tool, resolve the animated globe sheet to use instead of
+ * the static tool icon. Falls back to globe-template if the coloured globe
+ * asset has not been downloaded yet.
+ */
+function runningGlobeSheet(kind: ToolAvatarKind): ToolSheetKey {
+  const globe = TOOL_RUNNING_GLOBE[kind] ?? "globe-gold";
+  if (globeExists(globe)) return `tool:${globe}`;
+  // Coloured globe not yet present — fall back to the neutral template
+  if (globeExists("globe-indigo")) return "tool:globe-indigo";
+  return `tool:${kind}`; // last resort: static icon (no animation)
 }
 
 function frameFor(id: string, assets: Record<SheetKey, SheetAsset> = SHEET_ASSETS): AvatarFrame {
@@ -687,7 +782,17 @@ function toolKind(toolName: string, hintText = ""): ToolAvatarKind {
 
 function toolFrameId(toolName: string, status: ToolAvatarStatus, hintText = "", frameIndex = 0): string {
   const kind = toolKind(toolName, hintText);
-  return `tool-${kind}-${modIndex(frameIndex, AVATAR_FRAME_COUNT)}-${status}`;
+  // When running, switch to the animated coloured globe for this tool category.
+  // The globes have 9 distinct pulsing-glow frames so the animation is visible.
+  // Static states (pending / ok / error) keep the tool-specific icon at frame 0.
+  if (status === "running") {
+    const globeSheet = runningGlobeSheet(kind);
+    const index = modIndex(frameIndex, AVATAR_FRAME_COUNT);
+    // Encode as a tool frame id that frameSource() will resolve via TOOL_KINDS
+    const globeKind = globeSheet.replace(/^tool:/, "") as ToolAvatarKind;
+    return `tool-${globeKind}-${index}-running`;
+  }
+  return `tool-${kind}-0-${status}`;
 }
 
 export function renderToolPixelAvatar(

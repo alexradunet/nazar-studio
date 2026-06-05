@@ -23,6 +23,8 @@ const SHEETS = [
     "journal", "dumbbell", "plate-fork", "heart-pulse", "moon-stars", "calendar",
     "envelope", "map-pin", "coin-stack", "music-note", "camera", "pill-potion",
     "brain", "compass", "seedling", "hourglass", "key", "bell",
+    // animated coloured globe placeholders (running-state animation overlays)
+    "globe-gold", "globe-teal", "globe-violet", "globe-ember", "globe-pearl", "globe-indigo",
   ].map((name) => ({
     src: join(TOOL_DIR, `${name}.png`),
     dst: join(ANSI_TOOL_DIR, `${name}.png`),
