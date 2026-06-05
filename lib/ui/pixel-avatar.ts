@@ -30,6 +30,7 @@ const ANSI_ASSET_DIR = join(AVATAR_ASSET_DIR, "ansi");
 const ANSI_TOOL_ASSET_DIR = join(ANSI_ASSET_DIR, "tools");
 
 const TOOL_KINDS = [
+  // core file/code operations
   "scroll",
   "needle",
   "quill",
@@ -41,11 +42,30 @@ const TOOL_KINDS = [
   "seer",
   "new-head",
   "hammer",
+  // domain / life-tracking tools
+  "journal",
+  "dumbbell",
+  "plate-fork",
+  "heart-pulse",
+  "moon-stars",
+  "calendar",
+  "envelope",
+  "map-pin",
+  "coin-stack",
+  "music-note",
+  "camera",
+  "pill-potion",
+  "brain",
+  "compass",
+  "seedling",
+  "hourglass",
+  "key",
+  "bell",
 ] as const;
 
 type ToolAvatarStatus = "pending" | "running" | "ok" | "error";
 type ToolAvatarKind = typeof TOOL_KINDS[number];
-type CharacterSheetKey = "mage" | "nazar";
+type CharacterSheetKey = "mage" | "mage-female" | "mage-alien" | "nazar";
 type ToolSheetKey = `tool:${ToolAvatarKind}`;
 type SheetKey = CharacterSheetKey | ToolSheetKey;
 type FrameGeometry = { width: number; height: number };
@@ -84,12 +104,16 @@ export type RenderedAvatar = {
 
 const SHEET_ASSETS = Object.fromEntries([
   ["mage", { path: join(ANSI_ASSET_DIR, "mage.png"), frame: ANSI_AVATAR_FRAME }],
+  ["mage-female", { path: join(ANSI_ASSET_DIR, "mage-female.png"), frame: ANSI_AVATAR_FRAME }],
+  ["mage-alien", { path: join(ANSI_ASSET_DIR, "mage-alien.png"), frame: ANSI_AVATAR_FRAME }],
   ["nazar", { path: join(ANSI_ASSET_DIR, "nazar.png"), frame: ANSI_AVATAR_FRAME }],
   ...TOOL_KINDS.map((kind) => [`tool:${kind}`, { path: join(ANSI_TOOL_ASSET_DIR, `${kind}.png`), frame: ANSI_TOOL_FRAME }]),
 ] as [SheetKey, SheetAsset][]) as Record<SheetKey, SheetAsset>;
 
 const SOURCE_SHEET_ASSETS = Object.fromEntries([
   ["mage", { path: join(AVATAR_ASSET_DIR, "mage.png"), frame: SOURCE_FRAME }],
+  ["mage-female", { path: join(AVATAR_ASSET_DIR, "mage-female.png"), frame: SOURCE_FRAME }],
+  ["mage-alien", { path: join(AVATAR_ASSET_DIR, "mage-alien.png"), frame: SOURCE_FRAME }],
   ["nazar", { path: join(AVATAR_ASSET_DIR, "nazar.png"), frame: SOURCE_FRAME }],
   ...TOOL_KINDS.map((kind) => [`tool:${kind}`, { path: join(AVATAR_ASSET_DIR, "tools", `${kind}.png`), frame: SOURCE_FRAME }]),
 ] as [SheetKey, SheetAsset][]) as Record<SheetKey, SheetAsset>;
@@ -626,10 +650,30 @@ function hasAny(text: string, needles: readonly string[]): boolean {
 function toolKind(toolName: string, hintText = ""): ToolAvatarKind {
   const text = `${toolName} ${hintText}`.toLowerCase();
 
+  // Domain / life-tracking tools
+  if (hasAny(text, ["journal", "diary", "log", "note", "memo"])) return "journal";
+  if (hasAny(text, ["gym", "dumbbell", "workout", "exercise", "fitness", "sport"])) return "dumbbell";
+  if (hasAny(text, ["nutrition", "meal", "diet", "food", "plate", "calorie"])) return "plate-fork";
+  if (hasAny(text, ["heart", "pulse", "vitals", "hrv", "blood pressure", "heartbeat"])) return "heart-pulse";
+  if (hasAny(text, ["sleep", "rest", "moon", "circadian", "bedtime"])) return "moon-stars";
+  if (hasAny(text, ["calendar", "schedule", "event", "appointment", "reminder", "todo", "task"])) return "calendar";
+  if (hasAny(text, ["email", "mail", "message", "inbox", "send"])) return "envelope";
+  if (hasAny(text, ["location", "map", "place", "navigate", "route", "gps"])) return "map-pin";
+  if (hasAny(text, ["finance", "money", "budget", "expense", "coin", "payment"])) return "coin-stack";
+  if (hasAny(text, ["music", "audio", "sound", "podcast", "playlist"])) return "music-note";
+  if (hasAny(text, ["photo", "camera", "image", "picture", "screenshot"])) return "camera";
+  if (hasAny(text, ["medicine", "pill", "drug", "medication", "health track", "symptom"])) return "pill-potion";
+  if (hasAny(text, ["mind", "brain", "cognitive", "focus", "mental", "think"])) return "brain";
+  if (hasAny(text, ["navigate", "compass", "direction", "goal", "plan", "roadmap"])) return "compass";
+  if (hasAny(text, ["growth", "habit", "plant", "garden", "progress", "seedling"])) return "seedling";
+  if (hasAny(text, ["time", "timer", "stopwatch", "duration", "hourglass", "pomodoro"])) return "hourglass";
+  if (hasAny(text, ["access", "unlock", "auth", "credential", "password", "token", "secret"])) return "key";
+  if (hasAny(text, ["notify", "alert", "notification", "bell", "ping"])) return "bell";
+  // Core file / code operations
   if (hasAny(text, ["open-websearch", "fetch-web", "fetchgithub", "fetch-github", "websearch", "web search"])) return "seer";
   if (/\bsearch\b/.test(text) && !hasAny(text, ["grep", "ripgrep", "search files"])) return "seer";
-  if (hasAny(text, ["memory", "journal", "diet", "sport", "vault", "keeper"])) return "keeper";
-  if (hasAny(text, ["doctor", "health", "warden"])) return "warden";
+  if (hasAny(text, ["memory", "vault", "keeper"])) return "keeper";
+  if (hasAny(text, ["doctor", "warden"])) return "warden";
   if (hasAny(text, ["skill_write", "skill-write", "skill", "evolv", "new head"])) return "new-head";
   if (hasAny(text, ["read"])) return "scroll";
   if (hasAny(text, ["edit", "patch", "replace"])) return "needle";

@@ -7,13 +7,13 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { Component } from "@earendil-works/pi-tui";
-import { getCellDimensions, Text } from "@earendil-works/pi-tui";
+import { getCellDimensions, Image, Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-import { kittyImage, kittyPlaceholderGrid, terminalSupportsKitty } from "../lib/ui/graphics-protocol.ts";
 
 const execFileAsync = promisify(execFile);
 const DEFAULT_PROMPT = "8-bit pixel art avatar, front-facing portrait, simple silhouette, limited color palette, clean outline, game sprite, centered, plain dark background";
 const SCRIPT = join(process.env.HOME ?? "", ".local", "share", "nazar", "bin", "nazar-image");
+const MAX_THUMBNAIL_PX = 256;
 
 type GenerateMode = "fast-128" | "clean-128" | "clean-256" | "clean-384" | "clean-512";
 type ImageDetails = {
@@ -48,44 +48,52 @@ function imageId(path: string): number {
   return (hash.readUInt32BE(0) & 0xffffff) || 1;
 }
 
-class KittyPngComponent implements Component {
-  constructor(private path: string) {}
-  invalidate(): void {}
-  render(_width: number): string[] {
-    const data = readFileSync(this.path);
-    const dimensions = imageDimensions(this.path);
-    const { widthPx, heightPx } = getCellDimensions();
-    const cellW = Number.isFinite(widthPx) && widthPx > 0 ? Math.max(1, widthPx) : 8;
-    const cellH = Number.isFinite(heightPx) && heightPx > 0 ? Math.max(1, heightPx) : 16;
-    let columns = 24;
-    let rows = 12;
+export function thumbnailCellSize(
+  dimensions: { width: number; height: number } | undefined,
+  cellW: number,
+  cellH: number,
+): { columns: number; rows: number } {
+  const safeCellW = Number.isFinite(cellW) && cellW > 0 ? Math.max(1, cellW) : 8;
+  const safeCellH = Number.isFinite(cellH) && cellH > 0 ? Math.max(1, cellH) : 16;
+  let widthPx = MAX_THUMBNAIL_PX;
+  let heightPx = MAX_THUMBNAIL_PX;
 
-    if (dimensions) {
-      columns = Math.max(1, Math.round(dimensions.width / cellW));
-      rows = Math.max(1, Math.round(dimensions.height / cellH));
-      const widthScale = 64 / columns;
-      const heightScale = 36 / rows;
-      const scale = Math.min(1, widthScale, heightScale);
-      if (scale < 1) {
-        columns = Math.max(1, Math.round(columns * scale));
-        rows = Math.max(1, Math.round(rows * scale));
-      }
-    }
-
-    const id = imageId(this.path);
-    const image = kittyImage({ data, format: "png", columns, rows, id, virtualPlacement: true });
-    const placeholders = kittyPlaceholderGrid(id, columns, rows);
-    return placeholders.map((line, index) => index === 0 ? `${image}${line}` : line);
+  if (dimensions) {
+    const scale = Math.min(1, MAX_THUMBNAIL_PX / dimensions.width, MAX_THUMBNAIL_PX / dimensions.height);
+    widthPx = Math.max(1, Math.floor(dimensions.width * scale));
+    heightPx = Math.max(1, Math.floor(dimensions.height * scale));
   }
+
+  return {
+    columns: Math.max(1, Math.floor(widthPx / safeCellW)),
+    rows: Math.max(1, Math.floor(heightPx / safeCellH)),
+  };
+}
+
+function imageComponent(path: string, theme: any): Component {
+  const data = readFileSync(path);
+  const dimensions = imageDimensions(path);
+  const { widthPx, heightPx } = getCellDimensions();
+  const { columns, rows } = thumbnailCellSize(dimensions, widthPx, heightPx);
+  return new Image(
+    data.toString("base64"),
+    "image/png",
+    { fallbackColor: (text: string) => theme.fg?.("toolOutput", text) ?? text },
+    { maxWidthCells: columns, maxHeightCells: rows, filename: path, imageId: imageId(path) },
+    dimensions ? { widthPx: dimensions.width, heightPx: dimensions.height } : undefined,
+  );
+}
+
+export function displayImagePath(details: Pick<ImageDetails, "raw" | "alpha" | "pixel">): string | undefined {
+  return details.pixel ?? details.alpha ?? details.raw;
 }
 
 function resultComponent(result: any, theme: any): Component {
   const details = (result?.details ?? {}) as ImageDetails;
   if (details.error) return new Text(theme.fg?.("error", `Image generation failed: ${details.error}`) ?? `Image generation failed: ${details.error}`, 0, 0);
-  const path = details.alpha ?? details.raw ?? details.pixel;
+  const path = displayImagePath(details);
   if (!path || !existsSync(path)) return new Text("No generated image found.", 0, 0);
-  if (terminalSupportsKitty()) return new KittyPngComponent(path);
-  return new Text(`Generated image: ${path}`, 0, 0);
+  return imageComponent(path, theme);
 }
 
 export default function (pi: ExtensionAPI) {

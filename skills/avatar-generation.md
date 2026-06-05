@@ -39,4 +39,5 @@ Negative prompt is handled by the tool. The local generator adds the PixelArtRed
 - Keep default behavior at `clean-256` so avatar asks produce transparent 256×256 PNGs first.
 - For fast iteration or when waiting, use `fast-128`.
 - If the user says it looks messy or asks for a different style, use `fast-128` for quick retries, then `clean-512` for a higher-detail final pass.
+- Do not use the `read` tool to display generated images in the terminal UI; image attachments bypass Nazar's boxed renderer and can draw over the editor. Let `nazar_image_generate` render its own bounded preview, or report the saved preview path.
 - Keep private memory/preferences local; use them only as prompt hints when relevant.
