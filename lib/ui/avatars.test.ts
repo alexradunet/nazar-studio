@@ -78,6 +78,26 @@ test("every emitted row fits within the requested panel width (pi-tui width asse
   }
 });
 
+test("Pi-padded body lines do not get a stray '...' ellipsis appended", async () => {
+  // Regression: when Pi padded body text to exactly the wrap width (a width
+  // we computed from bodyColumnWidth), the safety-net truncation in
+  // paintBodyRow was off-by-one and added "..." on every row. The fix is
+  // that bodyColumnWidth reserves the 1-cell leading inset itself, so the
+  // composer's body cell exactly fits Pi's padded output.
+  const { bodyColumnWidth } = await import("./turn-composer.ts");
+  const { renderRoleAvatar } = await import("./pixel-avatar.ts");
+  const avatarW = renderRoleAvatar("nazar", { backend: "ansi" })!.width;
+  for (const w of [80, 100, 120, 209]) {
+    const wrapW = bodyColumnWidth(w, avatarW);
+    // Simulate a Pi-padded line at exactly the wrap width — what Pi actually
+    // emits for any full-width content. This should fit cleanly, no ellipsis.
+    const line = "x".repeat(wrapW);
+    const panel = __testing.composeMessagePanel([line], w, "T").map((l) => l.replace(/\x1b\[[0-9;]*m/g, ""));
+    const stray = panel.filter((r) => r.includes("..."));
+    expect(stray, `panel width ${w} (wrap ${wrapW}) produced ${stray.length} rows with "..."`).toHaveLength(0);
+  }
+});
+
 test("body text rows are free of box-drawing decoration", () => {
   const panel = __testing.composeMessagePanel(["test content"], 64, "Nazar").map(stripAnsi);
   // Every row may contain ▀/▄/█ sprite pixels in the avatar column, but no
