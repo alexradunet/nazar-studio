@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { afterEach, expect, test } from "vitest";
 import { __testing } from "./avatars.ts";
+import { visibleWidth } from "./ansi.ts";
 
 const originalRecentLimit = process.env.NAZAR_AVATAR_RECENT_LIMIT;
 
@@ -52,6 +53,29 @@ test("nameplate band appears at the top of the right column (panel row 0)", () =
   // Row 0 is the nameplate row; it carries the title and no border chars.
   expect(panel[0]).toContain("NAZAR");
   expect(panel[0]).not.toMatch(/[┏┓┗┛┃━┳┻]/);
+});
+
+test("every emitted row fits within the requested panel width (pi-tui width assertion)", () => {
+  // Regression for the crash: pi-tui asserts that every rendered line must
+  // fit within the terminal width. The two-column composer used to overflow
+  // when the body text was wider than the body column. Now Pi pre-wraps to
+  // the body width and the composer truncates as a safety net.
+  const cases = [
+    { lines: ["short"], width: 80, title: "Nazar" },
+    { lines: ["x".repeat(500)], width: 80, title: "Nazar" },
+    { lines: ["x".repeat(500)], width: 209, title: "Nazar" },
+    { lines: Array(50).fill("y".repeat(300)), width: 120, title: "Tool · construct" },
+    { lines: ["normal line"], width: 30, title: "VeryLongTitleThatDoesNotFitWidth" },
+  ];
+  for (const tc of cases) {
+    const panel = __testing.composeMessagePanel(tc.lines, tc.width, tc.title);
+    for (let i = 0; i < panel.length; i++) {
+      const w = visibleWidth(panel[i]);
+      if (w > tc.width) {
+        throw new Error(`row ${i} is ${w} > ${tc.width} (case: title="${tc.title}", body chars=${tc.lines.join("").length})`);
+      }
+    }
+  }
 });
 
 test("body text rows are free of box-drawing decoration", () => {

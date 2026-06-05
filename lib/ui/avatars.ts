@@ -5,6 +5,7 @@ import { AssistantMessageComponent, ToolExecutionComponent, UserMessageComponent
 import {
   analyzeTextCells,
   AvatarCell,
+  bodyColumnWidth,
   composeMessagePanel,
   PANEL_TOP_PADDING_ASSISTANT,
   splitLeadingControlSequences,
@@ -262,12 +263,6 @@ function toolCell(component: any): AvatarCell {
   return portraitCell(renderToolPixelAvatar(name, status, frame, safeToolHint(component))!);
 }
 
-// ── Message-text width (copy-safe: full row width) ─────────────────────────
-
-function messageTextWidth(width: number): number {
-  return Math.max(1, width);
-}
-
 // ── Testing surface ────────────────────────────────────────────────────────
 
 function testAvatarCell(): AvatarCell {
@@ -301,8 +296,12 @@ export function patchRpgAvatars() {
   g[AVATAR_ORIGINALS] = originals;
 
   UserMessageComponent.prototype.render = function patchedUserRender(width: number): string[] {
-    const lines = originals.userRender.call(this, messageTextWidth(width));
-    const cells = buildCells(this, lines);
+    // Build the cells FIRST so we know the avatar column width, then ask Pi
+    // to render the body wrapped into our narrower body column. Otherwise Pi
+    // produces full-width rows that overflow when we paste them into the
+    // two-column layout (causes pi-tui's width assertion to fire).
+    const cells = buildCells(this);
+    const lines = originals.userRender.call(this, bodyColumnWidth(width, cells.width));
     return composeMessagePanel(
       lines, cells.user, cells.width, width, 0,
       roleTitle("user"), rolePanelStyle("user"),
@@ -320,9 +319,9 @@ export function patchRpgAvatars() {
   };
 
   AssistantMessageComponent.prototype.render = function patchedAssistantRender(width: number): string[] {
-    const lines = originals.assistantRender.call(this, messageTextWidth(width));
+    const cells = buildCells(this);
+    const lines = originals.assistantRender.call(this, bodyColumnWidth(width, cells.width));
     if (trimOuterBlankLines(lines).length === 0) return [];
-    const cells = buildCells(this, lines);
     return composeMessagePanel(
       lines, cells.nazar, cells.width, width, PANEL_TOP_PADDING_ASSISTANT,
       roleTitle("nazar"), rolePanelStyle("nazar"),
@@ -333,7 +332,7 @@ export function patchRpgAvatars() {
   ToolExecutionComponent.prototype.render = function patchedToolRender(width: number): string[] {
     const tool = toolCell(this);
     const name = String((this as any)?.toolName || "tool").trim() || "tool";
-    const lines = originals.toolRender.call(this, messageTextWidth(width));
+    const lines = originals.toolRender.call(this, bodyColumnWidth(width, tool.width));
     if (trimOuterBlankLines(lines).length === 0) return [];
     const style = toolStyle(toolStatus(this));
     return composeMessagePanel(
