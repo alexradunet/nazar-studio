@@ -18,7 +18,7 @@
 // Body text rows are background-filled but otherwise unadorned, so selecting
 // the conversation copies clean text with no box-drawing contamination.
 
-import { padVisible, visibleWidth } from "./ansi.ts";
+import { compact, padVisible, visibleWidth } from "./ansi.ts";
 import { truecolorBg } from "./graphics-protocol.ts";
 import type { AvatarBackground, AvatarRenderLine } from "./pixel-avatar.ts";
 import { centerAvatarLine, emptyAvatarLine } from "./pixel-avatar.ts";
@@ -135,18 +135,46 @@ export function nameplateRow(
 ): string {
   const [r, g, b] = style.nameplateBg;
   const open = truecolorBg([r, g, b]);
-  const titleVis = visibleWidth(title);
-  const metaVis = visibleWidth(meta);
+  const inner = Math.max(0, width - 2); // budget after leading/trailing space
+  let displayTitle = title;
+  let displayMeta = meta;
+  let titleVis = visibleWidth(displayTitle);
+  let metaVis = visibleWidth(displayMeta);
+  // If title + meta + a 1-col gap don't fit, drop the meta first; if the
+  // title alone overflows, truncate it. Either way the band fits `width`.
+  if (titleVis + metaVis + 1 > inner) {
+    if (titleVis + 1 < inner) {
+      const budget = Math.max(0, inner - titleVis - 1);
+      displayMeta = compact(displayMeta, budget);
+      metaVis = visibleWidth(displayMeta);
+    } else {
+      displayMeta = "";
+      metaVis = 0;
+      displayTitle = compact(displayTitle, inner);
+      titleVis = visibleWidth(displayTitle);
+    }
+  }
   if (metaVis > 0) {
     // " title  <fill>  meta " — re-emit `open` after each styled segment to
     // restore the bg in case the segment reset it. Painters in panel-style.ts
     // only reset fg (\x1b[39m), not bg, so persistence is the default; the
     // re-emit is belt-and-braces for any caller that uses \x1b[0m.
-    const fill = Math.max(1, width - titleVis - metaVis - 2);
-    return `${open} ${title}${open}${" ".repeat(fill)}${meta}${open} \x1b[49m`;
+    const fill = Math.max(1, inner - titleVis - metaVis);
+    return `${open} ${displayTitle}${open}${" ".repeat(fill)}${displayMeta}${open} \x1b[49m`;
   }
-  const fill = Math.max(0, width - titleVis - 2);
-  return `${open} ${title}${open}${" ".repeat(fill)} \x1b[49m`;
+  const fill = Math.max(0, inner - titleVis);
+  return `${open} ${displayTitle}${open}${" ".repeat(fill)} \x1b[49m`;
+}
+
+/**
+ * Compute the body column width for a given panel width and avatar width.
+ * Mirrors the column math used inside `composeMessagePanel`; exposed so
+ * adapters can pre-tell Pi to wrap body text into our narrower column
+ * rather than emitting full-width rows that we'd have to truncate.
+ */
+export function bodyColumnWidth(panelWidth: number, avatarWidth: number, options: { outerPadX?: number } = {}): number {
+  const PAD = Math.max(0, options.outerPadX ?? DEFAULT_OUTER_PAD_X);
+  return Math.max(8, panelWidth - PAD * 2 - Math.max(1, avatarWidth) - COLUMN_GAP);
 }
 
 // ── Panel compositor (two-column) ──────────────────────────────────────────
@@ -171,8 +199,13 @@ function paintBodyRow(
   width: number,
   style: PanelStyle,
 ): string {
-  // Inset by one column so body text doesn't kiss the column gap.
-  const inner = ` ${padVisible(text, Math.max(0, width - 1))}`;
+  // Inset by one column so body text doesn't kiss the column gap. Truncate
+  // first as a safety net — Pi *should* already render at `bodyColumnWidth`
+  // when called via the patched adapter, but if a caller hands us a wider
+  // line we'd otherwise overflow the panel and pi-tui would assert.
+  const innerBudget = Math.max(0, width - 1);
+  const fitted = compact(text, innerBudget);
+  const inner = ` ${padVisible(fitted, innerBudget)}`;
   const painted = paintBgStrip(inner, style.background, width);
   return `${controls}${style.paint.text(painted)}`;
 }
