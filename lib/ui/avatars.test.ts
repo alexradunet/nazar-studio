@@ -13,52 +13,54 @@ afterEach(() => {
   else process.env.NAZAR_AVATAR_RECENT_LIMIT = originalRecentLimit;
 });
 
-test("message panels keep message rows free of decorative borders", () => {
-  const panel = __testing.composeMessagePanel(["copyable text"], 80);
-  const textLine = stripAnsi(panel.find((line) => line.includes("copyable text")) ?? "");
-  expect(textLine.trim()).toBe("copyable text");
-  // No box-drawing chars beside body text — copy-safe by construction
-  expect(textLine).not.toMatch(/[║│╔╗╚╝╭╮╰╯┏┓┗┛▗▖▝▘▐▌]/);
+test("message panels keep body text rows copyable (no box glyphs)", () => {
+  const panel = __testing.composeMessagePanel(["copyable text"], 80).map(stripAnsi);
+  // Find the row that contains the body text. In the two-column layout it
+  // shares a row with the portrait column (avatar half-blocks on the left,
+  // body text on the right). What matters is that the body text appears
+  // unadorned by border-drawing glyphs (┏┓┗┛┃═╔╗╚╝ etc.).
+  const textLine = panel.find((l) => l.includes("copyable text")) ?? "";
+  expect(textLine).toContain("copyable text");
+  // No box-drawing chars anywhere — half-blocks ▀/▄/█ in the avatar column
+  // are sprite pixels, not decorative borders.
+  expect(textLine).not.toMatch(/[║│╔╗╚╝╭╮╰╯┏┓┗┛═]/);
 });
 
-test("message panels render portrait above copyable text rows", () => {
+test("two-column layout: body text shares row with portrait, panel ends with blank gap", () => {
   const panel = __testing.composeMessagePanel(["answer"], 64).map(stripAnsi);
-  // Portrait rows come first; answer appears later — no bordered box
-  const answerIndex = panel.findIndex((line) => line.trim() === "answer");
-  expect(answerIndex).toBeGreaterThan(0);
-  expect(panel.at(-3)?.trim()).toBe("answer");
-  expect(panel.at(-2)?.trim()).toBe("");
-  expect(panel.at(-1)).toBe("━".repeat(64));
+  // Find the row that contains "answer". In the two-column layout it appears
+  // inside the panel rows (alongside the avatar), NOT below a separate portrait.
+  const answerIndex = panel.findIndex((l) => l.includes("answer"));
+  expect(answerIndex).toBeGreaterThanOrEqual(0);
+  // After the last panel row, there is a blank-gap row (separator between
+  // consecutive panels). That blank row has length = panel width.
+  expect(panel.at(-1)?.trim()).toBe("");
+  // The last non-blank row should not be a ━ rule (the rule is retired in
+  // the two-column layout).
+  const lastNonBlank = [...panel].reverse().find((l) => l.trim().length > 0) ?? "";
+  expect(lastNonBlank).not.toMatch(/^━+$/);
 });
 
-test("message panels keep one-row vertical content padding", () => {
-  const panel = __testing.composeMessagePanel(["answer"], 64).map(stripAnsi);
-  const answerIndex = panel.findIndex((line) => line.includes("answer"));
-  expect(panel.at(answerIndex - 1)?.trim()).toBe("");
-  expect(panel.at(answerIndex + 1)?.trim()).toBe("");
-});
-
-test("message panels can show the role/tool name inside the avatar header", () => {
+test("message panels can show the role/tool name inside the nameplate band", () => {
   const panel = __testing.composeMessagePanel(["answer"], 64, "Nazar").map(stripAnsi);
   expect(panel.join("\n")).toContain("Nazar");
   expect(panel.join("\n")).not.toContain("[ Nazar ]");
 });
 
-test("message panels show nameplate band as first row when title provided", () => {
+test("nameplate band appears at the top of the right column (panel row 0)", () => {
   const panel = __testing.composeMessagePanel(["answer"], 64, "NAZAR").map(stripAnsi);
-  // Nameplate is row 0; contains the title; has no box-border glyphs
+  // Row 0 is the nameplate row; it carries the title and no border chars.
   expect(panel[0]).toContain("NAZAR");
   expect(panel[0]).not.toMatch(/[┏┓┗┛┃━┳┻]/);
 });
 
-test("message panels have no box-border glyphs except the bottom rule", () => {
+test("body text rows are free of box-drawing decoration", () => {
   const panel = __testing.composeMessagePanel(["test content"], 64, "Nazar").map(stripAnsi);
-  // Every row except the last (the ━ separator) must be free of box chars
-  for (const line of panel.slice(0, -1)) {
+  // Every row may contain ▀/▄/█ sprite pixels in the avatar column, but no
+  // box-drawing glyphs anywhere (the bottom rule is retired in two-column).
+  for (const line of panel) {
     expect(line).not.toMatch(/[┏┓┗┛┃┳┻╔╗╚╝╠╣╦╩║═]/);
   }
-  // The bottom rule is the only row that may contain ━
-  expect(panel.at(-1)).toBe("━".repeat(64));
 });
 
 test("partial tool results count as running", () => {
