@@ -13,6 +13,7 @@ import {
   type RenderedAvatar,
 } from "./pixel-avatar.ts";
 import { roleNameplate, type SpriteRole } from "./sprites.ts";
+import { AVATAR_FIELDS } from "./tokens.ts";
 
 const OSC133_ZONE_START = "\x1b]133;A\x07";
 const OSC133_ZONE_END = "\x1b]133;B\x07";
@@ -138,7 +139,7 @@ function badgeCell(background: AvatarBackground, glyph = "◆"): AvatarCell {
 }
 
 function roleBackground(role: SpriteRole): AvatarBackground {
-  return role === "user" ? [31, 40, 64] : [54, 42, 30];
+  return role === "user" ? AVATAR_FIELDS.user : AVATAR_FIELDS.nazar;
 }
 
 function avatarCell(owner: unknown, role: SpriteRole, active = false, stableKey?: string): AvatarCell {
@@ -370,10 +371,10 @@ function safeToolHint(component: any): string {
 }
 
 function toolStatusBackground(status: ToolStatus): AvatarBackground {
-  if (status === "error") return [70, 30, 27];
-  if (status === "ok") return [22, 54, 58];
-  if (status === "running") return [50, 51, 55];
-  return [52, 43, 28];
+  if (status === "error") return AVATAR_FIELDS.toolError;
+  if (status === "ok") return AVATAR_FIELDS.toolOk;
+  if (status === "running") return AVATAR_FIELDS.toolRunning;
+  return AVATAR_FIELDS.toolPending;
 }
 
 function toolDisplayName(name: string): string {

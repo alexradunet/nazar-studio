@@ -44,7 +44,8 @@
     "reindex": "tsx scripts/reindex.ts",
     "skill-check": "tsx scripts/skill-validate.ts",
     "build:avatars": "tsx scripts/build-ansi-avatar-assets.ts",
-    "prepublishOnly": "npm run typecheck && npm run test"
+    "build:tokens": "tsx scripts/build-tokens.ts",
+    "prepublishOnly": "npm run build:tokens -- --check && npm run typecheck && npm run test"
   },
   "dependencies": {
     "@earendil-works/pi-tui": "^0.78.1",

@@ -3,18 +3,20 @@
 // ANSI remains the minimal compatibility layer; richer terminals may use a
 // graphics protocol backend for avatars while panels stay truecolor SGR.
 import { graphicsCapabilitySummary } from "./graphics-protocol.ts";
+import { LAYER_COLORS } from "./tokens.ts";
 
 export type UiLayer = "background" | "shadow" | "border" | "accent" | "text" | "muted";
 
 export type LayerPalette = Record<UiLayer, readonly [number, number, number]>;
 
+// Derived from the single token source (lib/ui/tokens.ts) — never hand-tune here.
 export const DEFAULT_LAYER_PALETTE: LayerPalette = {
-  background: [18, 22, 26],
-  shadow: [31, 35, 42],
-  border: [86, 98, 116],
-  accent: [233, 194, 103],
-  text: [244, 239, 228],
-  muted: [107, 122, 139],
+  background: LAYER_COLORS.background,
+  shadow: LAYER_COLORS.shadow,
+  border: LAYER_COLORS.border,
+  accent: LAYER_COLORS.accent,
+  text: LAYER_COLORS.text,
+  muted: LAYER_COLORS.muted,
 };
 
 export function ansiLayer(layer: UiLayer, text: string, palette: LayerPalette = DEFAULT_LAYER_PALETTE): string {

@@ -8,6 +8,7 @@ import { getCellDimensions, setCellDimensions, type CellDimensions } from "@eare
 import { visibleWidth } from "./ansi.ts";
 import { kittyImage, kittyPlaceholderGrid, selectGraphicsBackend, truecolorBg, truecolorFg, type GraphicsProtocolBackend } from "./graphics-protocol.ts";
 import { type SpriteRole } from "./sprites.ts";
+import { AVATAR_FIELDS as BACKGROUNDS } from "./tokens.ts";
 import { moduleDir } from "../paths.ts";
 
 const RESET = "\x1b[0m";
@@ -80,16 +81,6 @@ export type RenderedAvatar = {
   backend: AvatarRenderBackend;
   background?: AvatarBackground;
 };
-
-const BACKGROUNDS = {
-  user: [31, 40, 64],
-  nazar: [54, 42, 30],
-  thinking: [24, 55, 58],
-  toolPending: [52, 43, 28],
-  toolRunning: [50, 51, 55],
-  toolOk: [22, 54, 58],
-  toolError: [70, 30, 27],
-} satisfies Record<string, Rgb>;
 
 const SHEET_ASSETS = Object.fromEntries([
   ["mage", { path: join(ANSI_ASSET_DIR, "mage.png"), frame: ANSI_AVATAR_FRAME }],
