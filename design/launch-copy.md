@@ -66,7 +66,7 @@ as you teach it new skills.
 
 A few things that make it different:
 
-**Local by default.** It answers from a local model (llamafile, Qwen3.6) so your personal
+**Local by default.** It answers from a local model (llamafile, LFM2.5) so your personal
 data never leaves your box unless you deliberately switch to a frontier model for a specific
 task. The privacy guarantee is structural — not a setting.
 

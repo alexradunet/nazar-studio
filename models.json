@@ -10,20 +10,19 @@
         "supportsUsageInStreaming": false,
         "supportsStrictMode": false,
         "supportsStore": false,
-        "maxTokensField": "max_tokens",
-        "thinkingFormat": "qwen-chat-template"
+        "maxTokensField": "max_tokens"
       },
       "models": [
         {
-          "id": "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled",
+          "id": "lfm2.5-8b-a1b",
           "reasoning": false,
-          "contextWindow": 32768,
-          "maxTokens": 8192,
+          "contextWindow": 8192,
+          "maxTokens": 4096,
           "input": ["text"],
           "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
         }
       ]
     }
   },
-  "_notes": "Canonical local runtime is the pi/extensions/local-llm.ts extension: Mozilla llamafile serves the OpenAI-compatible local LLM endpoint on 127.0.0.1:8082, and Mozilla whisperfile handles local audio transcription. No native build/systemd fallback is canonical. The only supported local LLM is Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled Q4_K_M (GGUF: gopi87/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-Q4_K_M-GGUF)."
+  "_notes": "Canonical local runtime is the pi/extensions/local-llm.ts extension: Mozilla llamafile serves the OpenAI-compatible local LLM endpoint on 127.0.0.1:8082, and Mozilla whisperfile handles local audio transcription. No native build/systemd fallback is canonical. The only supported local LLM is LiquidAI/LFM2.5-8B-A1B-GGUF Q4_K_M (GGUF file: LFM2.5-8B-A1B-Q4_K_M.gguf)."
 }

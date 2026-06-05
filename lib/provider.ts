@@ -33,14 +33,13 @@ const FALLBACK: ProviderConfig = {
     supportsStrictMode: false,
     supportsStore: false,
     maxTokensField: "max_tokens",
-    thinkingFormat: "qwen-chat-template",
   },
   models: [
     {
-      id: "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled",
+      id: "lfm2.5-8b-a1b",
       reasoning: false,
-      contextWindow: 32768,
-      maxTokens: 8192,
+      contextWindow: 8192,
+      maxTokens: 4096,
       input: ["text"],
       cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
     },

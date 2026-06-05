@@ -20,16 +20,16 @@ const LLAMAFILE_URL = `https://github.com/mozilla-ai/llamafile/releases/download
 const WHISPERFILE_URL = `https://github.com/mozilla-ai/llamafile/releases/download/${LLAMAFILE_VERSION}/whisperfile-${LLAMAFILE_VERSION}`;
 
 const PROVIDER = "llamafile";
-const DEFAULT_MODEL_ID = "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled";
-const DEFAULT_MODEL_HF = "gopi87/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-Q4_K_M-GGUF";
-const DEFAULT_MODEL_FILE = "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled-q4_k_m.gguf";
+const DEFAULT_MODEL_ID = "lfm2.5-8b-a1b";
+const DEFAULT_MODEL_HF = "LiquidAI/LFM2.5-8B-A1B-GGUF";
+const DEFAULT_MODEL_FILE = "LFM2.5-8B-A1B-Q4_K_M.gguf";
 const MODEL_ID = DEFAULT_MODEL_ID;
 const MODEL_HF = DEFAULT_MODEL_HF;
 const MODEL_FILE = DEFAULT_MODEL_FILE;
-const MODEL_URL = `https://huggingface.co/gopi87/Qwen3.6-35B-A3B-Claude-4.7-Opus-Reasoning-Distilled-Q4_K_M-GGUF/resolve/main/${MODEL_FILE}`;
+const MODEL_URL = `https://huggingface.co/${MODEL_HF}/resolve/main/${MODEL_FILE}`;
 const PORT = Number(process.env.NAZAR_LLM_PORT || "8082");
 const HOST = "127.0.0.1";
-const CTX = Number(process.env.NAZAR_LLM_CTX || "32768");
+const CTX = Number(process.env.NAZAR_LLM_CTX || "8192");
 const WHISPER_MODEL_FILE = process.env.NAZAR_WHISPER_MODEL_FILE || "ggml-base.bin";
 const WHISPER_MODEL_URL = process.env.NAZAR_WHISPER_MODEL_URL || `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${WHISPER_MODEL_FILE}`;
 
@@ -38,7 +38,7 @@ function llmGpuDevice(): string {
 }
 
 function llmGpuLayers(): string {
-  return process.env.NAZAR_LLM_GPU_LAYERS || "99";
+  return process.env.NAZAR_LLM_GPU_LAYERS || "16";
 }
 
 function vkVisibleDevices(): string {
