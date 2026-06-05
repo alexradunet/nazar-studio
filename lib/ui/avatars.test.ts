@@ -211,3 +211,24 @@ test("bg-reset holes (\\x1b[49m) in body text are sealed instead of tearing the 
   const closeMatches = out.match(/\x1b\[49m/g) ?? [];
   expect(closeMatches.length).toBe(1);
 });
+
+test("inverse-video flag from pi-tui's cursor (\\x1b[7m...\\x1b[0m) is closed cleanly", async () => {
+  // Regression: pi-tui's editor renders the cursor as `\x1b[7m{char}\x1b[0m`
+  // — inverse video ON, then a full SGR reset. The previous \x1b[0m rewrite
+  // only re-opened the bg and reset fg; reverse-video stayed STUCK ON for
+  // every cell after the cursor, painting a bright bar where the panel
+  // ambient should be (the bg color started rendering as the fg color due
+  // to the swap). The fix explicitly turns off every renderable attribute
+  // in the rewrite, including 27 (reverse off).
+  const { paintBgStrip } = await import("./turn-composer.ts");
+  const cursor = `> \x1b[7m \x1b[0m`; // editor body with an inverse-cursor space
+  const out = paintBgStrip(cursor, [57, 76, 84] as any, 40);
+  // The full-reset \x1b[0m must be rewritten to a sequence that includes 27
+  // (reverse off), not silently dropped.
+  expect(out).toMatch(/\x1b\[(?:[0-9;]*;)?27(?:;[0-9;]*)?m/);
+  // And the bg must be re-applied right after the attribute clear, so the
+  // strip stays uniformly painted past the cursor.
+  expect(out).toContain("\x1b[48;2;57;76;84m");
+  // The strip should still end with exactly one bg-close (the outer wrap).
+  expect((out.match(/\x1b\[49m/g) ?? []).length).toBe(1);
+});

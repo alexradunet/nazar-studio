@@ -178,8 +178,31 @@ export function paintBgStrip(text: string, background: AvatarBackground | undefi
   // Internal `\x1b[0m` (full-reset) → keep the fg-reset semantics by emitting
   // `\x1b[39m` (fg-only reset) followed by our bg re-open, so embedded styling
   // can still clear its own fg without tearing the strip.
+  // Rewrite internal SGR resets so the painted bg survives intact:
+  //
+  //   \x1b[0m  — "reset everything" — must NOT just leak attributes through.
+  //              pi-tui emits the editor cursor as `\x1b[7m{char}\x1b[0m`
+  //              (inverse video on, then full reset). If we naively kept
+  //              only the bg, the inverse-video flag would stay ON for the
+  //              rest of the line and every cell past the cursor would
+  //              render with fg/bg swapped — a visible bright bar where
+  //              the panel ambient should be.
+  //
+  //              We turn off every renderable attribute explicitly:
+  //                22 = bold/dim off
+  //                23 = italic off
+  //                24 = underline off
+  //                25 = blink off
+  //                27 = reverse off  ← the cursor case
+  //                28 = conceal off
+  //                29 = strikethrough off
+  //                39 = fg → default
+  //              …then re-open our bg.
+  //
+  //   \x1b[49m — bg-reset only → just re-open our bg.
+  const sgrReset = `\x1b[22;23;24;25;27;28;29;39m${bgOpen}`;
   const safe = padded
-    .replace(/\x1b\[0m/g, `\x1b[39m${bgOpen}`)
+    .replace(/\x1b\[0m/g, sgrReset)
     .replace(/\x1b\[49m/g, bgOpen);
   // APC sequences come first (image transmission), then the painted strip.
   // Putting APC OUTSIDE the bg frame keeps the image data away from any
