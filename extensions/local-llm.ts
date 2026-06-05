@@ -29,7 +29,8 @@ const MODEL_FILE = DEFAULT_MODEL_FILE;
 const MODEL_URL = `https://huggingface.co/${MODEL_HF}/resolve/main/${MODEL_FILE}`;
 const PORT = Number(process.env.NAZAR_LLM_PORT || "8082");
 const HOST = "127.0.0.1";
-const CTX = Number(process.env.NAZAR_LLM_CTX || "32768");
+const CTX = Number(process.env.NAZAR_LLM_CTX || "128000");
+const REASONING_BUDGET = Number(process.env.NAZAR_LLM_REASONING_BUDGET || "64");
 const WHISPER_MODEL_FILE = process.env.NAZAR_WHISPER_MODEL_FILE || "ggml-base.bin";
 const WHISPER_MODEL_URL = process.env.NAZAR_WHISPER_MODEL_URL || `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${WHISPER_MODEL_FILE}`;
 
@@ -198,7 +199,7 @@ ${gpuArgs}  -t ${process.env.NAZAR_LLM_THREADS || "12"} -tb ${process.env.NAZAR_
   -np ${process.env.NAZAR_LLM_PARALLEL || "1"} \
   -c ${CTX} -b ${process.env.NAZAR_LLM_BATCH || "1024"} -ub ${process.env.NAZAR_LLM_UBATCH || "256"} \
   --cache-type-k q8_0 --cache-type-v q8_0 -fa on \
-  --jinja --reasoning off --no-mmproj --cache-ram ${process.env.NAZAR_LLM_CACHE_RAM || "512"} \
+  --jinja --reasoning auto --reasoning-format deepseek --reasoning-budget ${REASONING_BUDGET} --no-mmproj --cache-ram ${process.env.NAZAR_LLM_CACHE_RAM || "512"} \
   --api-key ${shellQuote(key)} >> ${shellQuote(log)} 2>&1
 `;
 
@@ -227,6 +228,7 @@ async function statusText(): Promise<string> {
     `Provider/model: ${PROVIDER} / ${MODEL_ID}`,
     `HF model: ${MODEL_HF}`,
     `GPU offload: ${llmGpuEnabled() ? `device=${llmGpuDevice()}, layers=${llmGpuLayers()}, GGML_VK_VISIBLE_DEVICES=${vkVisibleDevices()}` : "disabled"}`,
+    `Reasoning: format=deepseek, budget=${REASONING_BUDGET}`,
     `Endpoint: http://${HOST}:${PORT}/v1`,
     `Health: ${h.ok ? "ok" : "not ready"}${h.status ? ` (${h.status})` : ""}`,
     `PID: ${pid ?? "none"}${pid ? (live ? " (live)" : " (stale)") : ""}`,

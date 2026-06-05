@@ -37,8 +37,8 @@ const FALLBACK: ProviderConfig = {
   models: [
     {
       id: "lfm2.5-8b-a1b",
-      reasoning: false,
-      contextWindow: 32768,
+      reasoning: true,
+      contextWindow: 128000,
       maxTokens: 8192,
       input: ["text"],
       cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
