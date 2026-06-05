@@ -1,6 +1,6 @@
 ---
 name: doctor
-description: "Verify Nazar works end to end. Use when asked to check, validate, diagnose, or health-check Nazar — or after an update/reinstall, to confirm the stack (Node, package, local model, memory, UI) is healthy."
+description: "Verify Nazar works end to end. Use when asked to check, validate, diagnose, or health-check Nazar — or after an update/reinstall, to confirm the stack (Node, package, local model, memory, web search, UI) is healthy."
 ---
 
 # Self-check (doctor)
@@ -39,21 +39,34 @@ model; watch `~/.local/share/nazar/logs/local-llm.log`.
 - Footer model matches the actual terminal model; `/model` switches back to
   `llamafile / qwen3-14b-q4` for local/private.
 
-## 5. Source checkout (maintainers)
+## 5. Web search
+
+- `open-websearch` exists on `PATH`.
+- Daemon health is optional: `curl --noproxy '*' -fsS http://127.0.0.1:3210/health`.
+- One-shot retrieval works without a daemon:
+
+```bash
+open-websearch search "Nazar pi local first memory appliance" --limit 3 --engine startpage --json
+```
+
+Success means the command returns usable JSON results. If the daemon is unavailable but one-shot search
+works, report web search as healthy with no long-lived daemon running.
+
+## 6. Source checkout (maintainers)
 
 ```bash
 npm run typecheck && npm test && npm run smoke
 ```
 
-## 6. Stale legacy state
+## 7. Stale legacy state
 
-If a previous clone/Bun install lingers:
+If a previous legacy install lingers:
 
 ```bash
 systemctl --user disable --now nazar-agent 2>/dev/null || true
 rm -f ~/.config/systemd/user/nazar-agent.service
 ```
 
-## 7. Report
+## 8. Report
 
 Summarise: what's healthy, what's degraded and why, and the single next action.

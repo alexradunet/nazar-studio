@@ -26,20 +26,12 @@ Checked source: upstream README, `package.json`, skill, and `docs/http-api.md` f
 
 ## Capability detection and installation
 
-Use the smallest working path. `open-websearch` is a Nazar runtime dependency: if Bun or
-`open-websearch` is missing, install it before searching. Do not start daemons blindly.
+Use the smallest working path. `open-websearch` is a Nazar runtime dependency: if it is missing,
+install it before searching. Do not start daemons blindly.
 
 ```bash
-export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
-export PATH="$BUN_INSTALL/bin:$PATH"
-
-if ! command -v bun >/dev/null 2>&1; then
-  curl -fsSL https://bun.sh/install | bash
-  export PATH="$BUN_INSTALL/bin:$PATH"
-fi
-
 if ! command -v open-websearch >/dev/null 2>&1; then
-  bun add -g open-websearch@2.1.11
+  npm install -g open-websearch@2.1.11
 fi
 
 command -v open-websearch
@@ -47,8 +39,8 @@ open-websearch status --json 2>/dev/null || true
 curl --noproxy '*' -fsS http://127.0.0.1:3210/health 2>/dev/null || true
 ```
 
-Prefer the installed `open-websearch` binary. `bunx open-websearch@2.1.11` is only a temporary
-fallback if global installation fails and the user accepts the package download/cache.
+Prefer the installed `open-websearch` binary. Temporary package-manager fallbacks should only be used
+if global installation fails and the user accepts the package download/cache.
 
 ## One-shot search
 
@@ -56,8 +48,6 @@ Prefer one focused search first. Use JSON output for agent parsing.
 
 ```bash
 open-websearch search "query terms" --limit 5 --engine startpage --json
-# temporary fallback if installation failed and the user accepts package download/cache:
-bunx open-websearch@2.1.11 search "query terms" --limit 5 --engine startpage --json
 ```
 
 Useful flags:
