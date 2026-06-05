@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { Component } from "@earendil-works/pi-tui";
-import { Text } from "@earendil-works/pi-tui";
+import { getCellDimensions, Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { kittyImage, kittyPlaceholderGrid, terminalSupportsKitty } from "../lib/ui/graphics-protocol.ts";
 
@@ -15,7 +15,7 @@ const execFileAsync = promisify(execFile);
 const DEFAULT_PROMPT = "8-bit pixel art avatar, front-facing portrait, simple silhouette, limited color palette, clean outline, game sprite, centered, plain dark background";
 const SCRIPT = join(process.env.HOME ?? "", ".local", "share", "nazar", "bin", "nazar-image");
 
-type GenerateMode = "fast-128" | "clean-128";
+type GenerateMode = "fast-128" | "clean-128" | "clean-384";
 type ImageDetails = {
   prompt?: string;
   mode?: GenerateMode;
@@ -30,19 +30,49 @@ function parseOutput(stdout: string): Pick<ImageDetails, "raw" | "pixel"> {
   return { raw, pixel };
 }
 
+function imageDimensions(path: string): { width: number; height: number } | undefined {
+  const data = readFileSync(path);
+  if (!data.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return undefined;
+
+  const signature = data.subarray(8, 24);
+  const width = signature.readUInt32BE(8);
+  const height = signature.readUInt32BE(12);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return undefined;
+  return { width, height };
+}
+
 function imageId(path: string): number {
   const hash = createHash("sha1").update(path).digest();
   return (hash.readUInt32BE(0) & 0xffffff) || 1;
 }
 
 class KittyPngComponent implements Component {
-  constructor(private path: string, private columns = 24, private rows = 12) {}
+  constructor(private path: string) {}
   invalidate(): void {}
   render(_width: number): string[] {
     const data = readFileSync(this.path);
+    const dimensions = imageDimensions(this.path);
+    const { widthPx, heightPx } = getCellDimensions();
+    const cellW = Number.isFinite(widthPx) && widthPx > 0 ? Math.max(1, widthPx) : 8;
+    const cellH = Number.isFinite(heightPx) && heightPx > 0 ? Math.max(1, heightPx) : 16;
+    let columns = 24;
+    let rows = 12;
+
+    if (dimensions) {
+      columns = Math.max(1, Math.round(dimensions.width / cellW));
+      rows = Math.max(1, Math.round(dimensions.height / cellH));
+      const widthScale = 64 / columns;
+      const heightScale = 36 / rows;
+      const scale = Math.min(1, widthScale, heightScale);
+      if (scale < 1) {
+        columns = Math.max(1, Math.round(columns * scale));
+        rows = Math.max(1, Math.round(rows * scale));
+      }
+    }
+
     const id = imageId(this.path);
-    const image = kittyImage({ data, format: "png", columns: this.columns, rows: this.rows, id, virtualPlacement: true });
-    const placeholders = kittyPlaceholderGrid(id, this.columns, this.rows);
+    const image = kittyImage({ data, format: "png", columns, rows, id, virtualPlacement: true });
+    const placeholders = kittyPlaceholderGrid(id, columns, rows);
     return placeholders.map((line, index) => index === 0 ? `${image}${line}` : line);
   }
 }
@@ -50,7 +80,7 @@ class KittyPngComponent implements Component {
 function resultComponent(result: any, theme: any): Component {
   const details = (result?.details ?? {}) as ImageDetails;
   if (details.error) return new Text(theme.fg?.("error", `Image generation failed: ${details.error}`) ?? `Image generation failed: ${details.error}`, 0, 0);
-  const path = details.pixel ?? details.raw;
+  const path = details.raw ?? details.pixel;
   if (!path || !existsSync(path)) return new Text("No generated image found.", 0, 0);
   if (terminalSupportsKitty()) return new KittyPngComponent(path);
   return new Text(`Generated image: ${path}`, 0, 0);
@@ -66,12 +96,13 @@ export default function (pi: ExtensionAPI) {
       mode: Type.Optional(Type.Union([
         Type.Literal("fast-128"),
         Type.Literal("clean-128"),
-      ], { description: "fast-128 generates native 128px quickly; clean-128 generates 384px then pixel-downscales to 128px." })),
+        Type.Literal("clean-384"),
+      ], { description: "fast-128 generates native 128px quickly; clean-128/clean-384 generates 384px (with a 128px variant saved too)." })),
     }),
     renderShell: "self",
     async execute(_toolCallId, params): Promise<any> {
       const prompt = (params.prompt?.trim() || DEFAULT_PROMPT);
-      const mode = (params.mode ?? "fast-128") as GenerateMode;
+      const mode = (params.mode ?? "clean-384") as GenerateMode;
       if (!existsSync(SCRIPT)) {
         return {
           content: [{ type: "text", text: "Image generator is not installed at ~/.local/share/nazar/bin/nazar-image." }],
