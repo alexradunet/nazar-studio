@@ -15,19 +15,21 @@ const execFileAsync = promisify(execFile);
 const DEFAULT_PROMPT = "8-bit pixel art avatar, front-facing portrait, simple silhouette, limited color palette, clean outline, game sprite, centered, plain dark background";
 const SCRIPT = join(process.env.HOME ?? "", ".local", "share", "nazar", "bin", "nazar-image");
 
-type GenerateMode = "fast-128" | "clean-128" | "clean-384";
+type GenerateMode = "fast-128" | "clean-128" | "clean-256" | "clean-384" | "clean-512";
 type ImageDetails = {
   prompt?: string;
   mode?: GenerateMode;
   raw?: string;
+  alpha?: string;
   pixel?: string;
   error?: string;
 };
 
-function parseOutput(stdout: string): Pick<ImageDetails, "raw" | "pixel"> {
+function parseOutput(stdout: string): Pick<ImageDetails, "raw" | "alpha" | "pixel"> {
   const raw = stdout.match(/^raw:\s*(.+)$/m)?.[1]?.trim();
+  const alpha = stdout.match(/^alpha:\s*(.+)$/m)?.[1]?.trim();
   const pixel = stdout.match(/^pixel:\s*(.+)$/m)?.[1]?.trim();
-  return { raw, pixel };
+  return { raw, alpha, pixel };
 }
 
 function imageDimensions(path: string): { width: number; height: number } | undefined {
@@ -80,7 +82,7 @@ class KittyPngComponent implements Component {
 function resultComponent(result: any, theme: any): Component {
   const details = (result?.details ?? {}) as ImageDetails;
   if (details.error) return new Text(theme.fg?.("error", `Image generation failed: ${details.error}`) ?? `Image generation failed: ${details.error}`, 0, 0);
-  const path = details.raw ?? details.pixel;
+  const path = details.alpha ?? details.raw ?? details.pixel;
   if (!path || !existsSync(path)) return new Text("No generated image found.", 0, 0);
   if (terminalSupportsKitty()) return new KittyPngComponent(path);
   return new Text(`Generated image: ${path}`, 0, 0);
@@ -96,13 +98,15 @@ export default function (pi: ExtensionAPI) {
       mode: Type.Optional(Type.Union([
         Type.Literal("fast-128"),
         Type.Literal("clean-128"),
+        Type.Literal("clean-256"),
         Type.Literal("clean-384"),
-      ], { description: "fast-128 generates native 128px quickly; clean-128/clean-384 generates 384px (with a 128px variant saved too)." })),
+        Type.Literal("clean-512"),
+      ], { description: "fast-128 generates native 128px quickly; clean-* generates transparent PNG output and also saves a 128px variant." })),
     }),
     renderShell: "self",
     async execute(_toolCallId, params): Promise<any> {
       const prompt = (params.prompt?.trim() || DEFAULT_PROMPT);
-      const mode = (params.mode ?? "clean-384") as GenerateMode;
+      const mode = (params.mode ?? "clean-256") as GenerateMode;
       if (!existsSync(SCRIPT)) {
         return {
           content: [{ type: "text", text: "Image generator is not installed at ~/.local/share/nazar/bin/nazar-image." }],
@@ -110,11 +114,14 @@ export default function (pi: ExtensionAPI) {
         };
       }
 
-      const args = mode === "fast-128" ? ["--native-128", "--no-preview", prompt] : ["--no-preview", prompt];
+      const size = mode === "fast-128" || mode === "clean-128" ? 128 : mode === "clean-256" ? 256 : mode === "clean-384" ? 384 : 512;
+      const args = mode === "fast-128"
+        ? ["--native-128", "--no-preview", prompt]
+        : ["--size", String(size), "--no-preview", prompt];
       try {
         const { stdout } = await execFileAsync(SCRIPT, args, { timeout: 120_000, maxBuffer: 1024 * 1024 });
         const paths = parseOutput(stdout);
-        const text = paths.pixel ? `Generated image: ${paths.pixel}` : "Generated image.";
+        const text = paths.alpha ? `Generated transparent image: ${paths.alpha}` : paths.pixel ? `Generated image: ${paths.pixel}` : "Generated image.";
         return {
           content: [{ type: "text", text }],
           details: { prompt, mode, ...paths } satisfies ImageDetails,
