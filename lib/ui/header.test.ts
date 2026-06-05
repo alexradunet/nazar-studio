@@ -2,12 +2,14 @@
 import { afterEach, expect, test } from "vitest";
 import { visibleWidth } from "./ansi.ts";
 import { headerFactory, renderFolkBand } from "./header.ts";
+import { clearSessionInfo, recordSessionStart } from "./session-info.ts";
 
 const originalFolkBand = process.env.NAZAR_FOLK_BAND;
 
 afterEach(() => {
   if (originalFolkBand === undefined) delete process.env.NAZAR_FOLK_BAND;
   else process.env.NAZAR_FOLK_BAND = originalFolkBand;
+  clearSessionInfo();
 });
 
 function stripAnsi(text: string): string {
@@ -76,4 +78,30 @@ test("header adapts brand name on narrow widths", () => {
   expect(wide).toContain("B A L A U R");
   expect(narrow).toContain("NAZAR");
   expect(narrow).not.toContain("B A L A U R");
+});
+
+test("header swaps the trailing blank for a chapter divider once session info is recorded", () => {
+  delete process.env.NAZAR_FOLK_BAND;
+  // Before any recordSessionStart call, the third row is a plain blank
+  // (so ad-hoc / unit-test renders stay stable).
+  const before = headerFactory(null, theme).render(100);
+  expect(before[2].trim()).toBe("");
+
+  // After session_start fires, the third row becomes a centred chapter
+  // divider with the "session opened · HH:MM" label.
+  recordSessionStart("opened");
+  const after = headerFactory(null, theme).render(100);
+  const divider = stripAnsi(after[2]);
+  expect(divider).toContain("session opened");
+  // Local-time HH:MM somewhere in the label.
+  expect(divider).toMatch(/\d{2}:\d{2}/);
+  // Flanked by box-rule chars (─) on both sides.
+  expect(divider).toMatch(/─.*session opened.*─/);
+});
+
+test("chapter divider label uses 'resumed' when the session is restored", () => {
+  delete process.env.NAZAR_FOLK_BAND;
+  recordSessionStart("resumed");
+  const divider = stripAnsi(headerFactory(null, theme).render(100)[2]);
+  expect(divider).toContain("session resumed");
 });

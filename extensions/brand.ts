@@ -10,6 +10,7 @@ import { patchRpgAvatars } from "../lib/ui/avatars.ts";
 import { editorFactory } from "../lib/ui/editor.ts";
 import { footerFactory } from "../lib/ui/footer.ts";
 import { headerFactory } from "../lib/ui/header.ts";
+import { recordSessionStart } from "../lib/ui/session-info.ts";
 
 function applyNazarUI(pi: ExtensionAPI, ctx: ExtensionContext, onTui?: (tui: any) => void) {
   if (!ctx?.hasUI) return; // no terminal UI to brand
@@ -58,6 +59,10 @@ export default function (pi: ExtensionAPI) {
 
 
   pi.on("session_start", async (_event: unknown, ctx: any) => {
+    // Record the start moment so the header's third row can render a
+    // "session opened · HH:MM" chapter divider. /reload re-fires this
+    // event and overwrites the timestamp, which is the intended behaviour.
+    recordSessionStart("opened");
     applyNazarUI(pi, ctx, (tui) => { renderTui = tui; });
   });
 
