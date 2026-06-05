@@ -1,78 +1,70 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
-/*
-  Nazar — canonical design tokens (Basm design system).
-  THE single source of truth for color + type + layout values. The terminal theme
-  (themes/nazar.json) is the accent anchor; design/basm.md documents these;
-  web/ self-hosts this file. If a value differs anywhere else, this file wins.
-
-  Dark is the default identity. Add class="light" on <html> to switch.
-*/
+/* GENERATED FROM lib/ui/tokens.ts — DO NOT EDIT. Run `npm run build:tokens`. */
+/* Nazar canonical design tokens (Basm). Dark is the default identity; */
+/* add class="light" on <html> for the light theme. */
 
 :root {
-  /* ── Brand accents (theme-independent) ─────────────────────────── */
-  --gold:        #f2c14e;   /* the brand, kickers, folk accent  */
-  --gold-deep:   #b8862a;   /* hard shadows / pressed states under gold      */
-  --ember:       #ff6a2b;   /* primary CTA, links, emphasis                  */
-  --ember-deep:  #c2410c;   /* hard offset shadows under ember               */
-  --ember-red:   #e5484d;   /* error / destructive only                      */
-  --teal:        #2dd4bf;   /* the data-core, private/technical accent     */
-  --teal-deep:   #0d9488;   /* hard shadows under teal                       */
-  --folkred:     #e0563b;   /* heritage / scoarță band                       */
-  --indigo:      #a8c0f0;   /* the user (panel titles), folk accent          */
-  --violet:      #c084fc;   /* rare accent (numbers, syntax)                 */
-
-  /* ── Dark surfaces (default — night-green guardian domain) ───────── */
-  --bg:          #0b1310;
-  --surface:     #11201b;
-  --surface-2:   #172a23;
-  --surface-3:   #1f352c;
-  --fg:          #eae4d6;   /* warm cream body text                          */
-  --on-surface:  #f5f0e6;   /* headings / strong foreground                  */
-  --muted:       #93a59b;   /* secondary copy, metadata                      */
-  --hair:        #233530;   /* hairlines, borders                            */
-  --outline-2:   #1a2823;
-
-  /* ── Status (paired with text, never color-only) ──────────────── */
-  --ok:          var(--teal);
-  --warn:        var(--gold);
-  --err:         var(--ember-red);
-
-  /* ── Type ──────────────────────────────────────────────────────── */
-  --font-display: 'Pixelify Sans', system-ui, sans-serif;  /* hero / headings */
-  --font-pixel:   'Silkscreen', monospace;                 /* brand / kickers */
-  --font-body:    'Work Sans', system-ui, sans-serif;      /* body copy       */
-  --font-mono:    'JetBrains Mono', ui-monospace, monospace;/* nav / tech / code */
-
-  /* ── Layout ────────────────────────────────────────────────────── */
-  --radius:  3px;
-  --maxw:    1080px;
-  --margin:  6vw;
-  --shadow-hard: 5px 5px 0;   /* compose with a -deep color: var(--shadow-hard) var(--ember-deep) */
+  /* Brand accents */
+  --gold: #f2c14e;
+  --gold-deep: #b8862a;
+  --ember: #ff6a2b;
+  --ember-deep: #c2410c;
+  --ember-red: #e5484d;
+  --teal: #2dd4bf;
+  --teal-deep: #0d9488;
+  --folkred: #e0563b;
+  --indigo: #a8c0f0;
+  --violet: #c084fc;
+  /* Surfaces */
+  --bg: #0b1310;
+  --surface: #11201b;
+  --surface-2: #172a23;
+  --surface-3: #1f352c;
+  --fg: #eae4d6;
+  --on-surface: #f5f0e6;
+  --muted: #93a59b;
+  --hair: #233530;
+  --outline-2: #1a2823;
+  /* Status — always pair with a text label, never colour-only */
+  --ok: var(--teal);
+  --warn: var(--gold);
+  --err: var(--ember-red);
+  /* Type */
+  --font-display: 'Pixelify Sans', system-ui, sans-serif;
+  --font-pixel: 'Silkscreen', monospace;
+  --font-body: 'Work Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  /* Layout */
+  --radius: 3px;
+  --maxw: 1080px;
+  --margin: 6vw;
+  --shadow-hard: 5px 5px 0;
 }
 
-/* ── Light theme (earthy + woven, not sterile) ───────────────────── */
 :root.light {
-  --gold:        #8a6d12;
-  --gold-deep:   #6b5410;
-  --ember:       #c2410c;
-  --ember-deep:  #9a3410;
-  --ember-red:   #b42318;
-  --teal:        #00656b;
-  --teal-deep:   #024a4f;
-  --folkred:     #983f20;
-  --indigo:      #1e3a8a;
-  --violet:      #7c3aed;
-
-  --bg:          #f5f1e8;
-  --surface:     #fffdf7;
-  --surface-2:   #ece6d7;
-  --surface-3:   #e3dcc9;
-  --fg:          #18221d;
-  --on-surface:  #121b16;
-  --muted:       #5c6e63;
-  --hair:        #d8d0bf;
-  --outline-2:   #e2dccb;
+  /* Brand accents */
+  --gold: #8a6d12;
+  --gold-deep: #6b5410;
+  --ember: #c2410c;
+  --ember-deep: #9a3410;
+  --ember-red: #b42318;
+  --teal: #00656b;
+  --teal-deep: #024a4f;
+  --folkred: #983f20;
+  --indigo: #1e3a8a;
+  --violet: #7c3aed;
+  /* Surfaces */
+  --bg: #f5f1e8;
+  --surface: #fffdf7;
+  --surface-2: #ece6d7;
+  --surface-3: #e3dcc9;
+  --fg: #18221d;
+  --on-surface: #121b16;
+  --muted: #5c6e63;
+  --hair: #d8d0bf;
+  --outline-2: #e2dccb;
+  /* Status — always pair with a text label, never colour-only */
+  --ok: var(--teal);
+  --warn: var(--gold);
+  --err: var(--ember-red);
 }
-
-/* Respect OS preference when no explicit class is set is left to the host page;
-   this file stays declarative (KISS). */

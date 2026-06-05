@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { visibleWidth } from "./ansi.ts";
 import { borderGlyphs, bottomHorizontal, topHorizontal, type BorderGlyphs } from "./borders.ts";
-import { DEFAULT_LAYER_PALETTE } from "./design.ts";
+import { TERMINAL_ROLE_PALETTES, TERMINAL_STATE_ACCENTS } from "./tokens.ts";
 export type PanelRole = "user" | "assistant" | "tool" | "thinking" | "system";
 export type PanelState = "idle" | "active" | "running" | "ok" | "error" | "warning";
 export type PanelPaint = (text: string) => string;
@@ -143,84 +143,11 @@ function roleThemePalette(role: PanelRole): RolePaletteOverride {
   return overrides[role] ?? {};
 }
 
-const PALETTES: Record<PanelRole, RolePalette> = {
-  user: {
-    border: [91, 130, 228],
-    accent: [168, 192, 240],
-    title: [196, 214, 255],
-    muted: [107, 122, 139],
-    shadow: [30, 37, 52],
-    pulse: [130, 169, 244],
-    text: DEFAULT_LAYER_PALETTE.text,
-    background: [16, 34, 31],
-  },
-  assistant: {
-    border: [212, 154, 73],
-    accent: [233, 194, 103],
-    title: [255, 222, 176],
-    muted: [107, 122, 139],
-    shadow: [42, 35, 25],
-    pulse: [255, 214, 122],
-    text: DEFAULT_LAYER_PALETTE.text,
-    background: [35, 23, 15],
-  },
-  thinking: {
-    border: [72, 179, 188],
-    accent: [118, 213, 220],
-    title: [160, 235, 240],
-    muted: [107, 139, 145],
-    shadow: [24, 55, 58],
-    pulse: [178, 245, 248],
-    text: DEFAULT_LAYER_PALETTE.text,
-    background: [16, 41, 39],
-  },
-  tool: {
-    border: [134, 150, 95],
-    accent: [233, 194, 103],
-    title: [244, 239, 228],
-    muted: [107, 122, 139],
-    shadow: [36, 38, 42],
-    pulse: [244, 239, 228],
-    text: DEFAULT_LAYER_PALETTE.text,
-    background: [16, 34, 31],
-  },
-  system: {
-    border: [112, 118, 136],
-    accent: [154, 177, 185],
-    title: [244, 239, 228],
-    muted: [107, 122, 139],
-    shadow: [31, 35, 42],
-    pulse: [180, 190, 200],
-    text: DEFAULT_LAYER_PALETTE.text,
-    background: [15, 29, 42],
-  },
-};
-const STATE_ACCENTS: Partial<Record<PanelState, Partial<RolePalette>>> = {
-  running: {
-    accent: [130, 169, 244],
-    title: [196, 214, 255],
-    shadow: [22, 54, 58],
-  },
-  ok: {
-    border: [70, 150, 156],
-    accent: [118, 213, 220],
-    title: [170, 238, 242],
-    shadow: [22, 54, 58],
-  },
-  error: {
-    border: [170, 65, 52],
-    accent: [224, 86, 59],
-    title: [255, 160, 130],
-    shadow: [70, 30, 27],
-    pulse: [255, 120, 96],
-  },
-  warning: {
-    border: [170, 132, 64],
-    accent: [233, 194, 103],
-    title: [255, 225, 155],
-    shadow: [52, 43, 28],
-  },
-};
+// Role palettes + state overlays derive from the single token source
+// (lib/ui/tokens.ts). Per-role colours are no longer hand-tuned here.
+const PALETTES: Record<PanelRole, RolePalette> = TERMINAL_ROLE_PALETTES;
+const STATE_ACCENTS: Partial<Record<PanelState, Partial<RolePalette>>> =
+  TERMINAL_STATE_ACCENTS as Partial<Record<PanelState, Partial<RolePalette>>>;
 
 function mixPalette(role: PanelRole, state: PanelState): RolePalette {
   const override = roleThemePalette(role);
