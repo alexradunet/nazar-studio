@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// ANSI-only visual design primitives for Nazar's Pi terminal UI.
-// Nazar intentionally does not maintain UI tiers: the canonical UI is
-// ANSI-colored RPG panels plus generated ANSI pixel avatars.
+// Visual design primitives for Nazar's Pi terminal UI.
+// ANSI remains the minimal compatibility layer; richer terminals may use a
+// graphics protocol backend for avatars while panels stay truecolor SGR.
+import { graphicsCapabilitySummary } from "./graphics-protocol.ts";
 
 export type UiLayer = "background" | "shadow" | "border" | "accent" | "text" | "muted";
 
@@ -26,5 +27,5 @@ export function paintLayer(layer: UiLayer, text: string, palette: LayerPalette =
 }
 
 export function uiCapabilitySummary(): string {
-  return "chosen=ansi ansi=yes notes=ANSI canonical";
+  return `${graphicsCapabilitySummary()} notes=ANSI truecolor panels, optional Kitty avatars`;
 }

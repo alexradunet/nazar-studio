@@ -6,8 +6,8 @@ The Pi terminal is Nazar's owned daily surface. It should feel like an old-schoo
 
 - Make Pi feel like **Nazar**, not a generic coding agent.
 - Keep private/local state legible.
-- Add RPG flavor through structure: portrait panels, ANSI-colored dialog frames, terse wise copy, and generated ANSI pixel avatars.
-- Keep canonical per-avatar 3×3, 9-frame, 64×64 PNG sprite sheets; render them as generated ANSI pixel avatars only.
+- Add RPG flavor through structure: portrait panels, ANSI-colored dialog frames, terse wise copy, and generated sprite avatars.
+- Keep canonical per-avatar 3×3, 9-frame, 64×64 PNG sprite sheets; render them through the selected terminal graphics backend.
 - Avoid taking over the whole screen.
 
 ## Current implemented pieces
@@ -15,7 +15,7 @@ The Pi terminal is Nazar's owned daily surface. It should feel like an old-schoo
 - Compact Basm/RPG framed header.
 - Fixed-width RPG portrait gutters:
   - avatars are always on.
-  - generated ANSI pixel avatars are the only avatar rendering path.
+  - ANSI half-block avatars are the baseline rendering path; HD mode uses Kitty Unicode placeholder cells when supported.
   - role/tool names appear as the right panel title, using the same `╔═◆ label ◆═╗` double-line language as the input editor.
   - `NAZAR_AVATAR_RECENT_LIMIT=10`: cap full avatars to recent panels; older history uses compact generated ANSI badges for performance.
 - Working/thinking state is shown as a Nazar-owned transient chat-like assistant portrait widget, not as a sentence or Pi's default loader row.
@@ -25,7 +25,7 @@ The Pi terminal is Nazar's owned daily surface. It should feel like an old-schoo
   - dirty git state -> `git:branch*`
   - context usage -> compact text meter on wider terminals
 - Thinking blocks hidden by default with no placeholder line; the animated avatar is enough.
-- Quiet ANSI RPG panels around user, assistant, thinking, tool-call turns, and the input editor; no UI tier/fallback ladder.
+- Quiet truecolor ANSI RPG panels around user, assistant, thinking, tool-call turns, and the input editor; avatars may use ANSI or Kitty graphics.
 - Tool output collapsed by default and wrapped in the same dialog-panel style.
 - Per-tool generated pixel icons for read/edit/write/bash/search/memory/doctor/skill-evolution states. Tool names appear as right-panel titles.
 
@@ -50,11 +50,11 @@ Rules:
 - Use the role/tool palette for borders and title text; keep non-essential copy muted.
 - Do not render `[ Name ]` badges; the avatar is always shown.
 - Do not let user-message background bleed into the left portrait box.
-- Avoid emoji because terminal width varies; box drawing and ANSI color are part of the canonical UI.
-- Avatar backend is not configurable: generated ANSI pixels are canonical.
+- Avoid emoji because terminal width varies; box drawing and ANSI truecolor are part of the canonical UI.
+- Avatar quality is selected by `/nazar-ui basic|hd|auto` or `NAZAR_UI_QUALITY=basic|hd|auto`; basic is ANSI, hd is Kitty placeholder cells when supported, and auto chooses HD when Kitty support is detected.
 - Border style is not configurable: RPG box drawing plus ANSI SGR color is canonical.
 - Performance cap: `NAZAR_AVATAR_RECENT_LIMIT=<n|all>`; default `10`, `0` means active-only full avatars.
-- Role portraits and tool icons use canonical per-avatar 3×3, 9-frame, 64×64 PNG sprite sheets rendered into ANSI pixels.
+- Role portraits and tool icons use canonical per-avatar 3×3, 9-frame, 64×64 PNG sprite sheets rendered through ANSI half-blocks or Kitty graphics.
 
 ## Sprite rules
 

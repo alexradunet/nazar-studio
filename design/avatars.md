@@ -1,27 +1,29 @@
 # Nazar avatars and sprites
 
-Nazar avatars use **one canonical source and one canonical runtime**:
+Nazar avatars use **one canonical source and multiple terminal backends**:
 
 1. **Per-avatar 64×64 PNG sprite sheets** — source of truth under `assets/avatars/`.
-2. **Generated ANSI pixel renderer** — the only runtime avatar backend, derived from the PNG frame.
+2. **Graphics protocol renderers** — ANSI half-blocks as the compatibility baseline, Kitty graphics when the terminal supports it.
 
-Do not maintain separate terminal art by hand. New avatars start as 64×64 frames in their own sprite sheet, then the ANSI renderer scales them for the terminal.
+Do not maintain separate terminal art by hand. New avatars start as 64×64 frames in their own sprite sheet, then the selected backend scales them for the terminal.
 
 Current art direction follows **Basm**: 16-bit, woven, Romanian-fairy-tale pixel craft. **Nazar is the watchful blue eye** (the *nazar boncuğu*) — concentric blue/white iris, a calm steady gaze, gold/umber amulet rim, restrained teal/ember accents. **The human/user is a mage** — pointed hood/hat, robe, staff/glow, indigo/teal palette.
 
 ## Avatar backend
 
-Avatars are always on and always generated ANSI pixels. There is no runtime backend switch.
+Avatars are always on. Backend selection is small and explicit:
 
 ```txt
-NAZAR_AVATAR_RECENT_LIMIT=10 # full avatars only for latest N panels; 0 = active-only; all = uncapped
+NAZAR_UI_QUALITY=auto        # auto | basic | hd; auto uses HD when Kitty support is detected
+NAZAR_GRAPHICS_PROTOCOL=auto  # auto | ansi | kitty; low-level override
+NAZAR_AVATAR_RECENT_LIMIT=10  # full avatars only for latest N panels; 0 = active-only; all = uncapped
 ```
 
-There is no badge, image, Unicode, or ASCII avatar backend to maintain.
+ANSI is the minimum supported terminal layer: 24-bit truecolor SGR, text attributes, and half-block rasterization. Auto/HD mode uses Kitty graphics APC transmission plus Unicode placeholder cells (`U+10EEEE`) when support is detected, so images obey the same cell-grid contract as ANSI and fall back to ANSI when unsupported.
 
 ## Rendering rules
 
-- Chat messages, input editor, thinking widget, and tool panels use the same PNG-sheet-to-ANSI renderer path.
+- Chat messages, input editor, thinking widget, and tool panels use the same PNG-sheet-to-backend renderer path.
 - For long conversations, full avatars are capped to recent panels by `NAZAR_AVATAR_RECENT_LIMIT`; old history uses compact generated ANSI badges for performance.
 - Tool avatars animate only while the tool is actively running; pending/ok/error panels render frame 0 with their state background.
 - The transient thinking panel is a Nazar-owned widget, not Pi's built-in Loader/Text row.

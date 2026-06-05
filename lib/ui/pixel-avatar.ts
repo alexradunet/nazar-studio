@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// PNG sprite-sheet avatars for Nazar's ANSI-only terminal UI.
+// PNG sprite-sheet avatars for Nazar's terminal UI graphics backends.
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { inflateSync } from "node:zlib";
 import { getCellDimensions, setCellDimensions, type CellDimensions } from "@earendil-works/pi-tui";
 import { visibleWidth } from "./ansi.ts";
+import { kittyImage, kittyPlaceholderGrid, selectGraphicsBackend, truecolorBg, truecolorFg, type GraphicsProtocolBackend } from "./graphics-protocol.ts";
 import { type SpriteRole } from "./sprites.ts";
 import { moduleDir } from "../paths.ts";
 
@@ -13,6 +15,7 @@ const BG_RESET = "\x1b[49m";
 
 const ANSI_AVATAR_FRAME = { width: 16, height: 14 } as const;
 const ANSI_TOOL_FRAME = { width: 8, height: 6 } as const;
+const SOURCE_FRAME = { width: 64, height: 64 } as const;
 const SHEET_COLUMNS = 3;
 const AVATAR_FRAME_COUNT = 9;
 
@@ -61,7 +64,7 @@ type PngImage = {
 
 type AvatarFrame = PngImage & { id: string };
 
-export type AvatarRenderBackend = "ansi";
+export type AvatarRenderBackend = GraphicsProtocolBackend;
 export type AvatarRenderLine = {
   /** Text/escape payload for this avatar row. */
   text: string;
@@ -92,6 +95,12 @@ const SHEET_ASSETS = Object.fromEntries([
   ["mage", { path: join(ANSI_ASSET_DIR, "mage.png"), frame: ANSI_AVATAR_FRAME }],
   ["nazar", { path: join(ANSI_ASSET_DIR, "nazar.png"), frame: ANSI_AVATAR_FRAME }],
   ...TOOL_KINDS.map((kind) => [`tool:${kind}`, { path: join(ANSI_TOOL_ASSET_DIR, `${kind}.png`), frame: ANSI_TOOL_FRAME }]),
+] as [SheetKey, SheetAsset][]) as Record<SheetKey, SheetAsset>;
+
+const SOURCE_SHEET_ASSETS = Object.fromEntries([
+  ["mage", { path: join(AVATAR_ASSET_DIR, "mage.png"), frame: SOURCE_FRAME }],
+  ["nazar", { path: join(AVATAR_ASSET_DIR, "nazar.png"), frame: SOURCE_FRAME }],
+  ...TOOL_KINDS.map((kind) => [`tool:${kind}`, { path: join(AVATAR_ASSET_DIR, "tools", `${kind}.png`), frame: SOURCE_FRAME }]),
 ] as [SheetKey, SheetAsset][]) as Record<SheetKey, SheetAsset>;
 
 const sheetCache = new Map<string, PngImage>();
@@ -206,15 +215,16 @@ function decodePngRgba(path: string): PngImage {
   return { width, height, pixels: rgba };
 }
 
-function sheetAsset(key: SheetKey): SheetAsset {
-  return SHEET_ASSETS[key];
+function sheetAsset(key: SheetKey, assets: Record<SheetKey, SheetAsset> = SHEET_ASSETS): SheetAsset {
+  return assets[key];
 }
 
-function sheet(key: SheetKey): PngImage {
-  const cached = sheetCache.get(key);
+function sheet(key: SheetKey, assets: Record<SheetKey, SheetAsset> = SHEET_ASSETS): PngImage {
+  const asset = sheetAsset(key, assets);
+  const cached = sheetCache.get(asset.path);
   if (cached) return cached;
-  const decoded = decodePngRgba(sheetAsset(key).path);
-  sheetCache.set(key, decoded);
+  const decoded = decodePngRgba(asset.path);
+  sheetCache.set(asset.path, decoded);
   return decoded;
 }
 
@@ -247,14 +257,14 @@ function frameSource(id: string): FrameSource {
   throw new Error(`Unknown avatar frame: ${sourceId}`);
 }
 
-function frameFor(id: string): AvatarFrame {
+function frameFor(id: string, assets: Record<SheetKey, SheetAsset> = SHEET_ASSETS): AvatarFrame {
   const source = frameSource(id);
-  const asset = sheetAsset(source.sheet);
-  const cacheKey = `${source.sheet}:${source.index}`;
+  const asset = sheetAsset(source.sheet, assets);
+  const cacheKey = `${asset.path}:${source.index}`;
   const cached = frameCache.get(cacheKey);
   if (cached) return { ...cached, id };
 
-  const sheetImage = sheet(source.sheet);
+  const sheetImage = sheet(source.sheet, assets);
   const columns = SHEET_COLUMNS;
   const { width, height } = asset.frame;
   const frame = Buffer.alloc(width * height * 4);
@@ -343,12 +353,12 @@ function sampleRegion(frame: AvatarFrame, x0: number, x1: number, y0: number, y1
   return { color, coverage, contrast };
 }
 
-function fg([r, g, b]: Rgb): string {
-  return `\x1b[38;2;${r};${g};${b}m`;
+function fg(color: Rgb): string {
+  return truecolorFg(color);
 }
 
-function bg([r, g, b]: Rgb): string {
-  return `\x1b[48;2;${r};${g};${b}m`;
+function bg(color: Rgb): string {
+  return truecolorBg(color);
 }
 
 function paintBg(text: string, color: Rgb | undefined): string {
@@ -402,8 +412,9 @@ function halfBlockFromSamples(topSample: RegionSample, bottomSample: RegionSampl
     }
   }
 
-  if (best.char === " ") return paintBg(" ", background);
-  if (best.char === "█") return `${fg(best.fg)}${bg(background)}█${RESET}`;
+  if (best.char === " ") return " ";
+  if (best.char === "█") return `${fg(best.fg)}█${RESET}`;
+  if (colorDistance(best.bg, background) < 0.03) return `${fg(best.fg)}${best.char}${RESET}`;
   return `${fg(best.fg)}${bg(best.bg)}${best.char}${RESET}`;
 }
 
@@ -483,20 +494,51 @@ function ansiAvatar(frameId: string, rows = avatarRows()): RenderedAvatar {
   const frame = frameFor(frameId);
   const background = backgroundForFrame(frameId);
   const columns = avatarColumns(rows);
-  const lines = renderFrameAnsi(frame, background, columns, rows).map((line) => textAvatarLine(line, background));
-  return { lines, width: columns, height: lines.length, backend: "ansi", background };
+  const lines = renderFrameAnsi(frame, background, columns, rows).map((line) => textAvatarLine(line));
+  return { lines, width: columns, height: lines.length, backend: "ansi" };
+}
+
+function kittyId(frameId: string, columns: number, rows: number): number {
+  const hash = createHash("sha1").update(`${frameId}:${columns}:${rows}`).digest();
+  return (hash.readUInt32BE(0) & 0x7fffffff) || 1;
+}
+
+function kittyAvatar(frameId: string, rows = avatarRows()): RenderedAvatar {
+  const frame = frameFor(frameId, SOURCE_SHEET_ASSETS);
+  const columns = avatarColumns(rows);
+  const id = (kittyId(frameId, columns, rows) & 0xffffff) || 1;
+  const image = kittyImage({
+    data: frame.pixels,
+    format: "rgba",
+    widthPx: frame.width,
+    heightPx: frame.height,
+    columns,
+    rows,
+    id,
+    virtualPlacement: true,
+  });
+  const placeholders = kittyPlaceholderGrid(id, columns, rows);
+  const lines = placeholders.map((line, index) => ({
+    text: index === 0 ? `${image}${line}` : line,
+    virtualWidth: columns,
+  }));
+  return { lines, width: columns, height: rows, backend: "kitty-placeholder" };
 }
 
 type RenderAvatarOptions = {
   rows?: number;
-  backend?: AvatarRenderBackend;
+  backend?: "auto" | "kitty" | AvatarRenderBackend;
 };
 
 function renderFrameAvatar(
   frameId: string,
   options: RenderAvatarOptions = {},
 ): RenderedAvatar | undefined {
-  return ansiAvatar(frameId, options.rows ?? avatarRows());
+  const rows = options.rows ?? avatarRows();
+  const preferred = options.backend === "kitty" ? "kitty-placeholder" : options.backend;
+  const backend = preferred === undefined ? selectGraphicsBackend() : selectGraphicsBackend(preferred);
+  if (backend === "kitty-placeholder") return kittyAvatar(frameId, rows);
+  return ansiAvatar(frameId, rows);
 }
 
 export function avatarLineWidth(line: AvatarRenderLine): number {

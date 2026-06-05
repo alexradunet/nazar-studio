@@ -164,7 +164,7 @@ export function renderThinkingPanel(
   frameIndex: number,
   options: { loaderSafe?: boolean; mode?: unknown; preview?: string } = {},
 ): string {
-  const avatar = renderThinkingAvatar(frameIndex)!;
+  const avatar = renderThinkingAvatar(frameIndex, options.loaderSafe ? { backend: "ansi" } : {})!;
   const style = panelStyle("thinking", "running", { frame: frameIndex });
   const titlePaint = style.paint.title;
 
@@ -175,7 +175,7 @@ export function renderThinkingPanel(
   const g = style.glyphs;
   const avatarRows = avatar.lines.length;
   const label = titlePaint(spacedUpper(roleNameplate("nazar", "thinking")));
-  const titleWidth = visibleWidth(`${g.ornament} ${label} ${g.ornament}`);
+  const titleWidth = visibleWidth(` ${label} `);
   const innerWidth = Math.max(avatarInnerWidth, titleWidth + 2);
   const boxWidth = innerWidth + 2;
   const boxLeftColumn = headerLeftColumn(panelWidth, boxWidth);
@@ -239,7 +239,8 @@ export function hideThinkingWidget(ctx: ExtensionContext): void {
 }
 
 export function workingIndicator() {
-  // Built-in Loader/Text fallback only; ANSI is safe for every renderer.
+  // Built-in Loader/Text fallback only; force ANSI because Loader/Text hosts may
+  // measure by string width and do not understand image-placement escapes.
   return {
     frames: Array.from({ length: 9 }, (_, frame) => renderThinkingPanel(frame, { loaderSafe: true })),
     intervalMs: THINKING_INTERVAL_MS,

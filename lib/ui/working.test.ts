@@ -4,6 +4,8 @@ import { resetCapabilitiesCache, setCapabilities } from "@earendil-works/pi-tui"
 import { extractThinkingPreview, renderThinkingPanel, ThinkingWidget, workingIndicator } from "./working.ts";
 
 const originalAvatarMode = process.env.NAZAR_AVATAR_MODE;
+const originalTerm = process.env.TERM;
+const originalKittyWindowId = process.env.KITTY_WINDOW_ID;
 const originalTmux = process.env.TMUX;
 const originalZellij = process.env.ZELLIJ;
 const originalSty = process.env.STY;
@@ -25,13 +27,15 @@ function expectLeftPadding(text: string): void {
 afterEach(() => {
   if (originalAvatarMode === undefined) delete process.env.NAZAR_AVATAR_MODE;
   else process.env.NAZAR_AVATAR_MODE = originalAvatarMode;
+  restoreEnv("TERM", originalTerm);
+  restoreEnv("KITTY_WINDOW_ID", originalKittyWindowId);
   restoreEnv("TMUX", originalTmux);
   restoreEnv("ZELLIJ", originalZellij);
   restoreEnv("STY", originalSty);
   resetCapabilitiesCache();
 });
 
-test("thinking widget renders ANSI avatar even when image protocol is available", () => {
+test("thinking widget auto-renders Kitty placeholder avatar when image protocol is available", () => {
   delete process.env.TMUX;
   delete process.env.ZELLIJ;
   delete process.env.STY;
@@ -40,8 +44,8 @@ test("thinking widget renders ANSI avatar even when image protocol is available"
   try {
     const lines = widget.render(80);
     const frame = lines.join("\n");
-    expect(frame).not.toContain("\x1b_G");
-    expect(frame).toContain("\x1b[48;2;");
+    expect(frame).toContain("\x1b_G");
+    expect(frame).toContain("\u{10eeee}");
     expect(plain(frame)).toContain("N A Z A R");
     expect(plain(frame)).not.toContain("[ Nazar ]");
     expectLeftPadding(frame);
@@ -52,6 +56,8 @@ test("thinking widget renders ANSI avatar even when image protocol is available"
 });
 
 test("thinking panel renders ANSI avatar when image rendering is unsupported", () => {
+  process.env.TERM = "xterm-256color";
+  delete process.env.KITTY_WINDOW_ID;
   setCapabilities({ images: null, trueColor: true, hyperlinks: false });
   const rawFrame = renderThinkingPanel(0);
   const frame = plain(rawFrame);
