@@ -18,22 +18,37 @@ All sprites follow a unified pedestal and orb design established by the original
 ## Technical Specifications
 
 ### Spritesheet Format
-- **Dimensions:** 192×192 pixels total
+- **Source sheet dimensions:** 512×512 pixels total (RGBA, transparent background)
 - **Grid Layout:** 3×3 (3 columns × 3 rows)
-- **Frame Size:** 64×64 pixels per frame
+- **Frame Size:** 170×170 pixels per frame, 170px stride (content fills 510×510, with a 2px transparent margin on the right/bottom edge of the 512 canvas)
 - **Frame Order:** Row-major (left→right, top→bottom)
   - Frame 0 (top-left) = default/neutral state
-  - Frames 1–8 = emotion/state variants (for characters) or identical copies (for static tools)
-- **File Format:** PNG with transparency
+  - Frames 1–8 = emotion/state variants (for characters), pulse-animation frames (for globes), or identical copies (for static tools)
+- **File Format:** PNG with true alpha transparency (colorType 6, 8-bit, non-interlaced)
 - **Grid Visibility:** Grid lines must NOT be visible; seamless 3×3 layout
+
+### Generation → Processing Pipeline
+Sprites are generated at native **2048×2048** (Gemini 3 Pro Image) on the dark
+`#0d0d1a` background, then post-processed by `scripts/process_sprites.py`:
+1. Split the 2048 sheet into 9 frames at precise 3×3 boundaries (~683px each)
+2. **Background keying:** flood-fill the dark `#0d0d1a` field from each frame's
+   border → alpha 0. Connectivity preserves interior dark pixels (eye pupils,
+   globe shadows) that are NOT connected to the border, so no holes are punched.
+3. Downscale each masked frame to 170×170 (LANCZOS) so the binary mask becomes
+   a smooth anti-aliased alpha edge.
+4. Reassemble into the 512×512 RGBA sheet.
+
+The 512px transparent sheets feed the Kitty/HD graphics backend directly; the
+ANSI half-block backend renders from the downsampled pre-renders built by
+`scripts/build-ansi-avatar-assets.ts` (which reads 170px source frames).
 
 ### Color Palette & Style
 - **Palette:** Old-school 16-bit RPG pixel art
 - **Aesthetic:** Romanian folk-art with cosmic/mystical overlay
-- **Background Color:** Deep dark (#0d0d1a), consistent across all frames
+- **Generation background:** Deep dark (#0d0d1a) — keyed out to transparency in post
 - **Orb Interior:** Subtle blue-violet gradient with inner glow
 - **Pedestal:** Intricate geometric patterns in gold and deep red
-- **Rendering:** No anti-aliasing, clean pixel art
+- **Rendering:** No anti-aliasing in source art; alpha edges anti-aliased on downscale
 
 ## Reference Image
 

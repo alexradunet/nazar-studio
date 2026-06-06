@@ -16,7 +16,9 @@ const BG_RESET = "\x1b[49m";
 
 const ANSI_AVATAR_FRAME = { width: 16, height: 14 } as const;
 const ANSI_TOOL_FRAME = { width: 8, height: 6 } as const;
-const SOURCE_FRAME = { width: 64, height: 64 } as const;
+// Source sheets are 512×512 RGBA (3×3 grid, 170px stride, transparent bg).
+// The Kitty/HD backend slices frames directly from these high-res sheets.
+const SOURCE_FRAME = { width: 170, height: 170 } as const;
 const SHEET_COLUMNS = 3;
 const AVATAR_FRAME_COUNT = 9;
 

@@ -12,10 +12,10 @@ const ANSI_DIR = join(AVATAR_DIR, "ansi");
 const ANSI_TOOL_DIR = join(ANSI_DIR, "tools");
 
 const SHEETS = [
-  { src: join(AVATAR_DIR, "nazar.png"), dst: join(ANSI_DIR, "nazar.png"), frame: 64, outW: 16, outH: 14 },
-  { src: join(AVATAR_DIR, "mage.png"), dst: join(ANSI_DIR, "mage.png"), frame: 64, outW: 16, outH: 14 },
-  { src: join(AVATAR_DIR, "mage-female.png"), dst: join(ANSI_DIR, "mage-female.png"), frame: 64, outW: 16, outH: 14 },
-  { src: join(AVATAR_DIR, "mage-alien.png"), dst: join(ANSI_DIR, "mage-alien.png"), frame: 64, outW: 16, outH: 14 },
+  { src: join(AVATAR_DIR, "nazar.png"), dst: join(ANSI_DIR, "nazar.png"), frame: 170, outW: 16, outH: 14 },
+  { src: join(AVATAR_DIR, "mage.png"), dst: join(ANSI_DIR, "mage.png"), frame: 170, outW: 16, outH: 14 },
+  { src: join(AVATAR_DIR, "mage-female.png"), dst: join(ANSI_DIR, "mage-female.png"), frame: 170, outW: 16, outH: 14 },
+  { src: join(AVATAR_DIR, "mage-alien.png"), dst: join(ANSI_DIR, "mage-alien.png"), frame: 170, outW: 16, outH: 14 },
   ...[
     // original tools
     "scroll", "needle", "quill", "anvil", "lens", "folder", "keeper", "warden", "seer", "new-head", "hammer",
@@ -28,7 +28,7 @@ const SHEETS = [
   ].map((name) => ({
     src: join(TOOL_DIR, `${name}.png`),
     dst: join(ANSI_TOOL_DIR, `${name}.png`),
-    frame: 64,
+    frame: 170,
     outW: 8,
     outH: 6,
   })),
