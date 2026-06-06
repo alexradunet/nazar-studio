@@ -16,9 +16,9 @@ const BG_RESET = "\x1b[49m";
 
 const ANSI_AVATAR_FRAME = { width: 16, height: 14 } as const;
 const ANSI_TOOL_FRAME = { width: 8, height: 6 } as const;
-// Source sheets are 512×512 RGBA (3×3 grid, 170px stride, transparent bg).
+// Source sheets are 768×768 RGBA (3×3 grid, 256px stride, transparent bg).
 // The Kitty/HD backend slices frames directly from these high-res sheets.
-const SOURCE_FRAME = { width: 170, height: 170 } as const;
+const SOURCE_FRAME = { width: 256, height: 256 } as const;
 const SHEET_COLUMNS = 3;
 const AVATAR_FRAME_COUNT = 9;
 
@@ -869,18 +869,11 @@ function toolKind(toolName: string, hintText = ""): ToolAvatarKind {
 
 function toolFrameId(toolName: string, status: ToolAvatarStatus, hintText = "", frameIndex = 0): string {
   const kind = toolKind(toolName, hintText);
-  // When running, show animation. Tools whose own 9 frames are an animation
-  // (rocket, gear, flask, …) cycle through their OWN frames. Static-icon tools
-  // borrow an animated coloured globe so the running state still moves.
-  // Static states (pending / ok / error) keep the tool-specific icon at frame 0.
+  // Tool sprites are Nazar's eye showing the running tool (a pulsing coloured
+  // iris). Running cycles the iris's own 9 pulse frames; pending/ok/error show
+  // frame 0. (The legacy globe-borrow machinery is retired with the orb.)
   if (status === "running") {
-    const index = modIndex(frameIndex, AVATAR_FRAME_COUNT);
-    if (ANIMATED_TOOL_KINDS.has(kind)) {
-      return `tool-${kind}-${index}-running`;
-    }
-    const globeSheet = runningGlobeSheet(kind);
-    const globeKind = globeSheet.replace(/^tool:/, "") as ToolAvatarKind;
-    return `tool-${globeKind}-${index}-running`;
+    return `tool-${kind}-${modIndex(frameIndex, AVATAR_FRAME_COUNT)}-running`;
   }
   return `tool-${kind}-0-${status}`;
 }
