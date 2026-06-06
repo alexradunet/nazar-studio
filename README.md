@@ -1,8 +1,10 @@
 # Nazar
 
-> **Your personal wise companion that grows with you.**
+> **Your personal guardian that grows with you.**
+>
 
-![CI](https://github.com/alexradunet/pi-nazar-studio/actions/workflows/ci.yml/badge.svg) · AGPL-3.0 · a self-contained [Pi](https://pi.dev) extension (Node)
+![alt text](https://github.com/alexradunet/nazar-studio/blob/main/Screenshot_20260606_123152.png?raw=true)
+
 
 A sovereign, local-first AI companion that installs into Pi as a **single extension package**. It
 runs on your own box, remembers what matters in a Markdown vault, grows a new skill — a new eye —
