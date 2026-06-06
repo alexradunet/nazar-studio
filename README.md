@@ -2,9 +2,10 @@
 
 > **Your personal guardian that grows with you.**
 >
-> ![alt text](https://github.com/adam-p/markdown-here/raw/master/src/common/images/icon48.png "Logo Title Text 1")
+> ![alt text]([https://github.com/adam-p/markdown-here/raw/master/src/common/images/icon48.png](https://github.com/alexradunet/nazar-studio/blob/main/Screenshot_20260606_123152.png?raw=true) "Logo Title Text 1")
 
-[![CI](https://github.com/alexradunet/pi-nazar-studio/actions/workflows/ci.yml/badge.svg) · AGPL-3.0 · a self-contained [Pi](https://pi.dev) extension (Node)](https://github.com/alexradunet/nazar-studio/blob/main/Screenshot_20260606_123152.png)
+
+
 
 A sovereign, local-first AI companion that installs into Pi as a **single extension package**. It
 runs on your own box, remembers what matters in a Markdown vault, grows a new skill — a new eye —
