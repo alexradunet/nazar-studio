@@ -63,6 +63,34 @@ const TOOL_KINDS = [
   "hourglass",
   "key",
   "bell",
+  // dev / engineering
+  "terminal",
+  "code",
+  "git-branch",
+  "git-merge",
+  "database",
+  "cloud",
+  "browser",
+  "container",
+  "chat",
+  "gamepad",
+  "rocket",
+  "gear",
+  // objects / status / actions
+  "lightbulb",
+  "trophy",
+  "target",
+  "flask",
+  "atom",
+  "bug",
+  "lock",
+  "star",
+  "flag",
+  "gift",
+  "cart",
+  "paint-brush",
+  "wrench",
+  "bookmark",
   // animated coloured globe placeholders — used as running-state animation overlays
   // and as placeholders for future tool icons not yet illustrated
   "globe-gold",
@@ -111,12 +139,48 @@ const TOOL_RUNNING_GLOBE: Partial<Record<ToolAvatarKind, GlobeKind>> = {
   hourglass: "globe-gold",
   key: "globe-ember",
   bell: "globe-teal",
+  // new dev / object tools (static icons → borrow a coloured globe while running)
+  terminal: "globe-teal",
+  code: "globe-teal",
+  "git-branch": "globe-violet",
+  "git-merge": "globe-violet",
+  database: "globe-indigo",
+  cloud: "globe-pearl",
+  browser: "globe-teal",
+  container: "globe-indigo",
+  chat: "globe-teal",
+  gamepad: "globe-violet",
+  trophy: "globe-gold",
+  target: "globe-ember",
+  bug: "globe-ember",
+  lock: "globe-ember",
+  gift: "globe-violet",
+  cart: "globe-gold",
+  "paint-brush": "globe-violet",
+  wrench: "globe-gold",
+  bookmark: "globe-gold",
 };
+
+// Tools whose own 9 frames are an animation (pulse / motion). While running,
+// these cycle through their OWN frames instead of borrowing a coloured globe.
+// The coloured globes are themselves animated and belong here too.
+const ANIMATED_TOOL_KINDS: ReadonlySet<ToolAvatarKind> = new Set<ToolAvatarKind>([
+  "rocket", "gear", "lightbulb", "flask", "atom", "star", "flag",
+  "globe-gold", "globe-teal", "globe-violet", "globe-ember", "globe-pearl", "globe-indigo",
+]);
 
 type ToolAvatarStatus = "pending" | "running" | "ok" | "error";
 type ToolAvatarKind = typeof TOOL_KINDS[number];
 type GlobeKind = "globe-gold" | "globe-teal" | "globe-violet" | "globe-ember" | "globe-pearl" | "globe-indigo";
-type CharacterSheetKey = "mage" | "mage-female" | "mage-alien" | "nazar";
+type CharacterSheetKey =
+  | "mage"
+  | "mage-female"
+  | "mage-alien"
+  | "mage-brown"
+  | "mage-black"
+  | "mage-elder"
+  | "mage-blonde"
+  | "nazar";
 type ToolSheetKey = `tool:${ToolAvatarKind}`;
 type SheetKey = CharacterSheetKey | ToolSheetKey;
 type FrameGeometry = { width: number; height: number };
@@ -153,19 +217,17 @@ export type RenderedAvatar = {
   background?: AvatarBackground;
 };
 
+const CHARACTER_SHEETS: CharacterSheetKey[] = [
+  "mage", "mage-female", "mage-alien", "mage-brown", "mage-black", "mage-elder", "mage-blonde", "nazar",
+];
+
 const SHEET_ASSETS = Object.fromEntries([
-  ["mage", { path: join(ANSI_ASSET_DIR, "mage.png"), frame: ANSI_AVATAR_FRAME }],
-  ["mage-female", { path: join(ANSI_ASSET_DIR, "mage-female.png"), frame: ANSI_AVATAR_FRAME }],
-  ["mage-alien", { path: join(ANSI_ASSET_DIR, "mage-alien.png"), frame: ANSI_AVATAR_FRAME }],
-  ["nazar", { path: join(ANSI_ASSET_DIR, "nazar.png"), frame: ANSI_AVATAR_FRAME }],
+  ...CHARACTER_SHEETS.map((k) => [k, { path: join(ANSI_ASSET_DIR, `${k}.png`), frame: ANSI_AVATAR_FRAME }]),
   ...TOOL_KINDS.map((kind) => [`tool:${kind}`, { path: join(ANSI_TOOL_ASSET_DIR, `${kind}.png`), frame: ANSI_TOOL_FRAME }]),
 ] as [SheetKey, SheetAsset][]) as Record<SheetKey, SheetAsset>;
 
 const SOURCE_SHEET_ASSETS = Object.fromEntries([
-  ["mage", { path: join(AVATAR_ASSET_DIR, "mage.png"), frame: SOURCE_FRAME }],
-  ["mage-female", { path: join(AVATAR_ASSET_DIR, "mage-female.png"), frame: SOURCE_FRAME }],
-  ["mage-alien", { path: join(AVATAR_ASSET_DIR, "mage-alien.png"), frame: SOURCE_FRAME }],
-  ["nazar", { path: join(AVATAR_ASSET_DIR, "nazar.png"), frame: SOURCE_FRAME }],
+  ...CHARACTER_SHEETS.map((k) => [k, { path: join(AVATAR_ASSET_DIR, `${k}.png`), frame: SOURCE_FRAME }]),
   ...TOOL_KINDS.map((kind) => [`tool:${kind}`, { path: join(AVATAR_ASSET_DIR, "tools", `${kind}.png`), frame: SOURCE_FRAME }]),
 ] as [SheetKey, SheetAsset][]) as Record<SheetKey, SheetAsset>;
 
@@ -185,6 +247,10 @@ function userAvatarSheet(): CharacterSheetKey {
   const raw = (process.env.NAZAR_USER_AVATAR ?? "").trim().toLowerCase();
   if (raw === "mage-female" || raw === "female") return "mage-female";
   if (raw === "mage-alien" || raw === "alien") return "mage-alien";
+  if (raw === "mage-brown" || raw === "brown") return "mage-brown";
+  if (raw === "mage-black" || raw === "black") return "mage-black";
+  if (raw === "mage-elder" || raw === "elder") return "mage-elder";
+  if (raw === "mage-blonde" || raw === "blonde") return "mage-blonde";
   return "mage";
 }
 
@@ -747,6 +813,25 @@ function hasAny(text: string, needles: readonly string[]): boolean {
 function toolKind(toolName: string, hintText = ""): ToolAvatarKind {
   const text = `${toolName} ${hintText}`.toLowerCase();
 
+  // Dev / engineering tools — specific terms first so they win over the
+  // broader life-tracking keywords below (e.g. "git log" → git, not journal).
+  if (hasAny(text, ["terminal", "console", "repl", "tty"])) return "terminal";
+  if (hasAny(text, ["rebase", "git merge", "pull request", "pull_request"])) return "git-merge";
+  if (hasAny(text, ["git ", "git_", "commit", "checkout", "git-branch"])) return "git-branch";
+  if (hasAny(text, ["database", "sql", "postgres", "mysql", "sqlite", "mongo"])) return "database";
+  if (hasAny(text, ["docker", "container", "kubernetes", "k8s", "podman"])) return "container";
+  if (hasAny(text, ["browser", "playwright", "puppeteer", "headless", "navigate to"])) return "browser";
+  if (hasAny(text, ["vscode", "editor", "syntax", "lint"])) return "code";
+  if (hasAny(text, ["aws", "gcp", "azure", "lambda", "cloudformation"])) return "cloud";
+  if (hasAny(text, ["slack", "discord", "chat"])) return "chat";
+  if (hasAny(text, ["deploy", "release build", "ship it", "launch"])) return "rocket";
+  if (hasAny(text, ["settings", "config", "preferences"])) return "gear";
+  if (hasAny(text, ["debug", "stack trace", "traceback", "exception"])) return "bug";
+  if (hasAny(text, ["encrypt", "secure ", "lockdown"])) return "lock";
+  if (hasAny(text, ["game", "gamepad"])) return "gamepad";
+  if (hasAny(text, ["idea", "brainstorm"])) return "lightbulb";
+  if (hasAny(text, ["design", "illustrat", "paint"])) return "paint-brush";
+
   // Domain / life-tracking tools
   if (hasAny(text, ["journal", "diary", "log", "note", "memo"])) return "journal";
   if (hasAny(text, ["gym", "dumbbell", "workout", "exercise", "fitness", "sport"])) return "dumbbell";
@@ -784,13 +869,16 @@ function toolKind(toolName: string, hintText = ""): ToolAvatarKind {
 
 function toolFrameId(toolName: string, status: ToolAvatarStatus, hintText = "", frameIndex = 0): string {
   const kind = toolKind(toolName, hintText);
-  // When running, switch to the animated coloured globe for this tool category.
-  // The globes have 9 distinct pulsing-glow frames so the animation is visible.
+  // When running, show animation. Tools whose own 9 frames are an animation
+  // (rocket, gear, flask, …) cycle through their OWN frames. Static-icon tools
+  // borrow an animated coloured globe so the running state still moves.
   // Static states (pending / ok / error) keep the tool-specific icon at frame 0.
   if (status === "running") {
-    const globeSheet = runningGlobeSheet(kind);
     const index = modIndex(frameIndex, AVATAR_FRAME_COUNT);
-    // Encode as a tool frame id that frameSource() will resolve via TOOL_KINDS
+    if (ANIMATED_TOOL_KINDS.has(kind)) {
+      return `tool-${kind}-${index}-running`;
+    }
+    const globeSheet = runningGlobeSheet(kind);
     const globeKind = globeSheet.replace(/^tool:/, "") as ToolAvatarKind;
     return `tool-${globeKind}-${index}-running`;
   }

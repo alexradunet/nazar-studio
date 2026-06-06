@@ -43,6 +43,11 @@ CHARACTERS = {
     "mage-alien":      ("70293370-9137-40af-85e5-e54f17957b73", f"{ROOT}/mage-alien.png"),
     "mage-portrait":   ("493e40d4-71f2-4c3f-856e-6d0d477e823d", f"{ROOT}/mage-portrait.png"),
     "globe-template":  ("4b7b6c08-f5dd-42a4-9acc-d17643c06088", f"{ROOT}/globe-template.png"),
+    # icon-pack expansion — additional human avatars
+    "mage-brown":      ("f0a873f0-1dbc-4be1-87e1-65623b7f181e", f"{ROOT}/mage-brown.png"),
+    "mage-black":      ("e080b0a0-822b-4109-aa99-fd5012b6233f", f"{ROOT}/mage-black.png"),
+    "mage-elder":      ("0fda975a-6fb7-4eb7-ba0f-ac48048a27a6", f"{ROOT}/mage-elder.png"),
+    "mage-blonde":     ("93622845-aca3-453d-bfc2-bacd71f75e19", f"{ROOT}/mage-blonde.png"),
 }
 TOOLS_MAP = {
     "anvil":     ("ecf5573b-0cdf-44e7-91d1-3a5ff925a0f6", f"{TOOLS}/anvil.png"),
@@ -80,6 +85,34 @@ TOOLS_MAP = {
     "globe-ember":  ("02837af5-cf30-4591-8055-878b8b43a4c7", f"{TOOLS}/globe-ember.png"),
     "globe-pearl":  ("78d8c150-2f7f-4937-a95a-6c79b02c641b", f"{TOOLS}/globe-pearl.png"),
     "globe-indigo": ("4364f677-b1ac-4f77-bd3b-a15068e2d68c", f"{TOOLS}/globe-indigo.png"),
+    # icon-pack expansion — dev / engineering
+    "terminal":   ("3e63e46f-dbbd-42f3-ac81-9bb88c5171c8", f"{TOOLS}/terminal.png"),
+    "code":       ("ee4f1764-68a5-4444-899d-80559e52cc92", f"{TOOLS}/code.png"),
+    "git-branch": ("e0b0e143-47a5-4043-8a37-71c7ce3b00ff", f"{TOOLS}/git-branch.png"),
+    "git-merge":  ("7d9ee2fd-1f23-4d55-be11-800c8ffd4704", f"{TOOLS}/git-merge.png"),
+    "database":   ("2a80808f-f13d-4886-a297-9f6c7c0d9ec6", f"{TOOLS}/database.png"),
+    "cloud":      ("4e5869d4-ddb7-4662-ae82-b78d6af85ef1", f"{TOOLS}/cloud.png"),
+    "browser":    ("b759adaa-c608-47cc-b132-84c862c2c471", f"{TOOLS}/browser.png"),
+    "container":  ("2d5209dc-8884-4929-82e1-d3893c233147", f"{TOOLS}/container.png"),
+    "chat":       ("4d760b1c-aac4-41cb-bac1-9129a623ea7d", f"{TOOLS}/chat.png"),
+    "gamepad":    ("3291c161-0ec6-4ee9-a719-5c37688f8808", f"{TOOLS}/gamepad.png"),
+    "rocket":     ("e93f81bb-5e6c-41f9-9444-9e7f83b5d632", f"{TOOLS}/rocket.png"),
+    "gear":       ("2f989571-b48b-4187-9805-99b9e9c71bfe", f"{TOOLS}/gear.png"),
+    # icon-pack expansion — objects / status / actions
+    "lightbulb":  ("4b8358a3-a8c9-44a8-a74c-86c8f216bbb7", f"{TOOLS}/lightbulb.png"),
+    "trophy":     ("d77b3bc4-3997-4d2f-9455-fb2496554599", f"{TOOLS}/trophy.png"),
+    "target":     ("f4187155-bd92-4d6d-811e-6546b8354955", f"{TOOLS}/target.png"),
+    "flask":      ("89ae1131-0326-4c6d-b7c0-e87a403e4134", f"{TOOLS}/flask.png"),
+    "atom":       ("704bcc7e-9453-4d82-a4de-9b33bf044d52", f"{TOOLS}/atom.png"),
+    "bug":        ("ba652e61-f682-4a91-a863-bab86711018d", f"{TOOLS}/bug.png"),
+    "lock":       ("916e3017-82e6-4cd0-8557-201f0c7c5dec", f"{TOOLS}/lock.png"),
+    "star":       ("aa8cf03e-c8dd-49e8-ae7a-84fb1d6208b2", f"{TOOLS}/star.png"),
+    "flag":       ("6f530639-c50d-4eff-b5f9-d992b4ba8992", f"{TOOLS}/flag.png"),
+    "gift":       ("9b0c21c2-6604-4e68-a6ee-992bc8889f86", f"{TOOLS}/gift.png"),
+    "cart":       ("41961889-6358-458f-8960-218a4ce66f50", f"{TOOLS}/cart.png"),
+    "paint-brush":("cd35810a-f503-4b5c-bfc0-09fd3258cf36", f"{TOOLS}/paint-brush.png"),
+    "wrench":     ("dfe7435e-1588-4e7c-9b54-0767baf75264", f"{TOOLS}/wrench.png"),
+    "bookmark":   ("c82eff7b-c137-4abb-b801-f6181b808966", f"{TOOLS}/bookmark.png"),
 }
 ALL = {**CHARACTERS, **TOOLS_MAP}
 

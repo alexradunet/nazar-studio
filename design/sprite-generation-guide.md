@@ -326,6 +326,59 @@ These tools represent additional life domains beyond the original craft-focused 
   - Domain: Notifications / Awareness
   - Prompt: "a bell, representing notifications, alerts, and awareness"
 
+#### Icon-Pack Expansion — Additional Avatars
+
+Four more human face-in-globe avatars (9 expressions each: neutral, smile,
+thinking, surprised, concerned, pleased, focused, laughing, calm). Selectable
+at runtime via `NAZAR_USER_AVATAR`.
+
+- **mage-brown.png** — man, brown hair + brown beard
+- **mage-black.png** — man, black hair + black beard
+- **mage-elder.png** — older sage, grey/white beard
+- **mage-blonde.png** — woman, blonde hair
+
+#### Icon-Pack Expansion — Dev / Engineering Tools
+
+Globe icons for engineering work. `rocket` and `gear` are ANIMATED across
+their 9 frames (launch / rotation).
+
+- **terminal.png** — command-line prompt `>_`
+- **code.png** — code brackets `</>`
+- **git-branch.png** — git branch diagram
+- **git-merge.png** — git merge diagram
+- **database.png** — stacked DB cylinders
+- **cloud.png** — cloud computing/storage
+- **browser.png** — web browser window
+- **container.png** — cargo containers (docker-style)
+- **chat.png** — chat/speech bubble
+- **gamepad.png** — game controller
+- **rocket.png** ★animated — rocket launch (flame grows frame-to-frame)
+- **gear.png** ★animated — settings cog (rotates frame-to-frame)
+
+#### Icon-Pack Expansion — Objects / Status / Actions
+
+`lightbulb`, `flask`, `atom`, `star`, `flag` are ANIMATED across their 9 frames.
+
+- **lightbulb.png** ★animated — idea (pulsing glow)
+- **trophy.png** — achievement / win
+- **target.png** — goal / bullseye
+- **flask.png** ★animated — experiment (bubbling)
+- **atom.png** ★animated — science (orbiting electrons)
+- **bug.png** — debugging
+- **lock.png** — security / locked
+- **star.png** ★animated — favorite (twinkle)
+- **flag.png** ★animated — milestone (waving)
+- **gift.png** — reward / present
+- **cart.png** — commerce / shopping
+- **paint-brush.png** — design / art
+- **wrench.png** — repair / config
+- **bookmark.png** — save / bookmark
+
+> **Animation in the runtime:** tools whose 9 frames are an animation cycle
+> through their own frames while running. Static-icon tools borrow one of the
+> six coloured globes (`globe-*`) as their running animation. See
+> `ANIMATED_TOOL_KINDS` and `TOOL_RUNNING_GLOBE` in `lib/ui/pixel-avatar.ts`.
+
 ## Reproduction Workflow
 
 Follow these steps to generate new sprites in the Nazar family:

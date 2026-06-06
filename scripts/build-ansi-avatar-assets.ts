@@ -12,10 +12,13 @@ const ANSI_DIR = join(AVATAR_DIR, "ansi");
 const ANSI_TOOL_DIR = join(ANSI_DIR, "tools");
 
 const SHEETS = [
-  { src: join(AVATAR_DIR, "nazar.png"), dst: join(ANSI_DIR, "nazar.png"), frame: 170, outW: 16, outH: 14 },
-  { src: join(AVATAR_DIR, "mage.png"), dst: join(ANSI_DIR, "mage.png"), frame: 170, outW: 16, outH: 14 },
-  { src: join(AVATAR_DIR, "mage-female.png"), dst: join(ANSI_DIR, "mage-female.png"), frame: 170, outW: 16, outH: 14 },
-  { src: join(AVATAR_DIR, "mage-alien.png"), dst: join(ANSI_DIR, "mage-alien.png"), frame: 170, outW: 16, outH: 14 },
+  ...["nazar", "mage", "mage-female", "mage-alien", "mage-brown", "mage-black", "mage-elder", "mage-blonde"].map((name) => ({
+    src: join(AVATAR_DIR, `${name}.png`),
+    dst: join(ANSI_DIR, `${name}.png`),
+    frame: 170,
+    outW: 16,
+    outH: 14,
+  })),
   ...[
     // original tools
     "scroll", "needle", "quill", "anvil", "lens", "folder", "keeper", "warden", "seer", "new-head", "hammer",
@@ -23,6 +26,12 @@ const SHEETS = [
     "journal", "dumbbell", "plate-fork", "heart-pulse", "moon-stars", "calendar",
     "envelope", "map-pin", "coin-stack", "music-note", "camera", "pill-potion",
     "brain", "compass", "seedling", "hourglass", "key", "bell",
+    // dev / engineering
+    "terminal", "code", "git-branch", "git-merge", "database", "cloud",
+    "browser", "container", "chat", "gamepad", "rocket", "gear",
+    // objects / status / actions
+    "lightbulb", "trophy", "target", "flask", "atom", "bug", "lock",
+    "star", "flag", "gift", "cart", "paint-brush", "wrench", "bookmark",
     // animated coloured globe placeholders (running-state animation overlays)
     "globe-gold", "globe-teal", "globe-violet", "globe-ember", "globe-pearl", "globe-indigo",
   ].map((name) => ({
