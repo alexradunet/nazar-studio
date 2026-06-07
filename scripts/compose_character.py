@@ -87,18 +87,30 @@ def _eye_center(base_img):
     ys, xs = np.where(blue)
     return int(xs.mean()), int(ys.mean()), int(0.5 * max(xs.max()-xs.min(), ys.max()-ys.min()))
 
+# A calm contemplative loop through the expression frames so the thinking
+# animation reads as gentle contemplation, not erratic emotion-flicker.
+# (Generated order: 0 neutral 1 smile 2 thinking 3 surprised 4 concerned
+#  5 pleased 6 focused 7 laughing 8 resting.) The full 9 expressions live in
+# nazar-expr.png for future contextual use (e.g. pleased on success, concerned on error).
+NAZAR_IDLE_ORDER = [0, 2, 6, 5, 8, 5, 6, 2, 0]
+
 def compose_nazar():
-    """Idle Nazar: the finished base with a gentle pulsing glow on the cosmic eye."""
-    base = _part("nazar-base"); ecx, ecy, er = _eye_center(base)
+    """Nazar avatar: a calm loop of expression frames with a breathing eye glow."""
+    frames = _frames(os.path.join(PARTS, "nazar-expr.png"))
     sheet = Image.new("RGBA", (F*3, F*3), (0, 0, 0, 0))
-    for i in range(9):
-        intensity = 0.5 + 0.5 * (0.5 + 0.5 * math.cos(2 * math.pi * i / 9))  # 0.5..1 breathing
+    for out_i, src in enumerate(NAZAR_IDLE_ORDER):
+        base = frames[src]
+        try:
+            ecx, ecy, er = _eye_center(base)
+        except Exception:
+            ecx, ecy, er = F // 2, int(F * 0.36), int(F * 0.18)
         fr = base.copy()
+        intensity = 0.5 + 0.5 * (0.5 + 0.5 * math.cos(2 * math.pi * out_i / 9))
         glow = Image.new("RGBA", (F, F), (0, 0, 0, 0)); dg = ImageDraw.Draw(glow)
-        gr = int(er * 1.15); dg.ellipse([ecx-gr, ecy-gr, ecx+gr, ecy+gr], fill=(120, 170, 255, int(28 + 42*intensity)))
+        gr = int(er * 1.15); dg.ellipse([ecx-gr, ecy-gr, ecx+gr, ecy+gr], fill=(120, 170, 255, int(22 + 34*intensity)))
         glow = glow.filter(ImageFilter.GaussianBlur(max(2, int(er*0.22))))
         fr.alpha_composite(glow)
-        sheet.paste(fr, ((i % 3)*F, (i // 3)*F), fr)
+        sheet.paste(fr, ((out_i % 3)*F, (out_i // 3)*F), fr)
     return sheet
 
 # Each tool maps to the iris Nazar shows while running it. The tool sprite IS
@@ -143,6 +155,13 @@ def compose_tool_eye(iris_name):
         hl = Image.new("RGBA", (F, F), (0, 0, 0, 0)); dh = ImageDraw.Draw(hl)
         dh.ellipse([c-target*0.34, c-target*0.40, c+target*0.02, c-target*0.02], fill=(255, 255, 255, 55)); hl = hl.filter(ImageFilter.GaussianBlur(2))
         fr.alpha_composite(hl)
+        # a bright glint orbiting the iris -> the eye reads as actively "working"
+        ang = 2 * math.pi * i / 9
+        gx = int(c + math.cos(ang) * target * 0.30); gy = int(c + math.sin(ang) * target * 0.30)
+        glint = Image.new("RGBA", (F, F), (0, 0, 0, 0)); dgl = ImageDraw.Draw(glint)
+        gr2 = int(target * 0.09); dgl.ellipse([gx-gr2, gy-gr2, gx+gr2, gy+gr2], fill=(255, 255, 255, 150))
+        glint = glint.filter(ImageFilter.GaussianBlur(int(target * 0.04)))
+        fr.alpha_composite(glint)
         sheet.paste(fr, ((i % 3)*F, (i // 3)*F), fr)
     return sheet
 
