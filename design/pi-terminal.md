@@ -14,10 +14,10 @@ The Pi terminal is Nazar's owned daily surface. It should feel like an old-schoo
 
 - Compact Basm/RPG framed header.
 - Fixed-width RPG portrait gutters:
-  - avatars are always on.
+  - avatars are shown only on the latest messages.
   - ANSI half-block avatars are the baseline rendering path; HD mode uses Kitty Unicode placeholder cells when supported.
   - role/tool names appear as the right panel title, using the same `╔═◆ label ◆═╗` double-line language as the input editor.
-  - `NAZAR_AVATAR_RECENT_LIMIT=10`: cap full avatars to recent panels; older history uses compact generated ANSI badges for performance.
+  - `NAZAR_AVATAR_RECENT_LIMIT=20`: cap avatars to the latest messages; older history keeps the nameplate/body styling, with no avatar column and no badge.
 - Working/thinking state is shown as a Nazar-owned transient chat-like assistant portrait widget, not as a sentence or Pi's default loader row.
 - Truthful footer:
   - local model -> `local/private`
@@ -48,12 +48,12 @@ Rules:
 
 - User name comes from `NAZAR_USER_NAME` in `.env`, falling back to `$USER`, then `You`.
 - Use the role/tool palette for borders and title text; keep non-essential copy muted.
-- Do not render `[ Name ]` badges; the avatar is always shown.
+- Do not render `[ Name ]` badges; old history should keep the message nameplate/body render and drop only the avatar column.
 - Do not let user-message background bleed into the left portrait box.
 - Avoid emoji because terminal width varies; box drawing and ANSI truecolor are part of the canonical UI.
 - Avatar quality is selected by `/nazar-ui basic|hd|auto` or `NAZAR_UI_QUALITY=basic|hd|auto`; basic is ANSI, hd is Kitty placeholder cells when supported, and auto chooses HD when Kitty support is detected.
 - Border style is not configurable: RPG box drawing plus ANSI SGR color is canonical.
-- Performance cap: `NAZAR_AVATAR_RECENT_LIMIT=<n|all>`; default `10`, `0` means active-only full avatars.
+- Performance cap: `NAZAR_AVATAR_RECENT_LIMIT=<n|all>`; default `20`, `0` means active-only avatars.
 - Role portraits and tool icons use canonical per-avatar 3×3, 9-frame, 64×64 PNG sprite sheets rendered through ANSI half-blocks or Kitty graphics.
 
 ## Sprite rules

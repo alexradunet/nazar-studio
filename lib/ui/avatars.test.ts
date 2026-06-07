@@ -168,7 +168,7 @@ test("rich avatars are limited to recent panels unless active", () => {
   expect(__testing.shouldUseRichAvatar(first, true)).toBe(true);
 });
 
-test("old role messages render as plain messages instead of badge panels", async () => {
+test("old role messages keep the Nazar nameplate but drop the avatar column", async () => {
   process.env.NAZAR_AVATAR_RECENT_LIMIT = "0";
   const { patchRpgAvatars } = await import("./avatars.ts");
   const { UserMessageComponent, AssistantMessageComponent, ToolExecutionComponent } = await import("@earendil-works/pi-coding-agent");
@@ -189,9 +189,10 @@ test("old role messages render as plain messages instead of badge panels", async
     patchRpgAvatars();
     const rendered = UserMessageComponent.prototype.render.call({}, 80).map(stripAnsi).join("\n");
 
-    expect(rendered).toBe("plain message at 80");
+    expect(rendered).toContain("plain message at 75");
+    expect(rendered).toContain("· you");
+    expect(rendered).not.toBe("plain message at 80");
     expect(rendered).not.toContain("◆");
-    expect(rendered).not.toContain("YOU");
     expect(rendered).not.toMatch(/[▀▄█▌▐]/);
   } finally {
     UserMessageComponent.prototype.render = savedUserRender;

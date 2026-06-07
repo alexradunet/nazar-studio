@@ -13,6 +13,8 @@ import {
   analyzeTextCells,
   AvatarCell,
   bodyColumnWidth,
+  bodyOnlyColumnWidth,
+  composeBodyOnlyPanel,
   composeMessagePanel,
   PANEL_TOP_PADDING_ASSISTANT,
   splitLeadingControlSequences,
@@ -175,10 +177,9 @@ function stablePanelKey(owner: unknown, role: string, renderedLines?: string[]):
   return undefined;
 }
 
-function buildCells(owner: unknown, renderedLines?: string[]) {
-  const user = avatarCell(owner, "user", false, stablePanelKey(owner, "user", renderedLines));
-  const nazar = avatarCell(owner, "nazar", false, stablePanelKey(owner, "assistant", renderedLines));
-  return { user, nazar, width: Math.max(user.width, nazar.width) };
+function roleAvatarCell(owner: unknown, role: "user" | "assistant", renderedLines?: string[]): AvatarCell {
+  if (role === "user") return avatarCell(owner, "user", false, stablePanelKey(owner, "user", renderedLines));
+  return avatarCell(owner, "nazar", false, stablePanelKey(owner, "assistant", renderedLines));
 }
 
 // ── Role/tool styling helpers ──────────────────────────────────────────────
@@ -352,17 +353,24 @@ export function patchRpgAvatars() {
   g[AVATAR_ORIGINALS] = originals;
 
   UserMessageComponent.prototype.render = function patchedUserRender(width: number): string[] {
-    if (!shouldDecorateRolePanel(this, "user")) return originals.userRender.call(this, width);
+    if (!shouldDecorateRolePanel(this, "user")) {
+      const lines = originals.userRender.call(this, bodyOnlyColumnWidth(width));
+      return composeBodyOnlyPanel(
+        lines, width, 0,
+        roleTitle("user"), rolePanelStyle("user"),
+        { meta: roleMeta("user", undefined) },
+      );
+    }
     // Build the cells FIRST so we know the avatar column width, then ask Pi
     // to render the body wrapped into our narrower body column. Otherwise Pi
     // produces full-width rows that overflow when we paste them into the
     // two-column layout (causes pi-tui's width assertion to fire).
-    const cells = buildCells(this);
-    const lines = originals.userRender.call(this, bodyColumnWidth(width, cells.width));
+    const user = roleAvatarCell(this, "user");
+    const lines = originals.userRender.call(this, bodyColumnWidth(width, user.width));
     // Conversation flows left→right: YOU on the left, Nazar (and his tools) on
     // the right — mirroring the input bar (you type on the left, it flows to Nazar).
     return composeMessagePanel(
-      lines, cells.user, cells.width, width, 0,
+      lines, user, user.width, width, 0,
       roleTitle("user"), rolePanelStyle("user"),
       { meta: roleMeta("user", undefined), align: "left" },
     );
@@ -389,14 +397,19 @@ export function patchRpgAvatars() {
 
   AssistantMessageComponent.prototype.render = function patchedAssistantRender(width: number): string[] {
     if (!shouldDecorateRolePanel(this, "assistant")) {
-      const plain = originals.assistantRender.call(this, width);
-      return trimOuterBlankLines(plain).length === 0 ? [] : plain;
+      const lines = originals.assistantRender.call(this, bodyOnlyColumnWidth(width));
+      if (trimOuterBlankLines(lines).length === 0) return [];
+      return composeBodyOnlyPanel(
+        lines, width, PANEL_TOP_PADDING_ASSISTANT,
+        roleTitle("nazar"), rolePanelStyle("nazar"),
+        { meta: roleMeta("nazar", (this as any).lastMessage) },
+      );
     }
-    const cells = buildCells(this);
-    const lines = originals.assistantRender.call(this, bodyColumnWidth(width, cells.width));
+    const nazar = roleAvatarCell(this, "assistant");
+    const lines = originals.assistantRender.call(this, bodyColumnWidth(width, nazar.width));
     if (trimOuterBlankLines(lines).length === 0) return [];
     return composeMessagePanel(
-      lines, cells.nazar, cells.width, width, PANEL_TOP_PADDING_ASSISTANT,
+      lines, nazar, nazar.width, width, PANEL_TOP_PADDING_ASSISTANT,
       roleTitle("nazar"), rolePanelStyle("nazar"),
       { meta: roleMeta("nazar", (this as any).lastMessage), align: "right" },
     );
@@ -405,8 +418,15 @@ export function patchRpgAvatars() {
   ToolExecutionComponent.prototype.render = function patchedToolRender(width: number): string[] {
     const status = toolStatus(this);
     if (!shouldUseRichAvatar(this, status === "running", stablePanelKey(this, "tool"))) {
-      const plain = originals.toolRender.call(this, width);
-      return trimOuterBlankLines(plain).length === 0 ? [] : plain;
+      const name = String((this as any)?.toolName || "tool").trim() || "tool";
+      const style = toolStyle(status);
+      const lines = originals.toolRender.call(this, bodyOnlyColumnWidth(width));
+      if (trimOuterBlankLines(lines).length === 0) return [];
+      return composeBodyOnlyPanel(
+        lines, width, PANEL_TOP_PADDING_ASSISTANT,
+        toolTitle(name, style), style,
+        { meta: toolMeta(this, style) },
+      );
     }
     const tool = toolCell(this);
     const name = String((this as any)?.toolName || "tool").trim() || "tool";

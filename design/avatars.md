@@ -16,7 +16,7 @@ Avatars are always on. Backend selection is small and explicit:
 ```txt
 NAZAR_UI_QUALITY=auto        # auto | basic | hd; auto uses HD when Kitty support is detected
 NAZAR_GRAPHICS_PROTOCOL=auto  # auto | ansi | kitty; low-level override
-NAZAR_AVATAR_RECENT_LIMIT=10  # full avatars only for latest N panels; 0 = active-only; all = uncapped
+NAZAR_AVATAR_RECENT_LIMIT=20  # avatars only for latest N messages; 0 = active-only; all = uncapped
 ```
 
 ANSI is the minimum supported terminal layer: 24-bit truecolor SGR, text attributes, and half-block rasterization. Auto/HD mode uses Kitty graphics APC transmission plus Unicode placeholder cells (`U+10EEEE`) when support is detected, so images obey the same cell-grid contract as ANSI and fall back to ANSI when unsupported.
@@ -24,7 +24,7 @@ ANSI is the minimum supported terminal layer: 24-bit truecolor SGR, text attribu
 ## Rendering rules
 
 - Chat messages, input editor, thinking widget, and tool panels use the same PNG-sheet-to-backend renderer path.
-- For long conversations, full avatars are capped to recent panels by `NAZAR_AVATAR_RECENT_LIMIT`; old history uses compact generated ANSI badges for performance.
+- For long conversations, avatars are capped to the latest 20 messages by default via `NAZAR_AVATAR_RECENT_LIMIT`; older history keeps the Nazar nameplate/body styling but drops the avatar column and badge.
 - Tool avatars animate only while the tool is actively running; pending/ok/error panels render frame 0 with their state background.
 - The transient thinking panel is a Nazar-owned widget, not Pi's built-in Loader/Text row.
 

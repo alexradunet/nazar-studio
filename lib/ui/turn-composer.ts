@@ -277,9 +277,18 @@ export function bodyColumnWidth(panelWidth: number, avatarWidth: number, options
   return Math.max(8, panelWidth - PAD * 2 - Math.max(1, avatarWidth) - COLUMN_GAP - 1);
 }
 
+export function bodyOnlyColumnWidth(panelWidth: number, options: { outerPadX?: number } = {}): number {
+  const PAD = Math.max(0, options.outerPadX ?? DEFAULT_OUTER_PAD_X);
+  return Math.max(8, panelWidth - PAD * 2 - 1);
+}
+
 /** Body cell width (the column the nameplate band + body rows occupy). */
 function bodyCellWidth(panelWidth: number, avatarWidth: number, outerPadX: number): number {
   return Math.max(8, panelWidth - outerPadX * 2 - Math.max(1, avatarWidth) - COLUMN_GAP);
+}
+
+function bodyOnlyCellWidth(panelWidth: number, outerPadX: number): number {
+  return Math.max(8, panelWidth - outerPadX * 2);
 }
 
 // ── Panel compositor (two-column) ──────────────────────────────────────────
@@ -329,6 +338,46 @@ function paintBodyRow(
  * The legacy `_avatarWidth` parameter is kept for backward compatibility but
  * the actual width is read from `avatar.width`.
  */
+export function composeBodyOnlyPanel(
+  lines: string[],
+  width: number,
+  topPaddingLines = 0,
+  title?: string,
+  style: PanelStyle = panelStyle("system"),
+  options: ComposeOptions = {},
+): string[] {
+  const content = trimOuterBlankLines(lines);
+  const textCells = analyzeTextCells(content);
+
+  const PAD = Math.max(0, options.outerPadX ?? DEFAULT_OUTER_PAD_X);
+  const BODYW = bodyOnlyCellWidth(width, PAD);
+  const hasNameplate = Boolean(title);
+  const meta = options.meta ?? "";
+  const linesOut: string[] = [];
+  const padL = " ".repeat(PAD);
+
+  if (hasNameplate) linesOut.push(`${padL}${nameplateRow(title!, BODYW, style, meta)}`);
+
+  const TEXT_PAD = PANEL_TEXT_PADDING;
+  const innerRows = textCells.length + TEXT_PAD * 2;
+
+  for (let i = 0; i < innerRows; i++) {
+    const textIdx = i - TEXT_PAD;
+    const cell = textIdx >= 0 && textIdx < textCells.length ? textCells[textIdx] : { controls: "", text: "" };
+    linesOut.push(`${padL}${paintBodyRow(cell.text, cell.controls, BODYW, style)}`);
+  }
+
+  const bottomGap = Math.max(0, options.bottomGap ?? PANEL_BOTTOM_GAP);
+  const gapRows: string[] = [];
+  for (let i = 0; i < bottomGap; i++) gapRows.push(" ".repeat(width));
+
+  return [
+    ...Array(topPaddingLines).fill(" ".repeat(Math.max(0, width))),
+    ...linesOut,
+    ...gapRows,
+  ];
+}
+
 export function composeMessagePanel(
   lines: string[],
   avatar: AvatarCell,
