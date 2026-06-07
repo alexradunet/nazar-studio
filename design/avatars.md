@@ -7,7 +7,7 @@ Nazar avatars use **one canonical source and multiple terminal backends**:
 
 Do not maintain separate terminal art by hand. New avatars start as 64×64 frames in their own sprite sheet, then the selected backend scales them for the terminal.
 
-Current art direction follows **Basm**: 16-bit, woven, Romanian-fairy-tale pixel craft. **Nazar is the watchful blue eye** (the *nazar boncuğu*) — concentric blue/white iris, a calm steady gaze, gold/umber amulet rim, restrained teal/ember accents. **The human/user is a mage** — pointed hood/hat, robe, staff/glow, indigo/teal palette.
+Current art direction follows **Basm**: 16-bit, woven, Romanian-fairy-tale pixel craft. Nazar and the operator are a **matched pair of floating crystal orbs** — deep-violet glass with gold Romanian-folk filigree, no pedestal, on a dark field. **Nazar is the cosmic eye** inside the orb: the compressed memory of all human knowledge, a single expressive iris over a starlit interior. **The operator ("the Seeker") is a soul-of-light** in the same orb: an abstract, idealized, universal human visage of radiant gold-teal light with calm open eyes. Same vessel, opposite natures — the one who *knows* and the one who *lives*.
 
 ## Avatar backend
 
@@ -33,7 +33,7 @@ ANSI is the minimum supported terminal layer: 24-bit truecolor SGR, text attribu
 Every avatar-like entity owns a dedicated 3×3 sheet: **9 frames**, each **64×64 px**.
 
 ```txt
-assets/avatars/mage-alien.png       3 columns × 3 rows, 9 frames, 64×64 each
+assets/avatars/soul.png             3 columns × 3 rows, 9 frames, 64×64 each
 assets/avatars/nazar.png            3 columns × 3 rows, 9 frames, 64×64 each
 assets/avatars/nazar-expr.png       3 columns × 3 rows, 9 frames, 64×64 each
 assets/avatars/tools/eye-read.png   3 columns × 3 rows, 9 frames, 64×64 each
@@ -41,7 +41,7 @@ assets/avatars/tools/eye-bash.png   3 columns × 3 rows, 9 frames, 64×64 each
 ...
 ```
 
-Frame 0 is idle/base. Frames 1–8 are animation variants for that avatar. The user role uses the `mage-alien` sheet; Nazar uses `nazar` / `nazar-expr`; each tool/domain icon uses a shared `eye-*` sheet under `tools/`. Do not add another shared mixed sprite sheet.
+Frame 0 is idle/base (shown beside messages). Frames 1–8 are the animation: `nazar` cycles while Nazar is thinking; `soul` cycles while the operator is typing (radiance pulse + eye glint). The user role uses the `soul` sheet; Nazar uses `nazar` / `nazar-expr`; each tool/domain icon uses a shared `eye-*` sheet under `tools/`. Do not add another shared mixed sprite sheet.
 
 ## Portrait/title panels
 

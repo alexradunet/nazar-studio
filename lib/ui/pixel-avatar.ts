@@ -122,7 +122,7 @@ const KIND_TO_EYE: Record<ToolAvatarKind, EyeKind> = {
   "paint-brush": "write", wrench: "gear", bookmark: "read",
 };
 
-type CharacterSheetKey = "mage-alien" | "nazar" | "nazar-expr";
+type CharacterSheetKey = "mage-alien" | "nazar" | "nazar-expr" | "soul";
 type ToolSheetKey = `tool:${ToolAvatarKind}`;
 type SheetKey = CharacterSheetKey | ToolSheetKey;
 type FrameGeometry = { width: number; height: number };
@@ -159,7 +159,7 @@ export type RenderedAvatar = {
   background?: AvatarBackground;
 };
 
-const CHARACTER_SHEETS: CharacterSheetKey[] = ["mage-alien", "nazar", "nazar-expr"];
+const CHARACTER_SHEETS: CharacterSheetKey[] = ["mage-alien", "nazar", "nazar-expr", "soul"];
 
 const SHEET_ASSETS = Object.fromEntries([
   ...CHARACTER_SHEETS.map((k) => [k, { path: join(ANSI_ASSET_DIR, `${k}.png`), frame: ANSI_AVATAR_FRAME }]),
@@ -179,7 +179,11 @@ function modIndex(index: number, length: number): number {
 }
 
 function userAvatarSheet(): CharacterSheetKey {
-  return "mage-alien";
+  // The operator is "the Seeker": a soul-of-light face inside the same floating
+  // crystal orb as Nazar's cosmic eye (a matched pair). Frame 0 is the static
+  // idle shown beside messages; frames 1-8 animate (radiance pulse + eye glint)
+  // while typing, driven by the editor's per-keystroke typing frame.
+  return "soul";
 }
 
 function backgroundForFrame(id: string): Rgb {

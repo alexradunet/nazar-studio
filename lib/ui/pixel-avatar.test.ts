@@ -120,7 +120,7 @@ test("auto quality selects Kitty placeholder cells when supported", () => {
   expect(avatar.lines[0]?.text).toContain("\u{10eeee}");
 });
 
-test("default user avatar renders the mage-alien sheet in HD mode", () => {
+test("default user avatar renders the soul sheet in HD mode", () => {
   setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
   const avatar = renderRoleAvatar("user", { backend: "kitty" })!;
   expect(avatar.backend).toBe("kitty-placeholder");

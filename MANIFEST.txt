@@ -1,0 +1,29 @@
+nazar-studio — avatar overhaul (extract at repo root to replace files)
+Base: branched off origin/main 191a51c ("avatar" cleanup).
+
+NEW:
+  assets/avatars/soul.png             operator "Seeker" = soul-of-light orb (768x768, 9 frames)
+  assets/avatars/ansi/soul.png        ANSI half-block prerender (48x42)
+
+UPDATED — art:
+  assets/avatars/nazar.png            floating cosmic-eye orb, NO pedestal; frame0 static, 1-8 calm loop
+  assets/avatars/nazar-expr.png       matches the orb so mood frames stay on-style
+  assets/avatars/ansi/nazar.png       rebuilt prerender
+  assets/avatars/ansi/nazar-expr.png  rebuilt prerender
+
+UPDATED — code/docs:
+  lib/ui/pixel-avatar.ts              add "soul" to CharacterSheetKey + CHARACTER_SHEETS; userAvatarSheet() -> "soul"
+  lib/ui/pixel-avatar.test.ts         rename the default-user-avatar test
+  scripts/build-ansi-avatar-assets.ts add "soul" to the ANSI build list
+  design/avatars.md                   art direction -> matched floating-orb pair (eye / soul-of-light)
+
+Behavior:
+  Nazar (assistant) = eye-orb; static idle beside messages, calm 9-frame loop while thinking.
+  The Seeker (you)  = soul-of-light orb; static idle beside your messages, radiance + eye animation
+                      while typing (reuses the editor's existing per-keystroke typing-frame cycling,
+                      so NO editor code change).
+
+After replacing:
+  - If you re-edit the HD art, rebuild prerenders:  node scripts/build-ansi-avatar-assets.ts
+  - Validate:  npm run build:tokens -- --check && npm run typecheck && npm run test
+  - "mage-alien" is kept as an unused fallback sheet (optional cleanup).
