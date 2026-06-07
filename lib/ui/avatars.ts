@@ -155,6 +155,10 @@ function avatarCell(owner: unknown, role: SpriteRole, active = false, stableKey?
   return portraitCell(renderNazarExpression(frame)!);
 }
 
+function shouldDecorateRolePanel(owner: unknown, role: "user" | "assistant", active = false, renderedLines?: string[]): boolean {
+  return shouldUseRichAvatar(owner, active, stablePanelKey(owner, role, renderedLines));
+}
+
 // ── Stable identity key for rich-avatar limit ──────────────────────────────
 
 function stableHash(value: string): string {
@@ -348,18 +352,19 @@ export function patchRpgAvatars() {
   g[AVATAR_ORIGINALS] = originals;
 
   UserMessageComponent.prototype.render = function patchedUserRender(width: number): string[] {
+    if (!shouldDecorateRolePanel(this, "user")) return originals.userRender.call(this, width);
     // Build the cells FIRST so we know the avatar column width, then ask Pi
     // to render the body wrapped into our narrower body column. Otherwise Pi
     // produces full-width rows that overflow when we paste them into the
     // two-column layout (causes pi-tui's width assertion to fire).
     const cells = buildCells(this);
     const lines = originals.userRender.call(this, bodyColumnWidth(width, cells.width));
-    // User messages render with the avatar on the RIGHT so the conversation
-    // reads like a chat: agent/tools on the left, you on the right.
+    // Conversation flows left→right: YOU on the left, Nazar (and his tools) on
+    // the right — mirroring the input bar (you type on the left, it flows to Nazar).
     return composeMessagePanel(
       lines, cells.user, cells.width, width, 0,
       roleTitle("user"), rolePanelStyle("user"),
-      { meta: roleMeta("user", undefined), align: "right" },
+      { meta: roleMeta("user", undefined), align: "left" },
     );
   };
 
@@ -383,20 +388,28 @@ export function patchRpgAvatars() {
   };
 
   AssistantMessageComponent.prototype.render = function patchedAssistantRender(width: number): string[] {
+    if (!shouldDecorateRolePanel(this, "assistant")) {
+      const plain = originals.assistantRender.call(this, width);
+      return trimOuterBlankLines(plain).length === 0 ? [] : plain;
+    }
     const cells = buildCells(this);
     const lines = originals.assistantRender.call(this, bodyColumnWidth(width, cells.width));
     if (trimOuterBlankLines(lines).length === 0) return [];
     return composeMessagePanel(
       lines, cells.nazar, cells.width, width, PANEL_TOP_PADDING_ASSISTANT,
       roleTitle("nazar"), rolePanelStyle("nazar"),
-      { meta: roleMeta("nazar", (this as any).lastMessage) },
+      { meta: roleMeta("nazar", (this as any).lastMessage), align: "right" },
     );
   };
 
   ToolExecutionComponent.prototype.render = function patchedToolRender(width: number): string[] {
+    const status = toolStatus(this);
+    if (!shouldUseRichAvatar(this, status === "running", stablePanelKey(this, "tool"))) {
+      const plain = originals.toolRender.call(this, width);
+      return trimOuterBlankLines(plain).length === 0 ? [] : plain;
+    }
     const tool = toolCell(this);
     const name = String((this as any)?.toolName || "tool").trim() || "tool";
-    const status = toolStatus(this);
     const lines = originals.toolRender.call(this, bodyColumnWidth(width, tool.width));
     if (trimOuterBlankLines(lines).length === 0) return [];
     const style = toolStyle(status);
@@ -408,7 +421,7 @@ export function patchRpgAvatars() {
     return composeMessagePanel(
       lines, tool, tool.width, width, PANEL_TOP_PADDING_ASSISTANT,
       toolTitle(name, style), style,
-      { meta: toolMeta(this, style) },
+      { meta: toolMeta(this, style), align: "right" },
     );
   };
 

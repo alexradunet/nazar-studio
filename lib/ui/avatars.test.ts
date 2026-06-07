@@ -168,6 +168,41 @@ test("rich avatars are limited to recent panels unless active", () => {
   expect(__testing.shouldUseRichAvatar(first, true)).toBe(true);
 });
 
+test("old role messages render as plain messages instead of badge panels", async () => {
+  process.env.NAZAR_AVATAR_RECENT_LIMIT = "0";
+  const { patchRpgAvatars } = await import("./avatars.ts");
+  const { UserMessageComponent, AssistantMessageComponent, ToolExecutionComponent } = await import("@earendil-works/pi-coding-agent");
+  const key = Symbol.for("nazar.rpgAvatarOriginals");
+  const g = globalThis as any;
+  const savedOriginals = g[key];
+  const savedUserRender = UserMessageComponent.prototype.render;
+  const savedAssistantRender = AssistantMessageComponent.prototype.render;
+  const savedAssistantUpdateContent = AssistantMessageComponent.prototype.updateContent;
+  const savedToolRender = ToolExecutionComponent.prototype.render;
+
+  g[key] = {};
+  UserMessageComponent.prototype.render = function fakeOriginal(width: number) {
+    return [`plain message at ${width}`];
+  };
+
+  try {
+    patchRpgAvatars();
+    const rendered = UserMessageComponent.prototype.render.call({}, 80).map(stripAnsi).join("\n");
+
+    expect(rendered).toBe("plain message at 80");
+    expect(rendered).not.toContain("◆");
+    expect(rendered).not.toContain("YOU");
+    expect(rendered).not.toMatch(/[▀▄█▌▐]/);
+  } finally {
+    UserMessageComponent.prototype.render = savedUserRender;
+    AssistantMessageComponent.prototype.render = savedAssistantRender;
+    AssistantMessageComponent.prototype.updateContent = savedAssistantUpdateContent;
+    ToolExecutionComponent.prototype.render = savedToolRender;
+    if (savedOriginals === undefined) delete g[key];
+    else g[key] = savedOriginals;
+  }
+});
+
 test("Kitty image APC sequences pass through the composer verbatim", async () => {
   // Regression: in-message images (and HD avatar APC transmission rows)
   // were showing as raw Kitty placeholder chars because the APC image data
