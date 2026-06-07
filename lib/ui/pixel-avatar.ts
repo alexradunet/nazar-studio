@@ -192,7 +192,7 @@ function modIndex(index: number, length: number): number {
 /**
  * Resolve the character sheet for the user panel.
  * Set NAZAR_USER_AVATAR=mage-female or NAZAR_USER_AVATAR=mage-alien to change
- * the user avatar. Defaults to "mage" (male human face in globe).
+ * the user avatar. Defaults to "mage-alien".
  */
 function userAvatarSheet(): CharacterSheetKey {
   const raw = (process.env.NAZAR_USER_AVATAR ?? "").trim().toLowerCase();
@@ -202,7 +202,7 @@ function userAvatarSheet(): CharacterSheetKey {
   if (raw === "mage-black" || raw === "black") return "mage-black";
   if (raw === "mage-elder" || raw === "elder") return "mage-elder";
   if (raw === "mage-blonde" || raw === "blonde") return "mage-blonde";
-  return "mage";
+  return "mage-alien";
 }
 
 function backgroundForFrame(id: string): Rgb {
