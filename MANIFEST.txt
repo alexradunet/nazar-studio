@@ -1,29 +1,32 @@
-nazar-studio — avatar overhaul (extract at repo root to replace files)
-Base: branched off origin/main 191a51c ("avatar" cleanup).
+nazar-studio — avatar overhaul (extract at repo ROOT to replace files)
+Base: branched off origin/main 191a51c.
 
-NEW:
-  assets/avatars/soul.png             operator "Seeker" = soul-of-light orb (768x768, 9 frames)
-  assets/avatars/ansi/soul.png        ANSI half-block prerender (48x42)
+THE PAIR — two floating crystal orbs (full-quality HD PNGs, gently Basm-token graded, no pedestal):
+  Nazar (assistant) = COOL teal/indigo + gold cosmic eye-orb.
+  The Seeker (you)  = WARM ethereal soul-of-light face-orb.
 
-UPDATED — art:
-  assets/avatars/nazar.png            floating cosmic-eye orb, NO pedestal; frame0 static, 1-8 calm loop
-  assets/avatars/nazar-expr.png       matches the orb so mood frames stay on-style
-  assets/avatars/ansi/nazar.png       rebuilt prerender
-  assets/avatars/ansi/nazar-expr.png  rebuilt prerender
+ASSETS — 9-frame 3x3 768x768 sheets. FEATURE-ONLY animation (the orb/face is held perfectly
+still; only the internal feature moves), frame 0 = still rest:
+  assets/avatars/nazar.png        eye: open -> squint -> centered blink -> open (smooth cross-fade)
+  assets/avatars/nazar-expr.png   = nazar sheet (mood frames reuse the eye states)
+  assets/avatars/soul.png         mouth: closed -> talk shapes (smooth cross-fade)
+  assets/avatars/ansi/{nazar,nazar-expr,soul}.png   rebuilt half-block prerenders
 
-UPDATED — code/docs:
-  lib/ui/pixel-avatar.ts              add "soul" to CharacterSheetKey + CHARACTER_SHEETS; userAvatarSheet() -> "soul"
-  lib/ui/pixel-avatar.test.ts         rename the default-user-avatar test
-  scripts/build-ansi-avatar-assets.ts add "soul" to the ANSI build list
-  design/avatars.md                   art direction -> matched floating-orb pair (eye / soul-of-light)
+CODE:
+  lib/ui/pixel-avatar.ts               add "soul" to CharacterSheetKey + CHARACTER_SHEETS; userAvatarSheet() -> "soul"
+  lib/ui/pixel-avatar.test.ts          renamed the default-user-avatar test
+  scripts/build-ansi-avatar-assets.ts  add "soul" to the ANSI build list
+  design/avatars.md                    art direction -> matched floating-orb pair
+  extensions/brand.ts                  FIX: mount the animated ThinkingWidget on before_agent_start,
+                                       remove on agent_end. (It was implemented but never mounted, so
+                                       Nazar's eye never animated while thinking — now it does.)
 
-Behavior:
-  Nazar (assistant) = eye-orb; static idle beside messages, calm 9-frame loop while thinking.
-  The Seeker (you)  = soul-of-light orb; static idle beside your messages, radiance + eye animation
-                      while typing (reuses the editor's existing per-keystroke typing-frame cycling,
-                      so NO editor code change).
+BEHAVIOR:
+  Nazar : still beside messages; eye blinks/squints while he is thinking (ThinkingWidget @180ms).
+  Seeker: still beside your messages; mouth animates per keystroke while typing (existing editor cycling).
+  Only the eye/mouth move; the orb and face never wobble.
 
-After replacing:
-  - If you re-edit the HD art, rebuild prerenders:  node scripts/build-ansi-avatar-assets.ts
+AFTER REPLACING:
   - Validate:  npm run build:tokens -- --check && npm run typecheck && npm run test
+  - Re-edit HD art later? rebuild prerenders:  node scripts/build-ansi-avatar-assets.ts
   - "mage-alien" is kept as an unused fallback sheet (optional cleanup).

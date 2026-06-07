@@ -14,6 +14,7 @@ import { headerFactory } from "../lib/ui/header.ts";
 import { panelStyle } from "../lib/ui/panel-style.ts";
 import { recordSessionStart } from "../lib/ui/session-info.ts";
 import { setActiveTool, setNazarMood } from "../lib/ui/nazar-mood.ts";
+import { showThinkingWidget, hideThinkingWidget } from "../lib/ui/working.ts";
 import { compact, visibleWidth } from "../lib/ui/ansi.ts";
 
 function applyNazarUI(pi: ExtensionAPI, ctx: ExtensionContext, onTui?: (tui: any) => void) {
@@ -34,6 +35,7 @@ export default function (pi: ExtensionAPI) {
   patchRpgAvatars();
 
   let renderTui: any;
+  let uiCtx: ExtensionContext | undefined;
   const activeToolAnimations = new Set<string>();
   let toolAnimationTicker: ReturnType<typeof setInterval> | undefined;
 
@@ -71,6 +73,7 @@ export default function (pi: ExtensionAPI) {
   };
 
   pi.on("session_start", async (_event: unknown, ctx: any) => {
+    uiCtx = ctx;
     setNazarMood("neutral");
     applyNazarUI(pi, ctx, (tui) => { renderTui = tui; });
   });
@@ -81,10 +84,15 @@ export default function (pi: ExtensionAPI) {
   // each subsequent agent invocation. before_agent_start fires right before Pi
   // shows the loader, so we suppress it here reliably every turn.
   pi.on("before_agent_start", async (_event: unknown, ctx: any) => {
+    uiCtx = ctx;
     try { ctx?.ui?.setWorkingVisible?.(false); } catch { /* ignore */ }
     turnHadError = false;
     setActiveTool(null);
     setMood("thinking");
+    // Mount Nazar's animated thinking panel. The widget owns a 180ms timer that
+    // drives the calm eye-orb loop while he works (mood "thinking"/"neutral"),
+    // and holds a mood expression while a tool runs. Removed again on agent_end.
+    try { showThinkingWidget(ctx); } catch { /* ignore */ }
   });
 
   pi.on("model_select", async (_event: unknown, _ctx: any) => {
@@ -123,6 +131,7 @@ export default function (pi: ExtensionAPI) {
     setActiveTool(null);
     settleActiveAssistantAvatar();
     setMood(turnHadError ? "concerned" : "pleased");
+    if (uiCtx) { try { hideThinkingWidget(uiCtx); } catch { /* ignore */ } }
   });
 
   pi.on("session_shutdown", async (_event: unknown) => {
