@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { afterEach, expect, test } from "vitest";
-import { __testing } from "./avatars.ts";
+import { __testing, settleActiveAssistantAvatar } from "./avatars.ts";
 import { visibleWidth } from "./ansi.ts";
+import { NAZAR_MOOD_FRAME, setNazarMood } from "./nazar-mood.ts";
 
 const originalRecentLimit = process.env.NAZAR_AVATAR_RECENT_LIMIT;
 
@@ -12,6 +13,8 @@ function stripAnsi(text: string): string {
 afterEach(() => {
   if (originalRecentLimit === undefined) delete process.env.NAZAR_AVATAR_RECENT_LIMIT;
   else process.env.NAZAR_AVATAR_RECENT_LIMIT = originalRecentLimit;
+  settleActiveAssistantAvatar();
+  setNazarMood("neutral");
 });
 
 test("message panels keep body text rows copyable (no box glyphs)", () => {
@@ -179,6 +182,17 @@ test("body text rows are free of box-drawing decoration", () => {
 
 test("partial tool results count as running", () => {
   expect(__testing.toolStatus({ result: { details: "streaming" }, isPartial: true })).toBe("running");
+});
+
+test("saved assistant messages use Nazar's open-eye neutral avatar", () => {
+  const owner = {};
+
+  __testing.setActiveAssistantComponent(owner);
+  setNazarMood("pleased");
+  expect(__testing.nazarAvatarFrame(owner)).toBe(NAZAR_MOOD_FRAME.pleased);
+
+  settleActiveAssistantAvatar();
+  expect(__testing.nazarAvatarFrame(owner)).toBe(NAZAR_MOOD_FRAME.neutral);
 });
 
 test("rich avatars are limited to recent panels unless active", () => {

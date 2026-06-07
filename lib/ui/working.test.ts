@@ -93,6 +93,21 @@ test("thinking panel shows a live preview in the text pane", () => {
   expect(frame).toContain("change.");
 });
 
+test("thinking panel places Nazar avatar on the right", () => {
+  process.env.TERM = "xterm-256color";
+  delete process.env.KITTY_WINDOW_ID;
+  setCapabilities({ images: null, trueColor: true, hyperlinks: false });
+
+  const lines = plain(renderThinkingPanel(0, { preview: "right side marker" })).split("\n");
+  const bodyRow = lines.find((line) => line.includes("right side marker")) ?? "";
+  const bodyIdx = bodyRow.indexOf("right side marker");
+  expect(bodyIdx).toBeGreaterThan(0);
+
+  const avatarRow = lines.find((line) => /[▀▄█▌▐]/.test(line)) ?? "";
+  const avatarIdx = avatarRow.search(/[▀▄█▌▐]/);
+  expect(avatarIdx).toBeGreaterThan(bodyIdx);
+});
+
 test("thinking preview extraction keeps only the tail", () => {
   const preview = extractThinkingPreview({
     content: [{ type: "thinking", thinking: `${"older reasoning ".repeat(100)} latest useful thought` }],

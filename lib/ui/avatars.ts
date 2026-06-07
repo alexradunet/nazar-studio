@@ -53,6 +53,10 @@ let refreshScheduled = false;
 // across the whole transcript.
 let activeAssistantComponent: unknown = null;
 
+export function settleActiveAssistantAvatar(): void {
+  activeAssistantComponent = null;
+}
+
 type ToolStatus = "pending" | "running" | "ok" | "error";
 
 // ── Recent-avatar perf cap ─────────────────────────────────────────────────
@@ -148,13 +152,16 @@ function roleBackground(role: SpriteRole): AvatarBackground {
   return role === "user" ? AVATAR_FIELDS.user : AVATAR_FIELDS.nazar;
 }
 
+function assistantNazarAvatarFrame(owner: unknown): number {
+  // Only the active streaming assistant message reflects Nazar's live mood;
+  // saved transcript messages show the calm open-eye face.
+  return owner === activeAssistantComponent ? nazarMoodFrame() : NAZAR_MOOD_FRAME.neutral;
+}
+
 function avatarCell(owner: unknown, role: SpriteRole, active = false, stableKey?: string): AvatarCell {
   if (!shouldUseRichAvatar(owner, active, stableKey)) return badgeCell(roleBackground(role));
   if (role === "user") return portraitCell(renderRoleAvatar("user")!);
-  // Only the active (latest) assistant message reflects Nazar's live mood;
-  // historical messages show the calm neutral face (no transcript-wide animation).
-  const frame = owner === activeAssistantComponent ? nazarMoodFrame() : NAZAR_MOOD_FRAME.neutral;
-  return portraitCell(renderNazarExpression(frame)!);
+  return portraitCell(renderNazarExpression(assistantNazarAvatarFrame(owner))!);
 }
 
 function shouldDecorateRolePanel(owner: unknown, role: "user" | "assistant", active = false, renderedLines?: string[]): boolean {
@@ -330,6 +337,12 @@ export const __testing = {
   composeMessagePanel(lines: string[], width = 80, title?: string): string[] {
     const avatar = testAvatarCell();
     return composeMessagePanel(lines, avatar, avatar.width, width, 0, title);
+  },
+  nazarAvatarFrame(owner: unknown): number {
+    return assistantNazarAvatarFrame(owner);
+  },
+  setActiveAssistantComponent(owner: unknown): void {
+    activeAssistantComponent = owner;
   },
   shouldUseRichAvatar(owner: object, active = false): boolean {
     return shouldUseRichAvatar(owner, active);

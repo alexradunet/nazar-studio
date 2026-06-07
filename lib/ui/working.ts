@@ -180,7 +180,7 @@ export function renderThinkingPanel(
   const panel = composeMessagePanel(
     previewLines, cell, cell.width, width, 0,
     title, style,
-    { align: "left", bottomGap: 0 },
+    { align: "right", bottomGap: 0 },
   );
 
   return panel.join("\n");
