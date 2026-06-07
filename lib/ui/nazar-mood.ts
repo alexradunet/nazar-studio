@@ -18,6 +18,7 @@ export const NAZAR_MOOD_FRAME: Record<NazarMood, number> = {
 };
 
 let current: NazarMood = "neutral";
+let activeTool: string | null = null;
 
 export function getNazarMood(): NazarMood {
   return current;
@@ -30,4 +31,18 @@ export function setNazarMood(mood: NazarMood): void {
 /** The nazar-expr frame index for the current mood. */
 export function nazarMoodFrame(): number {
   return NAZAR_MOOD_FRAME[current];
+}
+
+/** The tool Nazar is currently running, if any (for the live status bar). */
+export function getActiveTool(): string | null {
+  return activeTool;
+}
+
+export function setActiveTool(name: string | null): void {
+  activeTool = name && name.trim() ? name.trim() : null;
+}
+
+/** Whether Nazar is actively working (non-resting mood). */
+export function isNazarWorking(): boolean {
+  return current === "thinking" || current === "focused";
 }

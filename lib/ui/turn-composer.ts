@@ -291,10 +291,10 @@ function bodyOnlyCellWidth(panelWidth: number, outerPadX: number): number {
   return Math.max(8, panelWidth - outerPadX * 2);
 }
 
-// ── Panel compositor (two-column) ──────────────────────────────────────────
+// ── Panel compositor ──────────────────────────────────────────────────────
 
-function paintPortraitFieldRow(width: number, field: AvatarBackground): string {
-  return paintBgStrip("", field, width);
+function emptyAvatarSpaceRow(width: number): string {
+  return " ".repeat(width);
 }
 
 function paintAvatarRow(line: AvatarRenderLine, width: number, startCol: number, field: AvatarBackground): string {
@@ -332,8 +332,9 @@ function paintBodyRow(
  *   PAD ┃ portrait column ┃ GAP ┃ right column (nameplate / body)
  *
  * Row 0 of the right column is the nameplate band (when `title` is supplied).
- * The portrait column carries the avatar pixels for `avatar.height` rows,
- * then continues with the portrait field background to match the body height.
+ * The portrait column paints the avatar field only for `avatar.height` rows;
+ * longer message bodies keep alignment with blank space instead of stretching
+ * the avatar box vertically.
  *
  * The legacy `_avatarWidth` parameter is kept for backward compatibility but
  * the actual width is read from `avatar.width`.
@@ -393,9 +394,10 @@ export function composeMessagePanel(
 
   const PAD = Math.max(0, options.outerPadX ?? DEFAULT_OUTER_PAD_X);
   const AVW = Math.max(1, avatar.width);
-  const BODYW = bodyCellWidth(width, AVW, PAD);
   const field = style.portraitField;
   const align: PanelAlignment = options.align ?? "left";
+
+  const BODYW = bodyCellWidth(width, AVW, PAD);
 
   const hasNameplate = Boolean(title);
   const meta = options.meta ?? "";
@@ -405,38 +407,38 @@ export function composeMessagePanel(
   const padL = " ".repeat(PAD);
   const padG = " ".repeat(COLUMN_GAP);
 
-  // Compose a single row from its avatar cell and body cell, in the
-  // alignment-appropriate order. Body text stays left-aligned for
-  // readability regardless of which side the avatar lives on.
+  // Compose a row: the single avatar sits on the alignment-appropriate side.
+  // Body text stays left-aligned for readability regardless.
   const composeRow = (avCell: string, bodyCell: string): string => {
     return align === "right"
       ? `${padL}${bodyCell}${padG}${avCell}`
       : `${padL}${avCell}${padG}${bodyCell}`;
   };
 
-  // Row 0: portrait field + nameplate band (or empty band if no title).
+  // Row 0: nameplate band. The avatar field starts on body row 0 so its
+  // visible background stays fixed to the avatar's own dimensions.
   if (hasNameplate) {
-    linesOut.push(composeRow(paintPortraitFieldRow(AVW, field), nameplateRow(title!, BODYW, style, meta)));
+    linesOut.push(composeRow(
+      emptyAvatarSpaceRow(AVW),
+      nameplateRow(title!, BODYW, style, meta),
+    ));
   }
 
-  // Compute total rows = max(avatar height, text rows + 2 padding rows)
+  // Compute total rows = max(avatar heights, text rows + 2 padding rows)
   const TEXT_PAD = PANEL_TEXT_PADDING;
   const bodyRowsNeeded = textCells.length + TEXT_PAD * 2;
   const portraitRows = avatar.height;
   const innerRows = Math.max(portraitRows, bodyRowsNeeded);
 
-  // Avatar's start column (1-indexed) for Kitty placeholder placement —
-  // on the left this is PAD + 1; on the right it's PAD + BODYW + GAP + 1.
-  const avatarStartColumn = align === "right"
-    ? PAD + BODYW + COLUMN_GAP + 1
-    : PAD + 1;
+  // Avatar start column (1-indexed) for Kitty placeholder placement.
+  const leftStartColumn = align !== "right" ? PAD + 1 : PAD + BODYW + COLUMN_GAP + 1;
 
   for (let i = 0; i < innerRows; i++) {
-    // Avatar column
+    // Left avatar column
     const avLine = i < portraitRows ? avatar.content(i) : null;
     const avCell = avLine
-      ? paintAvatarRow(avLine, AVW, avatarStartColumn, field)
-      : paintPortraitFieldRow(AVW, field);
+      ? paintAvatarRow(avLine, AVW, leftStartColumn, field)
+      : emptyAvatarSpaceRow(AVW);
 
     // Body column (top padding, then text cells, then bottom padding)
     const textIdx = i - TEXT_PAD;

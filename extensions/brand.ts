@@ -13,7 +13,7 @@ import { footerFactory } from "../lib/ui/footer.ts";
 import { headerFactory } from "../lib/ui/header.ts";
 import { panelStyle } from "../lib/ui/panel-style.ts";
 import { recordSessionStart } from "../lib/ui/session-info.ts";
-import { setNazarMood } from "../lib/ui/nazar-mood.ts";
+import { setActiveTool, setNazarMood } from "../lib/ui/nazar-mood.ts";
 import { compact, visibleWidth } from "../lib/ui/ansi.ts";
 
 function applyNazarUI(pi: ExtensionAPI, ctx: ExtensionContext, onTui?: (tui: any) => void) {
@@ -83,6 +83,7 @@ export default function (pi: ExtensionAPI) {
   pi.on("before_agent_start", async (_event: unknown, ctx: any) => {
     try { ctx?.ui?.setWorkingVisible?.(false); } catch { /* ignore */ }
     turnHadError = false;
+    setActiveTool(null);
     setMood("thinking");
   });
 
@@ -101,11 +102,13 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("tool_execution_start", async (event: any) => {
     trackToolAnimation(event?.toolCallId);
+    setActiveTool(event?.toolName ?? null);
     setMood("focused");
   });
 
   pi.on("tool_execution_end", async (event: any) => {
     untrackToolAnimation(event?.toolCallId);
+    setActiveTool(null);
     if (event?.isError) {
       turnHadError = true;
       setMood("concerned");
@@ -117,6 +120,7 @@ export default function (pi: ExtensionAPI) {
   pi.on("agent_end", async (_event: unknown) => {
     activeToolAnimations.clear();
     stopToolAnimationTicker();
+    setActiveTool(null);
     setMood(turnHadError ? "concerned" : "pleased");
   });
 

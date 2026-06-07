@@ -22,9 +22,10 @@ import {
   type AvatarRenderLine,
   type RenderedAvatar,
 } from "./pixel-avatar.ts";
+import { getActiveTool, getNazarMood } from "./nazar-mood.ts";
 import { renderRuntimeMeta, type RuntimeMetaContext } from "./runtime-meta.ts";
 import { mix, hexToRgb, COLOR } from "./tokens.ts";
-import { bodyColumnWidth, composeMessagePanel } from "./turn-composer.ts";
+import { composeMessagePanel } from "./turn-composer.ts";
 
 const PROMPT = "> ";
 const CONTINUATION = "  ";
@@ -123,11 +124,16 @@ export class NazarEditor extends CustomEditor {
     const avatar = userAvatarCell(currentText, this.typingFrame);
     const style = editorPanelStyle();
 
-    // Ask Pi to wrap the editor body into the body column; reserve room
-    // for the prompt marker so wrapped lines line up under each other.
+    // The input bar reads left→right: YOU (avatar) │ input. Nazar's live
+    // status rides in the right-side nameplate meta, not a second portrait.
+    const PAD = 2, GAP = 2;
+
+    // Ask Pi to wrap the editor body into the body column (matching the
+    // composer's single-avatar body width exactly); reserve room for the
+    // prompt marker.
     const promptWidth = visibleWidth(PROMPT);
-    const bodyWrapWidth = bodyColumnWidth(width, avatar.width);
-    const editorWidth = Math.max(1, bodyWrapWidth - promptWidth);
+    const bodyW = Math.max(8, width - PAD * 2 - avatar.width - GAP);
+    const editorWidth = Math.max(1, bodyW - promptWidth);
 
     const raw = super.render(editorWidth);
     const bodyLines = raw.filter((line) => !isPlainEditorRule(line));
@@ -139,22 +145,25 @@ export class NazarEditor extends CustomEditor {
       i === 0 ? `${promptPaint(PROMPT)}${line}` : `${continuationPaint(CONTINUATION)}${line}`,
     );
 
-    // Title is identical to a submitted user panel — same icon, same name,
-    // same descriptor. The cooler body bg + meta string carry the "this is
-    // live" signal instead of a separate "drafting…" indicator.
     const title = roleTitle("user");
 
-    // Meta budget: roughly half the panel width minus title + a gap.
-    const titleWidth = visibleWidth(title);
-    const metaBudget = Math.max(0, Math.floor(width / 2) - 4);
-    const meta = this.meta
-      ? renderRuntimeMeta(this.meta, Math.max(metaBudget, width - titleWidth - 12), style)
-      : "";
+    // Right-side nameplate meta: Nazar's LIVE STATUS while he works (mood +
+    // active tool), reverting to the runtime meta (model · ctx · git) at rest.
+    const mood = getNazarMood();
+    let meta = "";
+    if (mood !== "neutral") {
+      const tool = getActiveTool();
+      meta = style.paint.accent(`✦ ${tool ? `${mood} · ${tool}` : mood}`);
+    } else if (this.meta) {
+      const titleWidth = visibleWidth(title);
+      const metaBudget = Math.max(0, Math.floor(width / 2) - 4);
+      meta = renderRuntimeMeta(this.meta, Math.max(metaBudget, width - titleWidth - 12), style);
+    }
 
     return composeMessagePanel(
       decorated, avatar, avatar.width, width, 0,
       title, style,
-      { meta, align: "right", bottomGap: 1 },
+      { meta, align: "left", bottomGap: 1 },
     );
   }
 }

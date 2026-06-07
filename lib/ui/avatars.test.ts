@@ -98,6 +98,33 @@ test("Pi-padded body lines do not get a stray '...' ellipsis appended", async ()
   }
 });
 
+test("avatar field background keeps the avatar box fixed instead of stretching to long bodies", async () => {
+  const { composeMessagePanel } = await import("./turn-composer.ts");
+  const { panelStyle } = await import("./panel-style.ts");
+  const portraitField = [1, 2, 3] as const;
+  const style = { ...panelStyle("user"), portraitField };
+  const avatar = {
+    height: 2,
+    width: 4,
+    background: portraitField,
+    content: () => ({ text: "xx" }),
+  };
+
+  const panel = composeMessagePanel(
+    Array(8).fill("long body row"),
+    avatar,
+    avatar.width,
+    80,
+    0,
+    "CICO",
+    style,
+  );
+  const portraitBg = "\x1b[48;2;1;2;3m";
+
+  expect(panel[0]).not.toContain(portraitBg);
+  expect(panel.filter((row) => row.includes(portraitBg))).toHaveLength(avatar.height);
+});
+
 test("right-align layout places the avatar on the right of the body", async () => {
   // The user-message render flips the avatar to the right of the panel
   // (chat-style: them on the left, you on the right). We exercise the
