@@ -76,6 +76,12 @@ export default function (pi: ExtensionAPI) {
     uiCtx = ctx;
     setNazarMood("neutral");
     applyNazarUI(pi, ctx, (tui) => { renderTui = tui; });
+    // First render can happen before all rich-avatar state has fully settled.
+    // Force one extra paint tick so post-load avatar-cap pruning applies
+    // immediately (when the history buffer is already rendered).
+    setTimeout(() => {
+      try { renderTui?.requestRender?.(); } catch { /* ignore */ }
+    }, 0);
   });
 
   // Pi resets workingVisible = true before every agent run (interactive-mode.ts

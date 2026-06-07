@@ -382,10 +382,10 @@ export function patchRpgAvatars() {
   g[AVATAR_ORIGINALS] = originals;
 
   UserMessageComponent.prototype.render = function patchedUserRender(width: number): string[] {
-    if (!shouldDecorateRolePanel(this, "user")) {
-      const lines = originals.userRender.call(this, bodyOnlyColumnWidth(width));
+    const bodyOnlyLines = originals.userRender.call(this, bodyOnlyColumnWidth(width));
+    if (!shouldDecorateRolePanel(this, "user", false, bodyOnlyLines)) {
       return composeBodyOnlyPanel(
-        lines, width, 0,
+        bodyOnlyLines, width, 0,
         roleTitle("user"), rolePanelStyle("user"),
         { meta: roleMeta("user", undefined) },
       );
@@ -394,7 +394,7 @@ export function patchRpgAvatars() {
     // to render the body wrapped into our narrower body column. Otherwise Pi
     // produces full-width rows that overflow when we paste them into the
     // two-column layout (causes pi-tui's width assertion to fire).
-    const user = roleAvatarCell(this, "user");
+    const user = roleAvatarCell(this, "user", bodyOnlyLines);
     const lines = originals.userRender.call(this, bodyColumnWidth(width, user.width));
     // Conversation flows left→right: YOU on the left, Nazar (and his tools) on
     // the right — mirroring the input bar (you type on the left, it flows to Nazar).

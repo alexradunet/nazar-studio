@@ -681,8 +681,11 @@ export function renderUserTypingAvatar(
   frameIndex = 0,
   options: RenderAvatarOptions = {},
 ): RenderedAvatar | undefined {
-  const index = modIndex(frameIndex, AVATAR_FRAME_COUNT);
-  return renderFrameAvatar(index === 0 ? "user" : `user-typing-${index}`, options);
+  // Keep typing animation in motion on frames 1–8 only while input is non-empty.
+  // Frame 0 is the static idle portrait (used by submit-ready panels), so we
+  // skip it for the draft animation to avoid visible "blips" every 9th key.
+  const index = modIndex(frameIndex, AVATAR_FRAME_COUNT - 1) + 1;
+  return renderFrameAvatar(`user-typing-${index}`, options);
 }
 
 export function renderThinkingAvatar(
