@@ -195,6 +195,32 @@ test("saved assistant messages use Nazar's open-eye neutral avatar", () => {
   expect(__testing.nazarAvatarFrame(owner)).toBe(NAZAR_MOOD_FRAME.neutral);
 });
 
+test("assistant updates outside a live turn cannot animate saved messages", () => {
+  const owner = {};
+  setNazarMood("thinking");
+
+  __testing.activateAssistantAvatar(owner, undefined, { content: [] });
+
+  expect(__testing.nazarAvatarFrame(owner)).toBe(NAZAR_MOOD_FRAME.neutral);
+});
+
+test("assistant invalidation does not steal the live mood during thinking", () => {
+  const liveOwner = {};
+  const savedOwner = {};
+  const liveMessage = { content: [{ type: "text", text: "streaming" }] };
+  const savedMessage = { content: [{ type: "text", text: "saved" }] };
+
+  __testing.beginActiveAssistantAvatar();
+  __testing.activateAssistantAvatar(liveOwner, undefined, liveMessage);
+  setNazarMood("thinking");
+  expect(__testing.nazarAvatarFrame(liveOwner)).toBe(NAZAR_MOOD_FRAME.thinking);
+
+  __testing.activateAssistantAvatar(savedOwner, savedMessage, savedMessage);
+
+  expect(__testing.nazarAvatarFrame(savedOwner)).toBe(NAZAR_MOOD_FRAME.neutral);
+  expect(__testing.nazarAvatarFrame(liveOwner)).toBe(NAZAR_MOOD_FRAME.thinking);
+});
+
 test("rich avatars are limited to recent panels unless active", () => {
   process.env.NAZAR_AVATAR_RECENT_LIMIT = "2";
   const first = {};

@@ -47,14 +47,21 @@ const PANEL_KEY_SEQUENCE = new Map<string, number>();
 let panelSequenceCounter = 0;
 let refreshScheduled = false;
 
-// The assistant message currently being generated / most recently updated.
+// The assistant message currently being generated in the live agent turn.
 // Only this one reflects Nazar's live mood (focused / pleased / concerned …);
-// older messages render the calm neutral face so the avatar doesn't animate
-// across the whole transcript.
+// saved messages render the calm open-eye face so thinking animation does not
+// ripple backward through the transcript.
 let activeAssistantComponent: unknown = null;
+let assistantAvatarLive = false;
+
+export function beginActiveAssistantAvatar(): void {
+  activeAssistantComponent = null;
+  assistantAvatarLive = true;
+}
 
 export function settleActiveAssistantAvatar(): void {
   activeAssistantComponent = null;
+  assistantAvatarLive = false;
 }
 
 type ToolStatus = "pending" | "running" | "ok" | "error";
@@ -152,9 +159,16 @@ function roleBackground(role: SpriteRole): AvatarBackground {
   return role === "user" ? AVATAR_FIELDS.user : AVATAR_FIELDS.nazar;
 }
 
+function activateAssistantAvatar(owner: unknown, previousMessage: unknown, message: unknown): void {
+  if (!assistantAvatarLive) return;
+  // Pi invalidates old AssistantMessageComponents by calling updateContent()
+  // with their existing lastMessage. Do not let those cache rebuilds steal the
+  // live mood from the streaming component.
+  if (previousMessage === message) return;
+  activeAssistantComponent = owner;
+}
+
 function assistantNazarAvatarFrame(owner: unknown): number {
-  // Only the active streaming assistant message reflects Nazar's live mood;
-  // saved transcript messages show the calm open-eye face.
   return owner === activeAssistantComponent ? nazarMoodFrame() : NAZAR_MOOD_FRAME.neutral;
 }
 
@@ -341,6 +355,8 @@ export const __testing = {
   nazarAvatarFrame(owner: unknown): number {
     return assistantNazarAvatarFrame(owner);
   },
+  beginActiveAssistantAvatar,
+  activateAssistantAvatar,
   setActiveAssistantComponent(owner: unknown): void {
     activeAssistantComponent = owner;
   },
@@ -398,14 +414,14 @@ export function patchRpgAvatars() {
       self.markdownTheme = nazarMarkdownTheme(self.markdownTheme);
     }
 
+    const previousMessage = self.lastMessage;
     const hideThinking = Boolean(self.hideThinkingBlock);
     const displayMessage = hideThinking
       ? { ...message, content: message.content.filter((p: any) => p.type !== "thinking") }
       : message;
     originals.assistantUpdateContent.call(this, displayMessage);
     if (hideThinking) self.lastMessage = message;
-    // The streaming message is the active one — only it shows the live mood.
-    activeAssistantComponent = this;
+    activateAssistantAvatar(this, previousMessage, message);
   };
 
   AssistantMessageComponent.prototype.render = function patchedAssistantRender(width: number): string[] {

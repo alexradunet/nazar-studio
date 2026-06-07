@@ -6,7 +6,7 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { uiCapabilitySummary } from "../lib/ui/design.ts";
 import { setGraphicsQuality, type GraphicsQuality } from "../lib/ui/graphics-state.ts";
-import { patchRpgAvatars, settleActiveAssistantAvatar } from "../lib/ui/avatars.ts";
+import { beginActiveAssistantAvatar, patchRpgAvatars, settleActiveAssistantAvatar } from "../lib/ui/avatars.ts";
 import { renderChapterDivider, renderStitchLine } from "../lib/ui/divider.ts";
 import { editorFactory } from "../lib/ui/editor.ts";
 import { footerFactory } from "../lib/ui/footer.ts";
@@ -88,6 +88,7 @@ export default function (pi: ExtensionAPI) {
     try { ctx?.ui?.setWorkingVisible?.(false); } catch { /* ignore */ }
     turnHadError = false;
     setActiveTool(null);
+    beginActiveAssistantAvatar();
     setMood("thinking");
     // Mount Nazar's animated thinking panel. The widget owns a 180ms timer that
     // drives the calm eye-orb loop while he works (mood "thinking"/"neutral"),
