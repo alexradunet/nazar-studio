@@ -33,22 +33,15 @@ ANSI is the minimum supported terminal layer: 24-bit truecolor SGR, text attribu
 Every avatar-like entity owns a dedicated 3×3 sheet: **9 frames**, each **64×64 px**.
 
 ```txt
-assets/avatars/mage.png          3 columns × 3 rows, 9 frames, 64×64 each
-assets/avatars/nazar.png        3 columns × 3 rows, 9 frames, 64×64 each
-assets/avatars/tools/scroll.png  3 columns × 3 rows, 9 frames, 64×64 each
-assets/avatars/tools/needle.png  3 columns × 3 rows, 9 frames, 64×64 each
+assets/avatars/mage-alien.png       3 columns × 3 rows, 9 frames, 64×64 each
+assets/avatars/nazar.png            3 columns × 3 rows, 9 frames, 64×64 each
+assets/avatars/nazar-expr.png       3 columns × 3 rows, 9 frames, 64×64 each
+assets/avatars/tools/eye-read.png   3 columns × 3 rows, 9 frames, 64×64 each
+assets/avatars/tools/eye-bash.png   3 columns × 3 rows, 9 frames, 64×64 each
 ...
 ```
 
-Index files live beside each image:
-
-```txt
-assets/avatars/mage.txt
-assets/avatars/nazar.txt
-assets/avatars/tools/<tool>.txt
-```
-
-Frame 0 is idle/base. Frames 1–8 are animation variants for that avatar. The user/human role uses the `mage` sheet; Nazar uses the `nazar` sheet; each tool/domain icon uses its own sheet under `tools/`. Do not add another shared mixed sprite sheet.
+Frame 0 is idle/base. Frames 1–8 are animation variants for that avatar. The user role uses the `mage-alien` sheet; Nazar uses `nazar` / `nazar-expr`; each tool/domain icon uses a shared `eye-*` sheet under `tools/`. Do not add another shared mixed sprite sheet.
 
 ## Portrait/title panels
 

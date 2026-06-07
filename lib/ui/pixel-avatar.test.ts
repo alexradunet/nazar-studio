@@ -22,7 +22,6 @@ const originalAvatarAspect = process.env.NAZAR_AVATAR_ASPECT;
 const originalCellWidth = process.env.NAZAR_CELL_WIDTH_PX;
 const originalCellHeight = process.env.NAZAR_CELL_HEIGHT_PX;
 const originalToolRows = process.env.NAZAR_TOOL_ROWS;
-const originalUserAvatar = process.env.NAZAR_USER_AVATAR;
 const originalAnsiDetail = process.env.NAZAR_ANSI_DETAIL;
 const originalGraphicsProtocol = process.env.NAZAR_GRAPHICS_PROTOCOL;
 const originalTerm = process.env.TERM;
@@ -43,7 +42,6 @@ beforeEach(() => {
   delete process.env.NAZAR_CELL_WIDTH_PX;
   delete process.env.NAZAR_CELL_HEIGHT_PX;
   delete process.env.NAZAR_TOOL_ROWS;
-  delete process.env.NAZAR_USER_AVATAR;
   delete process.env.NAZAR_ANSI_DETAIL;
   delete process.env.NAZAR_GRAPHICS_PROTOCOL;
   process.env.TERM = "xterm-256color";
@@ -64,7 +62,6 @@ afterEach(() => {
   restoreEnv("NAZAR_CELL_WIDTH_PX", originalCellWidth);
   restoreEnv("NAZAR_CELL_HEIGHT_PX", originalCellHeight);
   restoreEnv("NAZAR_TOOL_ROWS", originalToolRows);
-  restoreEnv("NAZAR_USER_AVATAR", originalUserAvatar);
   restoreEnv("NAZAR_ANSI_DETAIL", originalAnsiDetail);
   restoreEnv("NAZAR_GRAPHICS_PROTOCOL", originalGraphicsProtocol);
   restoreEnv("TERM", originalTerm);

@@ -118,49 +118,17 @@ Subsequent frames show subtle expressions: narrowed for focus, widened for curio
 The arcane glow intensifies or dims to match emotional intensity.
 ```
 
-#### Nazar Portrait (Large Single Frame)
-- **File:** `assets/avatars/nazar-portrait.png`
-- **Shortcut ID:** `lhheol3v`
-- **Content:** Single large rendering of the Nazar eye orb on pedestal
-- **Note:** Not a 3×3 grid; this is a standalone large illustration
+#### Nazar Expressions
+- **File:** `assets/avatars/nazar-expr.png`
+- **Content:** Contextual Nazar mood expressions
+- **Frames:** 9 emotion states used by the live assistant panel
 
-#### Male Human Face (Mage)
-- **File:** `assets/avatars/mage.png`
-- **Shortcut ID:** `dqq3q4a8`
-- **Character Details:** Male human, approximately 31 years old, brown hair, reddish beard, visible neck
-- **Gaze:** Straight forward
-- **Frames:** 9 (currently all the same static gaze; future versions may show emotional variations)
-
-**Generation Prompt Addition:**
-```
-Inside the orb: a male human face, approximately 31 years old.
-Features: brown hair, reddish-brown beard, straight forward gaze.
-The face shows from forehead to shoulders, with visible neck.
-Expression: neutral, straightforward gaze directly at viewer.
-All 9 frames are identical (static portrait).
-```
-
-#### Female Human Face (Mage)
-- **File:** `assets/avatars/mage-female.png`
-- **Shortcut ID:** `cj8u0ayi`
-- **Character Details:** Female human, straight forward gaze, visible neck
-- **Frames:** 9 (currently all the same static gaze)
-
-**Generation Prompt Addition:**
-```
-Inside the orb: a female human face.
-Features: straight forward gaze directly at viewer.
-The face shows from forehead to shoulders, with visible neck.
-Expression: neutral, calm, and welcoming.
-All 9 frames are identical (static portrait).
-```
-
-#### Alien Face
+#### User Avatar — Mage Alien
 - **File:** `assets/avatars/mage-alien.png`
 - **Shortcut ID:** `xuth8abi`
 - **Character Details:** Alien humanoid, large eyes, no hair, pale or green tint, visible neck
 - **Gaze:** Straight forward
-- **Frames:** 9 (currently all the same static gaze)
+- **Frames:** 9 typing/portrait states
 
 **Generation Prompt Addition:**
 ```
@@ -168,26 +136,7 @@ Inside the orb: an alien humanoid face.
 Features: large expressive eyes, no hair, pale or slightly green-tinted skin.
 The face shows from forehead to shoulders, with visible neck.
 Expression: neutral, straightforward gaze directly at viewer.
-All 9 frames are identical (static portrait).
-```
-
-#### Male Portrait (Large Single Frame)
-- **File:** `assets/avatars/mage-portrait.png`
-- **Shortcut ID:** `isrkuhmp`
-- **Content:** Single large rendering of the male human face on pedestal
-- **Note:** Not a 3×3 grid; this is a standalone large illustration
-
-#### Empty Globe Template
-- **File:** `assets/avatars/globe-template.png`
-- **Shortcut ID:** `9rfb4wge`
-- **Content:** Crystal orb with nothing inside, mounted on pedestal
-- **Frames:** 9 (all identical—empty globe)
-
-**Generation Prompt Addition:**
-```
-Inside the orb: completely empty. No objects, no faces, no icons.
-The orb is transparent/translucent crystal with the blue-violet gradient glow, but nothing is visible inside.
-All 9 frames are identical (static empty globe).
+All 9 frames stay consistent as a compact user portrait.
 ```
 
 ### Tool Icons (Static Frames)
@@ -325,17 +274,6 @@ These tools represent additional life domains beyond the original craft-focused 
 - **bell.png** (shortId: `v5iwxxbs`)
   - Domain: Notifications / Awareness
   - Prompt: "a bell, representing notifications, alerts, and awareness"
-
-#### Icon-Pack Expansion — Additional Avatars
-
-Four more human face-in-globe avatars (9 expressions each: neutral, smile,
-thinking, surprised, concerned, pleased, focused, laughing, calm). Selectable
-at runtime via `NAZAR_USER_AVATAR`.
-
-- **mage-brown.png** — man, brown hair + brown beard
-- **mage-black.png** — man, black hair + black beard
-- **mage-elder.png** — older sage, grey/white beard
-- **mage-blonde.png** — woman, blonde hair
 
 #### Icon-Pack Expansion — Dev / Engineering Tools
 

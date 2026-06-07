@@ -122,16 +122,7 @@ const KIND_TO_EYE: Record<ToolAvatarKind, EyeKind> = {
   "paint-brush": "write", wrench: "gear", bookmark: "read",
 };
 
-type CharacterSheetKey =
-  | "mage"
-  | "mage-female"
-  | "mage-alien"
-  | "mage-brown"
-  | "mage-black"
-  | "mage-elder"
-  | "mage-blonde"
-  | "nazar"
-  | "nazar-expr";
+type CharacterSheetKey = "mage-alien" | "nazar" | "nazar-expr";
 type ToolSheetKey = `tool:${ToolAvatarKind}`;
 type SheetKey = CharacterSheetKey | ToolSheetKey;
 type FrameGeometry = { width: number; height: number };
@@ -168,9 +159,7 @@ export type RenderedAvatar = {
   background?: AvatarBackground;
 };
 
-const CHARACTER_SHEETS: CharacterSheetKey[] = [
-  "mage", "mage-female", "mage-alien", "mage-brown", "mage-black", "mage-elder", "mage-blonde", "nazar", "nazar-expr",
-];
+const CHARACTER_SHEETS: CharacterSheetKey[] = ["mage-alien", "nazar", "nazar-expr"];
 
 const SHEET_ASSETS = Object.fromEntries([
   ...CHARACTER_SHEETS.map((k) => [k, { path: join(ANSI_ASSET_DIR, `${k}.png`), frame: ANSI_AVATAR_FRAME }]),
@@ -189,19 +178,7 @@ function modIndex(index: number, length: number): number {
   return Math.abs(Math.floor(index)) % length;
 }
 
-/**
- * Resolve the character sheet for the user panel.
- * Set NAZAR_USER_AVATAR=mage-female or NAZAR_USER_AVATAR=mage-alien to change
- * the user avatar. Defaults to "mage-alien".
- */
 function userAvatarSheet(): CharacterSheetKey {
-  const raw = (process.env.NAZAR_USER_AVATAR ?? "").trim().toLowerCase();
-  if (raw === "mage-female" || raw === "female") return "mage-female";
-  if (raw === "mage-alien" || raw === "alien") return "mage-alien";
-  if (raw === "mage-brown" || raw === "brown") return "mage-brown";
-  if (raw === "mage-black" || raw === "black") return "mage-black";
-  if (raw === "mage-elder" || raw === "elder") return "mage-elder";
-  if (raw === "mage-blonde" || raw === "blonde") return "mage-blonde";
   return "mage-alien";
 }
 

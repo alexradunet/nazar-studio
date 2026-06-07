@@ -217,12 +217,12 @@ Calendar/Contacts (CalDAV/CardDAV), Email (Migadu), Photos (Immich), VM-isolatio
 
 ## 8. Brand asset inventory
 
-### The marks (final — in `design/`)
+### The marks (final — in `web/`)
 
 | Asset | What it is | Role |
 |---|---|---|
-| `crest.png` | ornate square emblem — the watchful blue eye (nazar) over the teal data-orb, on a woven folk border | **hero** — website hero, large surfaces, app/store icon, about |
-| `logo.png` | gold single-head nazar medallion (the coiled body forms the ring) | **compact mark** — top bar, social/org avatar, favicon source, small UI |
+| `web/crest.png` | ornate square emblem — the watchful blue eye (nazar) over the teal data-orb, on a woven folk border | **hero** — website hero, large surfaces, app/store icon, about |
+| `web/logo.png` | gold single-head nazar medallion (the coiled body forms the ring) | **compact mark** — top bar, social/org avatar, favicon source, small UI |
 
 These two are the **locked, final marks** (decided June 2026). Earlier explorations
 (`crest_ro`, `badge`, and the generated emblem/avatar/favicon set) are retired. Render raster
@@ -235,12 +235,8 @@ never hand-pick hexes.
    (accents anchored on the live terminal theme `themes/nazar.json`); `basm.md`
    documents it and the website mirrors it.
 2. **Mark palette** — *resolved.* Gold nazar + teal data-core across both marks.
-3. **Website violates the no-framework / self-host rule** — *open (Phase 4).* `web/index.html`
-   still loads **Tailwind Play CDN** + **Google Fonts CDN** (two third-party calls). Rebuild
-   hand-rolled with self-hosted (or system) fonts and local assets.
-4. **Broken web asset references** — *open (Phase 4).* `web/index.html` points to `./crest.png`
-   and `./favicon.png`, which aren't in `web/`. Place `crest.png`, `logo.png`, and a favicon in
-   `web/` (or reference `../design/`).
+3. **Website local assets** — *resolved.* `web/index.html` uses local marks (`web/crest.png`,
+   `web/logo.png`) and self-hosted fonts.
 
 ---
 

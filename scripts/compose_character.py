@@ -185,14 +185,8 @@ def compose_tool_eye(iris_name):
         sheet.paste(fr, ((i % 3)*F, (i // 3)*F), fr)
     return sheet
 
-# out name -> recipe  (human variants share the rig; nazar is the eye base)
+# out name -> recipe  (nazar is the eye base; the user avatar is mage-alien)
 HUMAN = {
-    "mage":        ("male",   "hair-01", "beard-02", (1, 1, 1)),
-    "mage-brown":  ("male",   "hair-03", "beard-04", (1, 1, 1)),
-    "mage-black":  ("male",   "hair-04", "beard-04", (0.97, 0.94, 0.9)),
-    "mage-elder":  ("male",   "hair-09", "beard-07", (1.02, 1.0, 0.98)),
-    "mage-female": ("female", "hair-09", None, (1, 1, 1)),
-    "mage-blonde": ("female", "hair-06", None, (1, 1, 1)),
     "mage-alien":  ("alien",  None, None, (1, 1, 1)),
 }
 
@@ -211,10 +205,9 @@ def build_all():
     print(f"  composed {len(eyes)} shared eye sprites (eye-*.png)")
 
 def demo():
-    items = [("mage", compose_human("male", "hair-01", "beard-02")),
-             ("mage-female", compose_human("female", "hair-09", None)),
+    items = [("mage-alien", compose_human("alien", None, None)),
              ("nazar", compose_nazar())]
-    cell = 220; grid = Image.new("RGB", (3*cell, cell+22), (30, 32, 44)); d = ImageDraw.Draw(grid)
+    cell = 220; grid = Image.new("RGB", (len(items)*cell, cell+22), (30, 32, 44)); d = ImageDraw.Draw(grid)
     for i, (n, sh) in enumerate(items):
         fr = sh.crop((0, 0, F, F)); mg = Image.new("RGBA", (F, F), (255, 0, 255, 255)); mg.alpha_composite(fr)
         grid.paste(mg.convert("RGB").resize((cell, cell), Image.LANCZOS), (i*cell, 22)); d.text((i*cell+6, 6), n, fill=(235, 235, 225))

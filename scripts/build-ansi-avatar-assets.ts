@@ -12,7 +12,7 @@ const ANSI_DIR = join(AVATAR_DIR, "ansi");
 const ANSI_TOOL_DIR = join(ANSI_DIR, "tools");
 
 const SHEETS = [
-  ...["nazar", "nazar-expr", "mage", "mage-female", "mage-alien", "mage-brown", "mage-black", "mage-elder", "mage-blonde"].map((name) => ({
+  ...["mage-alien", "nazar", "nazar-expr"].map((name) => ({
     src: join(AVATAR_DIR, `${name}.png`),
     dst: join(ANSI_DIR, `${name}.png`),
     frame: 256,

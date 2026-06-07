@@ -37,17 +37,7 @@ FLOOD_THRESH = 60       # tolerance for border flood-fill
 # name -> (uuid, destination_path)
 CHARACTERS = {
     "nazar":           ("0f66f8fe-c552-4133-a355-4cff1dd592b0", f"{ROOT}/nazar.png"),
-    "nazar-portrait":  ("cbf6977d-2dd9-4527-8bb1-a599d2cc3bca", f"{ROOT}/nazar-portrait.png"),
-    "mage":            ("d2240187-9629-4293-a249-31e687ac096c", f"{ROOT}/mage.png"),
-    "mage-female":     ("7e1cb605-41f8-49e7-a4cb-c60e0eec90be", f"{ROOT}/mage-female.png"),
     "mage-alien":      ("70293370-9137-40af-85e5-e54f17957b73", f"{ROOT}/mage-alien.png"),
-    "mage-portrait":   ("493e40d4-71f2-4c3f-856e-6d0d477e823d", f"{ROOT}/mage-portrait.png"),
-    "globe-template":  ("4b7b6c08-f5dd-42a4-9acc-d17643c06088", f"{ROOT}/globe-template.png"),
-    # icon-pack expansion — additional human avatars
-    "mage-brown":      ("f0a873f0-1dbc-4be1-87e1-65623b7f181e", f"{ROOT}/mage-brown.png"),
-    "mage-black":      ("e080b0a0-822b-4109-aa99-fd5012b6233f", f"{ROOT}/mage-black.png"),
-    "mage-elder":      ("0fda975a-6fb7-4eb7-ba0f-ac48048a27a6", f"{ROOT}/mage-elder.png"),
-    "mage-blonde":     ("93622845-aca3-453d-bfc2-bacd71f75e19", f"{ROOT}/mage-blonde.png"),
 }
 TOOLS_MAP = {
     "anvil":     ("ecf5573b-0cdf-44e7-91d1-3a5ff925a0f6", f"{TOOLS}/anvil.png"),
