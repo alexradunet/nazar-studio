@@ -28,7 +28,7 @@ import {
   type AvatarRenderLine,
   type RenderedAvatar,
 } from "./pixel-avatar.ts";
-import { nazarMoodFrame } from "./nazar-mood.ts";
+import { NAZAR_MOOD_FRAME, nazarMoodFrame } from "./nazar-mood.ts";
 import { AVATAR_FIELDS } from "./tokens.ts";
 import { panelStyle, type PanelState, type PanelStyle } from "./panel-style.ts";
 import { roleNameplate, type SpriteRole } from "./sprites.ts";
@@ -44,6 +44,12 @@ const PANEL_SEQUENCE = new WeakMap<object, number>();
 const PANEL_KEY_SEQUENCE = new Map<string, number>();
 let panelSequenceCounter = 0;
 let refreshScheduled = false;
+
+// The assistant message currently being generated / most recently updated.
+// Only this one reflects Nazar's live mood (focused / pleased / concerned …);
+// older messages render the calm neutral face so the avatar doesn't animate
+// across the whole transcript.
+let activeAssistantComponent: unknown = null;
 
 type ToolStatus = "pending" | "running" | "ok" | "error";
 
@@ -142,10 +148,11 @@ function roleBackground(role: SpriteRole): AvatarBackground {
 
 function avatarCell(owner: unknown, role: SpriteRole, active = false, stableKey?: string): AvatarCell {
   if (!shouldUseRichAvatar(owner, active, stableKey)) return badgeCell(roleBackground(role));
-  // Nazar's face reflects his current mood (focused / pleased / concerned / …);
-  // the user avatar is rendered normally.
-  const avatar = role === "user" ? renderRoleAvatar("user")! : renderNazarExpression(nazarMoodFrame())!;
-  return portraitCell(avatar);
+  if (role === "user") return portraitCell(renderRoleAvatar("user")!);
+  // Only the active (latest) assistant message reflects Nazar's live mood;
+  // historical messages show the calm neutral face (no transcript-wide animation).
+  const frame = owner === activeAssistantComponent ? nazarMoodFrame() : NAZAR_MOOD_FRAME.neutral;
+  return portraitCell(renderNazarExpression(frame)!);
 }
 
 // ── Stable identity key for rich-avatar limit ──────────────────────────────
@@ -371,6 +378,8 @@ export function patchRpgAvatars() {
       : message;
     originals.assistantUpdateContent.call(this, displayMessage);
     if (hideThinking) self.lastMessage = message;
+    // The streaming message is the active one — only it shows the live mood.
+    activeAssistantComponent = this;
   };
 
   AssistantMessageComponent.prototype.render = function patchedAssistantRender(width: number): string[] {
