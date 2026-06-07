@@ -94,6 +94,26 @@ def _eye_center(base_img):
 # nazar-expr.png for future contextual use (e.g. pleased on success, concerned on error).
 NAZAR_IDLE_ORDER = [0, 2, 6, 5, 8, 5, 6, 2, 0]
 
+def compose_nazar_expr():
+    """The 9 expressions in CANONICAL order (0 neutral … 8 resting) with a soft
+    cosmic glow — the source the runtime indexes for contextual moods
+    (focused while working, pleased on success, concerned on error)."""
+    frames = _frames(os.path.join(PARTS, "nazar-expr.png"))
+    sheet = Image.new("RGBA", (F*3, F*3), (0, 0, 0, 0))
+    for i in range(9):
+        base = frames[i]
+        try:
+            ecx, ecy, er = _eye_center(base)
+        except Exception:
+            ecx, ecy, er = F // 2, int(F * 0.36), int(F * 0.18)
+        fr = base.copy()
+        glow = Image.new("RGBA", (F, F), (0, 0, 0, 0)); dg = ImageDraw.Draw(glow)
+        gr = int(er * 1.12); dg.ellipse([ecx-gr, ecy-gr, ecx+gr, ecy+gr], fill=(120, 170, 255, 40))
+        glow = glow.filter(ImageFilter.GaussianBlur(max(2, int(er*0.22))))
+        fr.alpha_composite(glow)
+        sheet.paste(fr, ((i % 3)*F, (i // 3)*F), fr)
+    return sheet
+
 def compose_nazar():
     """Nazar avatar: a calm loop of expression frames with a breathing eye glow."""
     frames = _frames(os.path.join(PARTS, "nazar-expr.png"))
@@ -182,6 +202,8 @@ def build_all():
         print(f"  composed {name}.png")
     compose_nazar().save(os.path.join(AVATARS, "nazar.png"), "PNG", optimize=True)
     print("  composed nazar.png (idle cosmic eye)")
+    compose_nazar_expr().save(os.path.join(AVATARS, "nazar-expr.png"), "PNG", optimize=True)
+    print("  composed nazar-expr.png (contextual mood expressions)")
     tools_dir = os.path.join(AVATARS, "tools")
     eyes = sorted(set(TOOL_IRIS.values()))
     for iris in eyes:

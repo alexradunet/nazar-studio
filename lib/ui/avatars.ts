@@ -21,12 +21,14 @@ import {
 import {
   centerAvatarLine,
   emptyAvatarLine,
+  renderNazarExpression,
   renderRoleAvatar,
   renderToolPixelAvatar,
   type AvatarBackground,
   type AvatarRenderLine,
   type RenderedAvatar,
 } from "./pixel-avatar.ts";
+import { nazarMoodFrame } from "./nazar-mood.ts";
 import { AVATAR_FIELDS } from "./tokens.ts";
 import { panelStyle, type PanelState, type PanelStyle } from "./panel-style.ts";
 import { roleNameplate, type SpriteRole } from "./sprites.ts";
@@ -140,7 +142,10 @@ function roleBackground(role: SpriteRole): AvatarBackground {
 
 function avatarCell(owner: unknown, role: SpriteRole, active = false, stableKey?: string): AvatarCell {
   if (!shouldUseRichAvatar(owner, active, stableKey)) return badgeCell(roleBackground(role));
-  return portraitCell(renderRoleAvatar(role)!);
+  // Nazar's face reflects his current mood (focused / pleased / concerned / …);
+  // the user avatar is rendered normally.
+  const avatar = role === "user" ? renderRoleAvatar("user")! : renderNazarExpression(nazarMoodFrame())!;
+  return portraitCell(avatar);
 }
 
 // ── Stable identity key for rich-avatar limit ──────────────────────────────

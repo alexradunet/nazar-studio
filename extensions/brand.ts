@@ -13,6 +13,7 @@ import { footerFactory } from "../lib/ui/footer.ts";
 import { headerFactory } from "../lib/ui/header.ts";
 import { panelStyle } from "../lib/ui/panel-style.ts";
 import { recordSessionStart } from "../lib/ui/session-info.ts";
+import { setNazarMood } from "../lib/ui/nazar-mood.ts";
 import { compact, visibleWidth } from "../lib/ui/ansi.ts";
 
 function applyNazarUI(pi: ExtensionAPI, ctx: ExtensionContext, onTui?: (tui: any) => void) {
@@ -61,7 +62,16 @@ export default function (pi: ExtensionAPI) {
   }
 
 
+  // Whether any tool errored during the current agent turn — decides Nazar's
+  // resting expression when the turn ends (pleased vs. concerned).
+  let turnHadError = false;
+  const setMood = (mood: Parameters<typeof setNazarMood>[0]) => {
+    setNazarMood(mood);
+    try { renderTui?.requestRender?.(); } catch { /* ignore */ }
+  };
+
   pi.on("session_start", async (_event: unknown, ctx: any) => {
+    setNazarMood("neutral");
     applyNazarUI(pi, ctx, (tui) => { renderTui = tui; });
   });
 
@@ -72,6 +82,8 @@ export default function (pi: ExtensionAPI) {
   // shows the loader, so we suppress it here reliably every turn.
   pi.on("before_agent_start", async (_event: unknown, ctx: any) => {
     try { ctx?.ui?.setWorkingVisible?.(false); } catch { /* ignore */ }
+    turnHadError = false;
+    setMood("thinking");
   });
 
   pi.on("model_select", async (_event: unknown, _ctx: any) => {
@@ -89,15 +101,23 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("tool_execution_start", async (event: any) => {
     trackToolAnimation(event?.toolCallId);
+    setMood("focused");
   });
 
   pi.on("tool_execution_end", async (event: any) => {
     untrackToolAnimation(event?.toolCallId);
+    if (event?.isError) {
+      turnHadError = true;
+      setMood("concerned");
+    } else {
+      setMood("focused");
+    }
   });
 
   pi.on("agent_end", async (_event: unknown) => {
     activeToolAnimations.clear();
     stopToolAnimationTicker();
+    setMood(turnHadError ? "concerned" : "pleased");
   });
 
   pi.on("session_shutdown", async (_event: unknown) => {

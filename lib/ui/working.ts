@@ -6,8 +6,10 @@ import { compact, padVisible, visibleWidth } from "./ansi.ts";
 import { panelStyle, type PanelStyle } from "./panel-style.ts";
 import {
   emptyAvatarLine,
+  renderNazarExpression,
   renderThinkingAvatar,
 } from "./pixel-avatar.ts";
+import { getNazarMood, nazarMoodFrame } from "./nazar-mood.ts";
 import { roleNameplate } from "./sprites.ts";
 import { bodyColumnWidth, composeMessagePanel } from "./turn-composer.ts";
 
@@ -139,7 +141,13 @@ export function renderThinkingPanel(
   frameIndex: number,
   options: { loaderSafe?: boolean; mode?: unknown; preview?: string } = {},
 ): string {
-  const avatar = renderThinkingAvatar(frameIndex, options.loaderSafe ? { backend: "ansi" } : {})!;
+  // While Nazar works, his face reflects his mood: a calm contemplative loop by
+  // default, or a held expression (focused while a tool runs, concerned on error).
+  const backend = options.loaderSafe ? { backend: "ansi" as const } : {};
+  const mood = getNazarMood();
+  const avatar = (mood === "thinking" || mood === "neutral")
+    ? renderThinkingAvatar(frameIndex, backend)!
+    : renderNazarExpression(nazarMoodFrame(), backend)!;
   const style = panelStyle("thinking", "running", { frame: frameIndex });
   const width = Math.max(32, process.stdout.columns || 80);
 

@@ -130,7 +130,8 @@ type CharacterSheetKey =
   | "mage-black"
   | "mage-elder"
   | "mage-blonde"
-  | "nazar";
+  | "nazar"
+  | "nazar-expr";
 type ToolSheetKey = `tool:${ToolAvatarKind}`;
 type SheetKey = CharacterSheetKey | ToolSheetKey;
 type FrameGeometry = { width: number; height: number };
@@ -168,7 +169,7 @@ export type RenderedAvatar = {
 };
 
 const CHARACTER_SHEETS: CharacterSheetKey[] = [
-  "mage", "mage-female", "mage-alien", "mage-brown", "mage-black", "mage-elder", "mage-blonde", "nazar",
+  "mage", "mage-female", "mage-alien", "mage-brown", "mage-black", "mage-elder", "mage-blonde", "nazar", "nazar-expr",
 ];
 
 const SHEET_ASSETS = Object.fromEntries([
@@ -330,6 +331,11 @@ function frameSource(id: string): FrameSource {
   if (mageMatch) {
     const index = modIndex(Number(mageMatch[1]), AVATAR_FRAME_COUNT);
     return { sheet: userAvatarSheet(), index, id: sourceId };
+  }
+
+  const exprMatch = sourceId.match(/^nazar-expr-(\d+)$/);
+  if (exprMatch) {
+    return { sheet: "nazar-expr", index: modIndex(Number(exprMatch[1]), AVATAR_FRAME_COUNT), id: sourceId };
   }
 
   if (sourceId === "nazar") return { sheet: "nazar", index: 0, id: sourceId };
@@ -703,6 +709,18 @@ export function renderThinkingAvatar(
   options: RenderAvatarOptions = {},
 ): RenderedAvatar | undefined {
   return renderFrameAvatar(`nazar-thinking-${modIndex(frameIndex, AVATAR_FRAME_COUNT)}`, options);
+}
+
+/**
+ * Render Nazar showing a specific expression (contextual mood). The frame index
+ * is the canonical expression order: 0 neutral, 1 smile, 2 thinking, 3 surprised,
+ * 4 concerned, 5 pleased, 6 focused, 7 laughing, 8 resting.
+ */
+export function renderNazarExpression(
+  exprIndex = 0,
+  options: RenderAvatarOptions = {},
+): RenderedAvatar | undefined {
+  return renderFrameAvatar(`nazar-expr-${modIndex(exprIndex, AVATAR_FRAME_COUNT)}`, options);
 }
 
 export function renderAnsiAvatarFrame(role: SpriteRole): string[] {
