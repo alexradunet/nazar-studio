@@ -25,7 +25,7 @@ const AVATAR_FRAME_COUNT = 9;
 // Compact daily-chat avatar size. Terminal cells are usually taller than wide,
 // so columns are derived from the live cell aspect ratio to keep the 64×64
 // sprite square in pixel terms and flush inside the avatar box.
-const DEFAULT_AVATAR_ROWS = 7;
+const DEFAULT_AVATAR_ROWS = 9;
 
 const AVATAR_ASSET_DIR = join(moduleDir(import.meta.url), "..", "..", "assets", "avatars");
 const ANSI_ASSET_DIR = join(AVATAR_ASSET_DIR, "ansi");
@@ -581,7 +581,7 @@ function avatarColumns(rows = avatarRows()): number {
   // terms, then render the sprite flush to that interior. Terminal cells are
   // font-dependent and borders consume cells, so this uses Nazar's calibrated
   // cell dimensions rather than assuming pi-tui's generic 9×18 fallback.
-  return Math.max(1, Math.round((rows + 2) * terminalCellAspectRatio()) - 2);
+  return Math.max(1, Math.round((rows + 1) * terminalCellAspectRatio()) - 1);
 }
 
 function toolRows(): number {

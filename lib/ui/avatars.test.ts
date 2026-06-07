@@ -121,7 +121,9 @@ test("avatar field background keeps the avatar box fixed instead of stretching t
   );
   const portraitBg = "\x1b[48;2;1;2;3m";
 
+  expect(visibleWidth(panel[0])).toBe(78);
   expect(panel[0]).not.toContain(portraitBg);
+  expect(panel[1]).toContain(portraitBg);
   expect(panel.filter((row) => row.includes(portraitBg))).toHaveLength(avatar.height);
 });
 

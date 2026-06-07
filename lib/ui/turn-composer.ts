@@ -35,7 +35,8 @@ export const PANEL_TEXT_PADDING = 1;
 const PANEL_BOTTOM_GAP = 1;
 
 const DEFAULT_OUTER_PAD_X = 2;
-const COLUMN_GAP = 2;
+const PANEL_RIGHT_PAD_X = 2;
+const COLUMN_GAP = 0;
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -274,7 +275,7 @@ export function nameplateRow(
  */
 export function bodyColumnWidth(panelWidth: number, avatarWidth: number, options: { outerPadX?: number } = {}): number {
   const PAD = Math.max(0, options.outerPadX ?? DEFAULT_OUTER_PAD_X);
-  return Math.max(8, panelWidth - PAD * 2 - Math.max(1, avatarWidth) - COLUMN_GAP - 1);
+  return Math.max(8, panelWidth - PAD - PANEL_RIGHT_PAD_X - Math.max(1, avatarWidth) - COLUMN_GAP - 1);
 }
 
 export function bodyOnlyColumnWidth(panelWidth: number, options: { outerPadX?: number } = {}): number {
@@ -284,7 +285,7 @@ export function bodyOnlyColumnWidth(panelWidth: number, options: { outerPadX?: n
 
 /** Body cell width (the column the nameplate band + body rows occupy). */
 function bodyCellWidth(panelWidth: number, avatarWidth: number, outerPadX: number): number {
-  return Math.max(8, panelWidth - outerPadX * 2 - Math.max(1, avatarWidth) - COLUMN_GAP);
+  return Math.max(8, panelWidth - outerPadX - PANEL_RIGHT_PAD_X - Math.max(1, avatarWidth) - COLUMN_GAP);
 }
 
 function bodyOnlyCellWidth(panelWidth: number, outerPadX: number): number {
@@ -401,6 +402,10 @@ export function composeMessagePanel(
 
   const hasNameplate = Boolean(title);
   const meta = options.meta ?? "";
+  const portraitRows = avatar.height;
+
+  // Avatar start column (1-indexed) for Kitty placeholder placement.
+  const leftStartColumn = align !== "right" ? PAD + 1 : PAD + BODYW + COLUMN_GAP + 1;
 
   // Row collection
   const linesOut: string[] = [];
@@ -415,23 +420,16 @@ export function composeMessagePanel(
       : `${padL}${avCell}${padG}${bodyCell}`;
   };
 
-  // Row 0: nameplate band. The avatar field starts on body row 0 so its
-  // visible background stays fixed to the avatar's own dimensions.
+  // Row 0: full-width nameplate/status band. The fixed avatar box starts on
+  // the next row, glued underneath the bar instead of sharing that row.
   if (hasNameplate) {
-    linesOut.push(composeRow(
-      emptyAvatarSpaceRow(AVW),
-      nameplateRow(title!, BODYW, style, meta),
-    ));
+    linesOut.push(`${padL}${nameplateRow(title!, Math.max(8, width - PAD - PANEL_RIGHT_PAD_X), style, meta)}`);
   }
 
-  // Compute total rows = max(avatar heights, text rows + 2 padding rows)
+  // Compute total rows = max(avatar rows, text rows + 2 padding rows)
   const TEXT_PAD = PANEL_TEXT_PADDING;
   const bodyRowsNeeded = textCells.length + TEXT_PAD * 2;
-  const portraitRows = avatar.height;
   const innerRows = Math.max(portraitRows, bodyRowsNeeded);
-
-  // Avatar start column (1-indexed) for Kitty placeholder placement.
-  const leftStartColumn = align !== "right" ? PAD + 1 : PAD + BODYW + COLUMN_GAP + 1;
 
   for (let i = 0; i < innerRows; i++) {
     // Left avatar column

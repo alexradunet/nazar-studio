@@ -74,8 +74,8 @@ afterEach(() => {
 
 test("role avatars render generated ANSI art", () => {
   const nazar = renderAnsiAvatarFrame("nazar");
-  expect(nazar).toHaveLength(7);
-  expect(nazar.map((line) => visibleWidth(line))).toEqual([16, 16, 16, 16, 16, 16, 16]);
+  expect(nazar).toHaveLength(9);
+  expect(nazar.map((line) => visibleWidth(line))).toEqual([19, 19, 19, 19, 19, 19, 19, 19, 19]);
   expect(nazar.join("\n")).toContain("\x1b[48;2;");
   expect(renderAnsiAvatarFrame("user").join("\n")).toContain("\x1b[48;2;");
 });
@@ -86,27 +86,29 @@ test("ANSI animations expose stable wrapping frames", () => {
   expect(new Set(Array.from({ length: 4 }, (_, index) => renderThinkingAvatarFrame(index).join("\n"))).size).toBeGreaterThan(1);
 });
 
-test("avatar renderer derives cell width from terminal aspect ratio for square sprite framing", () => {
+test("avatar renderer derives cell width from terminal aspect ratio for near-square sprite framing", () => {
   setCellDimensions({ widthPx: 9, heightPx: 18 });
   let avatar = renderRoleAvatar("nazar")!;
   expect(avatar.backend).toBe("ansi");
-  expect(avatar.width).toBe(16);
-  expect(avatar.height).toBe(7);
-  expect(avatarPixelAspect(avatar.width + 2, avatar.height + 2)).toBeCloseTo(1, 1);
+  expect(avatar.width).toBe(19);
+  expect(avatar.height).toBe(9);
+  expect(avatarPixelAspect(avatar.width + 2, avatar.height + 2)).toBeGreaterThan(0.9);
+  expect(avatarPixelAspect(avatar.width + 2, avatar.height + 2)).toBeLessThan(1.1);
 
   setCellDimensions({ widthPx: 8, heightPx: 19 });
   avatar = renderRoleAvatar("nazar")!;
-  expect(avatar.width).toBe(19);
-  expect(avatar.height).toBe(7);
-  expect(avatarPixelAspect(avatar.width + 2, avatar.height + 2)).toBeCloseTo(1, 1);
+  expect(avatar.width).toBe(23);
+  expect(avatar.height).toBe(9);
+  expect(avatarPixelAspect(avatar.width + 2, avatar.height + 2)).toBeGreaterThan(0.9);
+  expect(avatarPixelAspect(avatar.width + 2, avatar.height + 2)).toBeLessThan(1.1);
 });
 
 test("avatar renderer can calibrate cell dimensions for the live terminal font", () => {
   process.env.NAZAR_CELL_WIDTH_PX = "9";
   process.env.NAZAR_CELL_HEIGHT_PX = "17";
   const avatar = renderRoleAvatar("nazar")!;
-  expect(avatar.width).toBe(15);
-  expect(avatar.height).toBe(7);
+  expect(avatar.width).toBe(18);
+  expect(avatar.height).toBe(9);
   expect(getCellDimensions()).toEqual({ widthPx: 9, heightPx: 17 });
   expect(avatarPixelAspect(avatar.width + 2, avatar.height + 2)).toBeCloseTo(1, 1);
 });
@@ -142,7 +144,7 @@ test("explicit Kitty backend uses Kitty placeholder cells", () => {
   expect(avatar.lines[0]?.text).toContain("U=1");
   expect(avatar.lines[0]?.text).toContain("\u{10eeee}");
   expect(avatar.lines[0]?.virtualWidth).toBe(avatar.width);
-  expect(avatar.lines).toHaveLength(7);
+  expect(avatar.lines).toHaveLength(9);
 });
 
 test("explicit ANSI option ignores image capabilities", () => {

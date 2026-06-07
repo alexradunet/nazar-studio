@@ -126,13 +126,13 @@ export class NazarEditor extends CustomEditor {
 
     // The input bar reads left→right: YOU (avatar) │ input. Nazar's live
     // status rides in the right-side nameplate meta, not a second portrait.
-    const PAD = 2, GAP = 2;
+    const PAD = 2, RIGHT_PAD = 2, GAP = 0;
 
     // Ask Pi to wrap the editor body into the body column (matching the
     // composer's single-avatar body width exactly); reserve room for the
     // prompt marker.
     const promptWidth = visibleWidth(PROMPT);
-    const bodyW = Math.max(8, width - PAD * 2 - avatar.width - GAP);
+    const bodyW = Math.max(8, width - PAD - RIGHT_PAD - avatar.width - GAP);
     const editorWidth = Math.max(1, bodyW - promptWidth);
 
     const raw = super.render(editorWidth);
