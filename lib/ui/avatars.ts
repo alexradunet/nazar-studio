@@ -42,7 +42,7 @@ const DEFAULT_RICH_AVATAR_RECENT_LIMIT = 20;
 // Animation cadence — running tools self-schedule a re-render every tick so
 // their pixel-art sprite cycles frames (anvil striking, lens scanning, etc).
 const TOOL_ANIMATION_INTERVAL_MS = 180;
-const PANEL_SEQUENCE = new WeakMap<object, number>();
+let PANEL_SEQUENCE = new WeakMap<object, number>();
 const PANEL_KEY_SEQUENCE = new Map<string, number>();
 let panelSequenceCounter = 0;
 let refreshScheduled = false;
@@ -190,12 +190,68 @@ function stableHash(value: string): string {
   return (hash >>> 0).toString(36);
 }
 
+function userComponentText(owner: unknown): string | undefined {
+  const markdown = (owner as any)?.contentBox?.children?.[0];
+  return typeof markdown?.text === "string" ? markdown.text : undefined;
+}
+
+function messageText(message: any): string | undefined {
+  if (typeof message?.content === "string") return message.content;
+  if (typeof message?.text === "string") return message.text;
+  if (Array.isArray(message?.content)) {
+    const text = message.content
+      .filter((part: any) => part?.type === "text" && typeof part.text === "string")
+      .map((part: any) => part.text)
+      .join("\n");
+    return text || undefined;
+  }
+  return undefined;
+}
+
+function roleMessagePanelKey(role: "user" | "assistant", message: any): string | undefined {
+  if (role === "user") {
+    const text = messageText(message);
+    return text !== undefined ? `${role}:${stableHash(text)}` : undefined;
+  }
+  return `${role}:${stableHash(JSON.stringify(message))}`;
+}
+
 function stablePanelKey(owner: unknown, role: string, renderedLines?: string[]): string | undefined {
   const any = owner as any;
-  if (role === "assistant" && any?.lastMessage) return `${role}:${stableHash(JSON.stringify(any.lastMessage))}`;
+  if (role === "user") {
+    const text = userComponentText(owner);
+    if (text !== undefined) return `${role}:${stableHash(text)}`;
+  }
+  if (role === "assistant" && any?.lastMessage) return roleMessagePanelKey("assistant", any.lastMessage);
   if (role === "tool" && any?.toolCallId) return `${role}:${String(any.toolCallId)}`;
   if (renderedLines && renderedLines.length > 0) return `${role}:${stableHash(renderedLines.join("\n"))}`;
   return undefined;
+}
+
+export function seedAvatarPanelOrderFromSessionEntries(entries: readonly unknown[]): void {
+  PANEL_SEQUENCE = new WeakMap<object, number>();
+  PANEL_KEY_SEQUENCE.clear();
+  panelSequenceCounter = 0;
+
+  for (const entry of entries) {
+    const any = entry as any;
+    if (any?.type !== "message") continue;
+    const message = any.message;
+    if (message?.role === "user") {
+      const key = roleMessagePanelKey("user", message);
+      if (key) PANEL_KEY_SEQUENCE.set(key, panelSequenceCounter++);
+      continue;
+    }
+    if (message?.role === "assistant") {
+      const key = roleMessagePanelKey("assistant", message);
+      if (key) PANEL_KEY_SEQUENCE.set(key, panelSequenceCounter++);
+      for (const part of Array.isArray(message.content) ? message.content : []) {
+        if (part?.type === "toolCall" && typeof part.id === "string") {
+          PANEL_KEY_SEQUENCE.set(`tool:${part.id}`, panelSequenceCounter++);
+        }
+      }
+    }
+  }
 }
 
 function roleAvatarCell(owner: unknown, role: "user" | "assistant", renderedLines?: string[]): AvatarCell {
@@ -363,6 +419,13 @@ export const __testing = {
   shouldUseRichAvatar(owner: object, active = false): boolean {
     return shouldUseRichAvatar(owner, active);
   },
+  shouldUseRichAvatarKey(stableKey: string, active = false): boolean {
+    return shouldUseRichAvatar({}, active, stableKey);
+  },
+  messagePanelKey(role: "user" | "assistant", message: any): string | undefined {
+    return roleMessagePanelKey(role, message);
+  },
+  seedAvatarPanelOrderFromSessionEntries,
   toolStatus(component: any): ToolStatus {
     return toolStatus(component);
   },

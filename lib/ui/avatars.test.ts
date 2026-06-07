@@ -15,6 +15,7 @@ afterEach(() => {
   else process.env.NAZAR_AVATAR_RECENT_LIMIT = originalRecentLimit;
   settleActiveAssistantAvatar();
   setNazarMood("neutral");
+  __testing.seedAvatarPanelOrderFromSessionEntries([]);
 });
 
 test("message panels keep body text rows copyable (no box glyphs)", () => {
@@ -235,6 +236,23 @@ test("rich avatars are limited to recent panels unless active", () => {
   expect(__testing.shouldUseRichAvatar(second)).toBe(true);
   expect(__testing.shouldUseRichAvatar(third)).toBe(true);
   expect(__testing.shouldUseRichAvatar(first, true)).toBe(true);
+});
+
+test("resumed sessions seed avatar cap before first input render", () => {
+  process.env.NAZAR_AVATAR_RECENT_LIMIT = "1";
+  const oldUser = { role: "user", content: "old prompt" };
+  const recentAssistant = { role: "assistant", content: [{ type: "text", text: "recent answer" }] };
+
+  __testing.seedAvatarPanelOrderFromSessionEntries([
+    { type: "message", message: oldUser },
+    { type: "message", message: recentAssistant },
+  ]);
+
+  const oldKey = __testing.messagePanelKey("user", oldUser)!;
+  const recentKey = __testing.messagePanelKey("assistant", recentAssistant)!;
+
+  expect(__testing.shouldUseRichAvatarKey(oldKey)).toBe(false);
+  expect(__testing.shouldUseRichAvatarKey(recentKey)).toBe(true);
 });
 
 test("old role messages keep the Nazar nameplate but drop the avatar column", async () => {

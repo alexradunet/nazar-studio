@@ -6,7 +6,7 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { uiCapabilitySummary } from "../lib/ui/design.ts";
 import { setGraphicsQuality, type GraphicsQuality } from "../lib/ui/graphics-state.ts";
-import { beginActiveAssistantAvatar, patchRpgAvatars, settleActiveAssistantAvatar } from "../lib/ui/avatars.ts";
+import { beginActiveAssistantAvatar, patchRpgAvatars, seedAvatarPanelOrderFromSessionEntries, settleActiveAssistantAvatar } from "../lib/ui/avatars.ts";
 import { renderChapterDivider, renderStitchLine } from "../lib/ui/divider.ts";
 import { editorFactory } from "../lib/ui/editor.ts";
 import { footerFactory } from "../lib/ui/footer.ts";
@@ -75,6 +75,7 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_start", async (_event: unknown, ctx: any) => {
     uiCtx = ctx;
     setNazarMood("neutral");
+    try { seedAvatarPanelOrderFromSessionEntries(ctx?.sessionManager?.getBranch?.() ?? []); } catch { /* ignore */ }
     applyNazarUI(pi, ctx, (tui) => { renderTui = tui; });
     // First render can happen before all rich-avatar state has fully settled.
     // Force one extra paint tick so post-load avatar-cap pruning applies
