@@ -6,7 +6,7 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { uiCapabilitySummary } from "../lib/ui/design.ts";
 import { setGraphicsQuality, type GraphicsQuality } from "../lib/ui/graphics-state.ts";
-import { patchRpgAvatars } from "../lib/ui/avatars.ts";
+import { patchRpgAvatars, seedAvatarPanelOrderFromSessionEntries } from "../lib/ui/avatars.ts";
 import { renderChapterDivider, renderStitchLine } from "../lib/ui/divider.ts";
 import { editorFactory } from "../lib/ui/editor.ts";
 import { footerFactory } from "../lib/ui/footer.ts";
@@ -52,12 +52,10 @@ export default function (pi: ExtensionAPI) {
     toolAnimationTicker = undefined;
   }
 
-  function trackToolAnimation(id: unknown): boolean {
-    if (typeof id !== "string" || !id) return false;
-    const wasTracked = activeToolAnimations.has(id);
+  function trackToolAnimation(id: unknown) {
+    if (typeof id !== "string" || !id) return;
     activeToolAnimations.add(id);
     startToolAnimationTicker();
-    return !wasTracked;
   }
 
   function untrackToolAnimation(id: unknown) {
@@ -74,8 +72,16 @@ export default function (pi: ExtensionAPI) {
     try { renderTui?.requestRender?.(); } catch { /* ignore */ }
   };
 
-  pi.on("session_start", async (_event: unknown, ctx: any) => {
+  pi.on("session_start", async (event: any, ctx: any) => {
     uiCtx = ctx;
+    try {
+      const sessionManager = ctx?.sessionManager;
+      const branch = sessionManager?.getBranch?.() ?? sessionManager?.getEntries?.() ?? [];
+      seedAvatarPanelOrderFromSessionEntries(Array.isArray(branch) ? branch : []);
+    } catch {
+      seedAvatarPanelOrderFromSessionEntries([]);
+    }
+    recordSessionStart(event?.reason === "resume" ? "resumed" : "opened");
     setNazarMood("neutral");
     applyNazarUI(pi, ctx, (tui) => { renderTui = tui; });
   });
@@ -102,13 +108,11 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on("message_update", async (event: any) => {
-    if (event?.message?.role !== "assistant" || !Array.isArray(event.message.content)) return;
-    // Pi already schedules streaming message redraws. Do not add another
-    // requestRender() per token here; in long answers that competes with input
-    // editing and makes the editor feel sticky. We only discover tool-call ids
-    // so the slower 180ms tool animation ticker can take over when needed.
-    for (const part of event.message.content) {
-      if (part?.type === "toolCall") trackToolAnimation(part.id);
+    if (event?.message?.role === "assistant" && Array.isArray(event.message.content)) {
+      for (const part of event.message.content) {
+        if (part?.type === "toolCall") trackToolAnimation(part.id);
+      }
+      try { renderTui?.requestRender?.(); } catch { /* ignore */ }
     }
   });
 

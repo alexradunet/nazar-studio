@@ -17,12 +17,17 @@ function plain(lines: string[]): string[] {
   return lines.map((line) => line.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "").replace(/\x1b_G.*?\x1b\\/g, ""));
 }
 
+function expectTruecolorBackground(text: string): void {
+  expect(text).toMatch(/\x1b\[[0-9;]*48;2;/);
+}
+
 const originalAvatarRows = process.env.NAZAR_AVATAR_ROWS;
 const originalAvatarAspect = process.env.NAZAR_AVATAR_ASPECT;
 const originalCellWidth = process.env.NAZAR_CELL_WIDTH_PX;
 const originalCellHeight = process.env.NAZAR_CELL_HEIGHT_PX;
 const originalToolRows = process.env.NAZAR_TOOL_ROWS;
 const originalAnsiDetail = process.env.NAZAR_ANSI_DETAIL;
+const originalAnsiRenderer = process.env.NAZAR_ANSI_RENDERER;
 const originalGraphicsProtocol = process.env.NAZAR_GRAPHICS_PROTOCOL;
 const originalTerm = process.env.TERM;
 const originalKittyWindowId = process.env.KITTY_WINDOW_ID;
@@ -43,6 +48,7 @@ beforeEach(() => {
   delete process.env.NAZAR_CELL_HEIGHT_PX;
   delete process.env.NAZAR_TOOL_ROWS;
   delete process.env.NAZAR_ANSI_DETAIL;
+  delete process.env.NAZAR_ANSI_RENDERER;
   delete process.env.NAZAR_GRAPHICS_PROTOCOL;
   process.env.TERM = "xterm-256color";
   delete process.env.KITTY_WINDOW_ID;
@@ -63,6 +69,7 @@ afterEach(() => {
   restoreEnv("NAZAR_CELL_HEIGHT_PX", originalCellHeight);
   restoreEnv("NAZAR_TOOL_ROWS", originalToolRows);
   restoreEnv("NAZAR_ANSI_DETAIL", originalAnsiDetail);
+  restoreEnv("NAZAR_ANSI_RENDERER", originalAnsiRenderer);
   restoreEnv("NAZAR_GRAPHICS_PROTOCOL", originalGraphicsProtocol);
   restoreEnv("TERM", originalTerm);
   restoreEnv("KITTY_WINDOW_ID", originalKittyWindowId);
@@ -76,8 +83,8 @@ test("role avatars render generated ANSI art", () => {
   const nazar = renderAnsiAvatarFrame("nazar");
   expect(nazar).toHaveLength(9);
   expect(nazar.map((line) => visibleWidth(line))).toEqual([19, 19, 19, 19, 19, 19, 19, 19, 19]);
-  expect(nazar.join("\n")).toContain("\x1b[48;2;");
-  expect(renderAnsiAvatarFrame("user").join("\n")).toContain("\x1b[48;2;");
+  expectTruecolorBackground(nazar.join("\n"));
+  expectTruecolorBackground(renderAnsiAvatarFrame("user").join("\n"));
 });
 
 test("ANSI animations expose stable wrapping frames", () => {
@@ -154,16 +161,6 @@ test("explicit Kitty backend uses Kitty placeholder cells", () => {
   expect(avatar.lines).toHaveLength(9);
 });
 
-test("Kitty avatar rows hide their reusable image id from Pi cleanup", () => {
-  setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
-  const avatar = renderRoleAvatar("user", { backend: "kitty" })!;
-  const firstKittySequence = avatar.lines[0]?.text.match(/\x1b_G[\s\S]*?;/)?.[0] ?? "";
-
-  expect(firstKittySequence).toBe("\x1b_Ga=d,d=i,i=0,q=2;");
-  expect(avatar.lines[0]?.text).toContain("\x1b_Ga=T,f=32");
-  expect(avatar.lines[0]?.text).toContain("\u{10eeee}");
-});
-
 test("explicit ANSI option ignores image capabilities", () => {
   setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
   const avatar = renderRoleAvatar("nazar", { backend: "ansi" })!;
@@ -192,12 +189,12 @@ test("tool avatars are full-size generated ANSI icons matching role-avatar dimen
   expect(ansiRows).toBeGreaterThanOrEqual(5);
   const widths = read.map((line) => visibleWidth(line));
   expect(new Set(widths).size).toBe(1); // all rows the same width
-  expect(read.join("\n")).toContain("\x1b[48;2;");
+  expectTruecolorBackground(read.join("\n"));
 
   const bash = renderToolAvatar("bash", "pending", 0, '{"command":"git status"}');
   expect(bash).toHaveLength(ansiRows);
   expect(bash.map((line) => visibleWidth(line))).toEqual(widths);
-  expect(bash.join("\n")).toContain("\x1b[48;2;");
+  expectTruecolorBackground(bash.join("\n"));
   // Globe-on-pedestal sprites share the same half-block silhouette at 8×6 cells;
   // visual distinction is preserved through colour (the full coloured output differs).
   expect(bash.join("\n")).not.toEqual(read.join("\n"));

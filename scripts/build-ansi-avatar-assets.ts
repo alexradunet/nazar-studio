@@ -28,6 +28,13 @@ const SHEETS = [
     "eye-journal", "eye-gym", "eye-calendar", "eye-mail", "eye-music", "eye-time",
     "eye-terminal", "eye-rocket", "eye-gear", "eye-idle",
     "eye-money", "eye-sports", "eye-diet", "eye-sleep", "eye-mind",
+    // 30 new tools (2026-06-08): coding / life-management / calls / apps
+    "eye-git", "eye-merge", "eye-database", "eye-cloud", "eye-container", "eye-bug",
+    "eye-api", "eye-code", "eye-lock", "eye-package",
+    "eye-tasks", "eye-habit", "eye-weight", "eye-water", "eye-meds", "eye-mood",
+    "eye-goal", "eye-cart",
+    "eye-phone", "eye-video", "eye-chat", "eye-contacts", "eye-mic", "eye-bell",
+    "eye-share", "eye-drive", "eye-card", "eye-map", "eye-media", "eye-docs",
   ].map((name) => ({
     src: join(TOOL_DIR, `${name}.png`),
     dst: join(ANSI_TOOL_DIR, `${name}.png`),

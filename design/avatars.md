@@ -16,10 +16,11 @@ Avatars are always on. Backend selection is small and explicit:
 ```txt
 NAZAR_UI_QUALITY=auto        # auto | basic | hd; auto uses HD when Kitty support is detected
 NAZAR_GRAPHICS_PROTOCOL=auto  # auto | ansi | kitty; low-level override
+NAZAR_ANSI_RENDERER=chafa     # chafa | internal; Chafa WASM is default, internal half-blocks are fallback
 NAZAR_AVATAR_RECENT_LIMIT=20  # avatars only for latest N messages; 0 = active-only; all = uncapped
 ```
 
-ANSI is the minimum supported terminal layer: 24-bit truecolor SGR, text attributes, and half-block rasterization. Auto/HD mode uses Kitty graphics APC transmission plus Unicode placeholder cells (`U+10EEEE`) when support is detected, so images obey the same cell-grid contract as ANSI and fall back to ANSI when unsupported.
+ANSI is the minimum supported terminal layer: 24-bit truecolor SGR and text attributes. The default ANSI renderer uses bundled `chafa-wasm` when its extension has initialized, with Nazar's internal half-block rasterizer as the synchronous fallback. Auto/HD mode uses Kitty graphics APC transmission plus Unicode placeholder cells (`U+10EEEE`) when support is detected, so images obey the same cell-grid contract as ANSI and fall back to ANSI when unsupported.
 
 ## Rendering rules
 
