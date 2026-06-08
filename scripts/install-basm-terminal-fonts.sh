@@ -3,8 +3,10 @@
 # Install Nazar's Basm terminal fonts locally.
 #
 # Basm uses display/pixel fonts for web labels, but the daily terminal needs a
-# readable monospace. CozetteVector is the default: compact, local, and ANSI-safe.
-# Departure Mono and JetBrains Mono remain available as alternatives.
+# readable monospace. Iosevka Term is Nazar's recommended terminal font for
+# octant/high avatars, but it is not vendored here. This helper installs the
+# bundled fallback fonts: CozetteVector by default, plus Departure Mono or
+# JetBrains Mono on request.
 set -euo pipefail
 
 DIR="${NAZAR_DIR:-$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)}"
@@ -47,7 +49,7 @@ case "${FONT_FAMILY,,}" in
     install_jetbrains_mono
     ;;
   *)
-    echo "Unknown NAZAR_TERMINAL_FONT='$FONT_FAMILY'. Use 'Cozette', 'Departure Mono', or 'JetBrains Mono'." >&2
+    echo "Unknown NAZAR_TERMINAL_FONT='$FONT_FAMILY'. Use bundled 'Cozette', 'Departure Mono', or 'JetBrains Mono'. Install Iosevka Term separately for the recommended high-mode font." >&2
     exit 1
     ;;
 esac

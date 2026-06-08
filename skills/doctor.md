@@ -37,8 +37,9 @@ model; watch `~/.local/share/nazar/logs/local-llm.log`.
 
 - Nazar theme and avatars load (run `/reload` if not).
 - Terminal experience check: truecolor ANSI terminal and terminal font
-  `Departure Mono` (https://departuremono.com/) preferred. From a source checkout, the exact notice
-  logic is covered by `npm test -- terminal-experience`.
+  `Iosevka Term` (https://github.com/be5invis/Iosevka) preferred, especially for `high` / octant avatars.
+- Font helper: `/nazar-terminal-font status` reports terminal/font/octant readiness; `/nazar-terminal-font configure` can safely update Kitty after user approval.
+- If avatars look broken in `high`, run `/skill:terminal-font` and keep `/nazar-ui medium` until the octant glyph test is clean. From a source checkout, the exact notice logic is covered by `npm test -- terminal-experience`.
 - Footer model matches the actual terminal model; `/model` switches back to
   `llamafile / lfm2.5-8b-a1b` for local/private.
 

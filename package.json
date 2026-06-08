@@ -28,6 +28,7 @@
   "pi": {
     "extensions": [
       "./extensions/brand.ts",
+      "./extensions/terminal-font.ts",
       "./extensions/personality.ts",
       "./extensions/memory.ts",
       "./extensions/vault.ts",

@@ -84,15 +84,14 @@ curl -s http://127.0.0.1:8082/health
 Nazar Studio targets portable terminal standards. The preferred setup is:
 
 - **Truecolor ANSI** (`COLORTERM=truecolor`, non-`dumb` `$TERM`).
-- **Departure Mono** as the terminal font: https://departuremono.com/
+- **Iosevka Term** as the terminal font: https://github.com/be5invis/Iosevka
+  - It is the recommended Nazar font for `high` avatar quality because recent Iosevka builds cover the Unicode octant block glyphs (`U+1CD00…`).
 
-The `/nazar-ui low|medium|high` command switches avatar quality live. The `/skill:doctor`
-health check includes this terminal experience check; Nazar does not show it as a startup notice.
+The `/nazar-ui low|medium|high` command switches avatar quality live. `/nazar-terminal-font status` checks whether the current terminal/font can support high/octant mode, and `/nazar-terminal-font configure` can update Kitty after explicit approval. The `/skill:doctor` health check includes this terminal experience check; Nazar does not show it as a startup notice.
 
 ## Terminal font installer (optional, source checkout)
 
-The vendored Cozette/Departure Mono fonts and their installer live in the repo (not the npm
-tarball). From a `git clone` of this repo:
+The repo still carries a small installer for bundled fallback fonts (not the npm tarball). Iosevka is not vendored; install it from your OS package manager or upstream releases. From a `git clone` of this repo:
 
 ```bash
 bash scripts/install-basm-terminal-fonts.sh
@@ -104,8 +103,9 @@ bash scripts/install-basm-terminal-fonts.sh
 /reload          reload extensions, skills, prompts, theme
 /model           switch model; frontier models are manual/opt-in
 /login           sign in to a frontier provider, if wanted
-/local-llm       manage the local llamafile + whisperfile runtime
-/skill:doctor    run the doctor playbook
+/local-llm             manage the local llamafile + whisperfile runtime
+/nazar-terminal-font   check/configure Iosevka Term for octant avatars
+/skill:doctor          run the doctor playbook
 ```
 
 ## Develop / self-maintain

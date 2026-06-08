@@ -288,7 +288,9 @@ Implementation: [`../lib/ui/footer.ts`](../lib/ui/footer.ts).
 
 ## Typography
 
-A terminal can only use one monospace family for the TUI. Nazar's default Basm terminal font is **CozetteVector**: the vector build of Cozette, compact enough to fit the 16-bit/RPG surface while staying readable for chat and tools. Install/apply it locally with:
+A terminal can only use one monospace family for the TUI. Nazar's recommended terminal font is **Iosevka Term**: it is designed for terminals and recent builds cover the Unicode octant block glyphs used by `/nazar-ui high`. Use `/nazar-terminal-font status` to diagnose coverage and `/nazar-terminal-font configure` to safely update Kitty after approval. Install Iosevka from upstream or your OS package manager, then set your terminal font to Iosevka Term.
+
+The source checkout still includes a small installer for bundled fallback fonts:
 
 ```bash
 bash scripts/install-basm-terminal-fonts.sh

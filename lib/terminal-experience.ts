@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-export const DEPARTURE_MONO_URL = "https://departuremono.com/";
-export const RECOMMENDED_FONT = "Departure Mono";
+export const IOSEVKA_URL = "https://github.com/be5invis/Iosevka";
+export const RECOMMENDED_FONT = "Iosevka Term";
 
 type Env = Record<string, string | undefined>;
 
@@ -15,8 +15,8 @@ function normalize(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
-export function isDepartureMono(fontName: string | undefined): boolean {
-  return normalize(fontName ?? "").includes("departuremono");
+export function isIosevka(fontName: string | undefined): boolean {
+  return normalize(fontName ?? "").includes("iosevka");
 }
 
 function terminalName(env: Env): string {
@@ -49,8 +49,8 @@ export function terminalExperienceNotice(env: Env = process.env): string | undef
     suggestions.push("run Nazar Studio in a modern truecolor ANSI terminal");
   }
 
-  if (!isDepartureMono(info.fontName)) {
-    suggestions.push(`switch your terminal font to ${RECOMMENDED_FONT} (${DEPARTURE_MONO_URL})`);
+  if (!isIosevka(info.fontName)) {
+    suggestions.push(`switch your terminal font to ${RECOMMENDED_FONT} (${IOSEVKA_URL})`);
   }
 
   if (suggestions.length === 0) return undefined;

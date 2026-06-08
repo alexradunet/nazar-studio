@@ -24,9 +24,7 @@ just blits cached lines.
 ### Octant fidelity
 Octant packs 8 subpixels/cell vs sextant's 6 — 33% more vertical resolution
 (same density as braille, but solid blocks). It visibly sharpens faces and eyes,
-but depends on newer font coverage. The default is **medium / sextant**; switch
-to **high / octant** only when your terminal font renders U+1CD00 glyphs cleanly,
-or to **low / half-block** for conservative systems. **Verify** the
+but depends on newer font coverage. The recommended Nazar terminal font for high mode is **Iosevka Term**. The default is **medium / sextant**; switch to **high / octant** only when your terminal font renders U+1CD00 glyphs cleanly, or to **low / half-block** for conservative systems. **Verify** the
 `OCTANT_BASE = 0x1CD00` constant in `sextant.ts` against your font if octant
 glyphs look shifted — it is isolated to that one constant.
 

@@ -19,7 +19,7 @@ NAZAR_AVATAR_ROWS=11         # 11 rows = default 23×11 avatar target
 NAZAR_AVATAR_RECENT_LIMIT=20 # avatars only for latest N messages; 0 = active-only; all = uncapped
 ```
 
-ANSI is the supported terminal layer: 24-bit truecolor SGR and text attributes. Runtime renders directly from the source PNG sheets with no external graphics dependency or generated text cache.
+ANSI is the supported terminal layer: 24-bit truecolor SGR and text attributes. Runtime renders directly from the source PNG sheets with no external graphics dependency or generated text cache. Iosevka Term is the recommended Nazar terminal font for `high` / octant mode; use `medium` if your font lacks clean `U+1CD00…` glyphs.
 
 ## Rendering rules
 
