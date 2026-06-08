@@ -263,9 +263,12 @@ test("old role messages keep the Nazar nameplate but drop the avatar column", as
   const g = globalThis as any;
   const savedOriginals = g[key];
   const savedUserRender = UserMessageComponent.prototype.render;
+  const savedUserInvalidate = UserMessageComponent.prototype.invalidate;
   const savedAssistantRender = AssistantMessageComponent.prototype.render;
   const savedAssistantUpdateContent = AssistantMessageComponent.prototype.updateContent;
+  const savedAssistantInvalidate = AssistantMessageComponent.prototype.invalidate;
   const savedToolRender = ToolExecutionComponent.prototype.render;
+  const savedToolInvalidate = ToolExecutionComponent.prototype.invalidate;
 
   g[key] = {};
   UserMessageComponent.prototype.render = function fakeOriginal(width: number) {
@@ -283,9 +286,60 @@ test("old role messages keep the Nazar nameplate but drop the avatar column", as
     expect(rendered).not.toMatch(/[▀▄█▌▐]/);
   } finally {
     UserMessageComponent.prototype.render = savedUserRender;
+    UserMessageComponent.prototype.invalidate = savedUserInvalidate;
     AssistantMessageComponent.prototype.render = savedAssistantRender;
     AssistantMessageComponent.prototype.updateContent = savedAssistantUpdateContent;
+    AssistantMessageComponent.prototype.invalidate = savedAssistantInvalidate;
     ToolExecutionComponent.prototype.render = savedToolRender;
+    ToolExecutionComponent.prototype.invalidate = savedToolInvalidate;
+    if (savedOriginals === undefined) delete g[key];
+    else g[key] = savedOriginals;
+  }
+});
+
+test("stable user panels cache composed render across input redraws", async () => {
+  process.env.NAZAR_AVATAR_RECENT_LIMIT = "all";
+  const { patchRpgAvatars } = await import("./avatars.ts");
+  const { UserMessageComponent, AssistantMessageComponent, ToolExecutionComponent } = await import("@earendil-works/pi-coding-agent");
+  const key = Symbol.for("nazar.rpgAvatarOriginals");
+  const g = globalThis as any;
+  const savedOriginals = g[key];
+  const savedUserRender = UserMessageComponent.prototype.render;
+  const savedUserInvalidate = UserMessageComponent.prototype.invalidate;
+  const savedAssistantRender = AssistantMessageComponent.prototype.render;
+  const savedAssistantUpdateContent = AssistantMessageComponent.prototype.updateContent;
+  const savedAssistantInvalidate = AssistantMessageComponent.prototype.invalidate;
+  const savedToolRender = ToolExecutionComponent.prototype.render;
+  const savedToolInvalidate = ToolExecutionComponent.prototype.invalidate;
+
+  let originalRenderCalls = 0;
+  g[key] = {};
+  UserMessageComponent.prototype.render = function fakeOriginal(width: number) {
+    originalRenderCalls++;
+    return [`cached message at ${width}`];
+  };
+  UserMessageComponent.prototype.invalidate = function fakeInvalidate() {};
+
+  try {
+    patchRpgAvatars();
+    const owner = {};
+    const first = UserMessageComponent.prototype.render.call(owner, 80);
+    const second = UserMessageComponent.prototype.render.call(owner, 80);
+
+    expect(second).toBe(first);
+    expect(originalRenderCalls).toBe(2);
+
+    UserMessageComponent.prototype.invalidate.call(owner);
+    UserMessageComponent.prototype.render.call(owner, 80);
+    expect(originalRenderCalls).toBe(4);
+  } finally {
+    UserMessageComponent.prototype.render = savedUserRender;
+    UserMessageComponent.prototype.invalidate = savedUserInvalidate;
+    AssistantMessageComponent.prototype.render = savedAssistantRender;
+    AssistantMessageComponent.prototype.updateContent = savedAssistantUpdateContent;
+    AssistantMessageComponent.prototype.invalidate = savedAssistantInvalidate;
+    ToolExecutionComponent.prototype.render = savedToolRender;
+    ToolExecutionComponent.prototype.invalidate = savedToolInvalidate;
     if (savedOriginals === undefined) delete g[key];
     else g[key] = savedOriginals;
   }

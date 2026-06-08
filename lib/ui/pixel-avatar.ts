@@ -590,6 +590,8 @@ function kittyId(frameId: string, columns: number, rows: number): number {
   return (hash.readUInt32BE(0) & 0x7fffffff) || 1;
 }
 
+const KITTY_AVATAR_CLEANUP_GUARD = "\x1b_Ga=d,d=i,i=0,q=2;\x1b\\";
+
 function kittyAvatar(frameId: string, rows = avatarRows()): RenderedAvatar {
   const frame = frameFor(frameId, SOURCE_SHEET_ASSETS);
   const columns = avatarColumns(rows);
@@ -606,7 +608,13 @@ function kittyAvatar(frameId: string, rows = avatarRows()): RenderedAvatar {
   });
   const placeholders = kittyPlaceholderGrid(id, columns, rows);
   const lines = placeholders.map((line, index) => ({
-    text: index === 0 ? `${image}${line}` : line,
+    // Pi's diff renderer deletes Kitty image ids before rewriting changed rows.
+    // Inline placeholder avatars are tiny reusable sprites; if their backing
+    // image is deleted just before the placeholders are redrawn, Kitty can blink
+    // the old Seeker/Nazar panel on each keystroke. A quiet no-op graphics APC
+    // first in the row keeps Pi's cleanup parser from claiming the real sprite
+    // id, while the actual image payload still reaches the terminal every time.
+    text: index === 0 ? `${KITTY_AVATAR_CLEANUP_GUARD}${image}${line}` : line,
     virtualWidth: columns,
   }));
   return { lines, width: columns, height: rows, backend: "kitty-placeholder" };

@@ -154,6 +154,16 @@ test("explicit Kitty backend uses Kitty placeholder cells", () => {
   expect(avatar.lines).toHaveLength(9);
 });
 
+test("Kitty avatar rows hide their reusable image id from Pi cleanup", () => {
+  setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
+  const avatar = renderRoleAvatar("user", { backend: "kitty" })!;
+  const firstKittySequence = avatar.lines[0]?.text.match(/\x1b_G[\s\S]*?;/)?.[0] ?? "";
+
+  expect(firstKittySequence).toBe("\x1b_Ga=d,d=i,i=0,q=2;");
+  expect(avatar.lines[0]?.text).toContain("\x1b_Ga=T,f=32");
+  expect(avatar.lines[0]?.text).toContain("\u{10eeee}");
+});
+
 test("explicit ANSI option ignores image capabilities", () => {
   setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
   const avatar = renderRoleAvatar("nazar", { backend: "ansi" })!;

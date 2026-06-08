@@ -36,6 +36,7 @@ import { panelStyle, type PanelState, type PanelStyle } from "./panel-style.ts";
 import { roleNameplate, type SpriteRole } from "./sprites.ts";
 import { nazarMarkdownTheme } from "./markdown-theme.ts";
 import { renderChapterDivider } from "./divider.ts";
+import { graphicsQuality } from "./graphics-state.ts";
 
 const AVATAR_ORIGINALS = Symbol.for("nazar.rpgAvatarOriginals");
 const DEFAULT_RICH_AVATAR_RECENT_LIMIT = 20;
@@ -46,6 +47,54 @@ let PANEL_SEQUENCE = new WeakMap<object, number>();
 const PANEL_KEY_SEQUENCE = new Map<string, number>();
 let panelSequenceCounter = 0;
 let refreshScheduled = false;
+
+const PANEL_RENDER_CACHE = Symbol.for("nazar.panelRenderCache");
+
+type PanelRenderCache = {
+  key: string;
+  lines: string[];
+};
+
+function panelRenderEnvKey(): string {
+  return [
+    graphicsQuality(),
+    process.env.NAZAR_GRAPHICS_PROTOCOL ?? "",
+    process.env.NAZAR_AVATAR_BACKEND ?? "",
+    process.env.NAZAR_AVATAR_ROWS ?? "",
+    process.env.NAZAR_CELL_WIDTH_PX ?? "",
+    process.env.NAZAR_CELL_HEIGHT_PX ?? "",
+    process.env.NAZAR_AVATAR_RECENT_LIMIT ?? "",
+  ].join("|");
+}
+
+function panelRenderCacheKey(kind: string, width: number, state: string): string {
+  return [kind, width, panelSequenceCounter, panelRenderEnvKey(), state].join("\0");
+}
+
+function clearPanelRenderCache(owner: unknown): void {
+  if ((typeof owner !== "object" && typeof owner !== "function") || owner === null) return;
+  delete (owner as any)[PANEL_RENDER_CACHE];
+}
+
+function cachedPanelRender(
+  owner: unknown,
+  kind: string,
+  width: number,
+  state: string,
+  render: () => string[],
+): string[] {
+  if ((typeof owner !== "object" && typeof owner !== "function") || owner === null) return render();
+  const beforeKey = panelRenderCacheKey(kind, width, state);
+  const cache = (owner as any)[PANEL_RENDER_CACHE] as PanelRenderCache | undefined;
+  if (cache?.key === beforeKey) return cache.lines;
+
+  const lines = render();
+  (owner as any)[PANEL_RENDER_CACHE] = {
+    key: panelRenderCacheKey(kind, width, state),
+    lines,
+  };
+  return lines;
+}
 
 // The assistant message currently being generated in the live agent turn.
 // Only this one reflects Nazar's live mood (focused / pleased / concerned …);
@@ -440,35 +489,56 @@ export function patchRpgAvatars() {
   const originals = g[AVATAR_ORIGINALS] ?? {};
   originals.assistantRender ??= AssistantMessageComponent.prototype.render;
   originals.assistantUpdateContent ??= AssistantMessageComponent.prototype.updateContent;
+  originals.assistantInvalidate ??= AssistantMessageComponent.prototype.invalidate;
   originals.toolRender ??= ToolExecutionComponent.prototype.render;
+  originals.toolInvalidate ??= ToolExecutionComponent.prototype.invalidate;
   originals.userRender ??= UserMessageComponent.prototype.render;
+  originals.userInvalidate ??= UserMessageComponent.prototype.invalidate;
   g[AVATAR_ORIGINALS] = originals;
 
+  UserMessageComponent.prototype.invalidate = function patchedUserInvalidate(): void {
+    clearPanelRenderCache(this);
+    originals.userInvalidate.call(this);
+  };
+
+  AssistantMessageComponent.prototype.invalidate = function patchedAssistantInvalidate(): void {
+    clearPanelRenderCache(this);
+    originals.assistantInvalidate.call(this);
+  };
+
+  ToolExecutionComponent.prototype.invalidate = function patchedToolInvalidate(): void {
+    clearPanelRenderCache(this);
+    originals.toolInvalidate.call(this);
+  };
+
   UserMessageComponent.prototype.render = function patchedUserRender(width: number): string[] {
-    const bodyOnlyLines = originals.userRender.call(this, bodyOnlyColumnWidth(width));
-    if (!shouldDecorateRolePanel(this, "user", false, bodyOnlyLines)) {
-      return composeBodyOnlyPanel(
-        bodyOnlyLines, width, 0,
+    return cachedPanelRender(this, "user", width, "static", () => {
+      const bodyOnlyLines = originals.userRender.call(this, bodyOnlyColumnWidth(width));
+      if (!shouldDecorateRolePanel(this, "user", false, bodyOnlyLines)) {
+        return composeBodyOnlyPanel(
+          bodyOnlyLines, width, 0,
+          roleTitle("user"), rolePanelStyle("user"),
+          { meta: roleMeta("user", undefined) },
+        );
+      }
+      // Build the cells FIRST so we know the avatar column width, then ask Pi
+      // to render the body wrapped into our narrower body column. Otherwise Pi
+      // produces full-width rows that overflow when we paste them into the
+      // two-column layout (causes pi-tui's width assertion to fire).
+      const user = roleAvatarCell(this, "user", bodyOnlyLines);
+      const lines = originals.userRender.call(this, bodyColumnWidth(width, user.width));
+      // Conversation flows left→right: YOU on the left, Nazar (and his tools) on
+      // the right — mirroring the input bar (you type on the left, it flows to Nazar).
+      return composeMessagePanel(
+        lines, user, user.width, width, 0,
         roleTitle("user"), rolePanelStyle("user"),
-        { meta: roleMeta("user", undefined) },
+        { meta: roleMeta("user", undefined), align: "left" },
       );
-    }
-    // Build the cells FIRST so we know the avatar column width, then ask Pi
-    // to render the body wrapped into our narrower body column. Otherwise Pi
-    // produces full-width rows that overflow when we paste them into the
-    // two-column layout (causes pi-tui's width assertion to fire).
-    const user = roleAvatarCell(this, "user", bodyOnlyLines);
-    const lines = originals.userRender.call(this, bodyColumnWidth(width, user.width));
-    // Conversation flows left→right: YOU on the left, Nazar (and his tools) on
-    // the right — mirroring the input bar (you type on the left, it flows to Nazar).
-    return composeMessagePanel(
-      lines, user, user.width, width, 0,
-      roleTitle("user"), rolePanelStyle("user"),
-      { meta: roleMeta("user", undefined), align: "left" },
-    );
+    });
   };
 
   AssistantMessageComponent.prototype.updateContent = function patchedAssistantUpdateContent(message: any): void {
+    clearPanelRenderCache(this);
     // Inject the inscription-style markdown theme. The wrapper is idempotent
     // and reuses the base theme's painters for colour, so it composes
     // cleanly with whatever theme Pi configured at construction time.
@@ -485,56 +555,80 @@ export function patchRpgAvatars() {
     originals.assistantUpdateContent.call(this, displayMessage);
     if (hideThinking) self.lastMessage = message;
     activateAssistantAvatar(this, previousMessage, message);
+    clearPanelRenderCache(this);
   };
 
   AssistantMessageComponent.prototype.render = function patchedAssistantRender(width: number): string[] {
-    if (!shouldDecorateRolePanel(this, "assistant")) {
-      const lines = originals.assistantRender.call(this, bodyOnlyColumnWidth(width));
+    const any = this as any;
+    const lastMessage = any.lastMessage;
+    const state = [
+      lastMessage?.usage?.output_tokens ?? lastMessage?.usage?.tokens ?? "",
+      lastMessage?.elapsedMs ?? lastMessage?.elapsed_ms ?? "",
+      Boolean(any.hideThinkingBlock),
+    ].join(":");
+    const render = () => {
+      if (!shouldDecorateRolePanel(this, "assistant")) {
+        const lines = originals.assistantRender.call(this, bodyOnlyColumnWidth(width));
+        if (trimOuterBlankLines(lines).length === 0) return [];
+        return composeBodyOnlyPanel(
+          lines, width, PANEL_TOP_PADDING_ASSISTANT,
+          roleTitle("nazar"), rolePanelStyle("nazar"),
+          { meta: roleMeta("nazar", lastMessage) },
+        );
+      }
+      const nazar = roleAvatarCell(this, "assistant");
+      const lines = originals.assistantRender.call(this, bodyColumnWidth(width, nazar.width));
       if (trimOuterBlankLines(lines).length === 0) return [];
-      return composeBodyOnlyPanel(
-        lines, width, PANEL_TOP_PADDING_ASSISTANT,
+      return composeMessagePanel(
+        lines, nazar, nazar.width, width, PANEL_TOP_PADDING_ASSISTANT,
         roleTitle("nazar"), rolePanelStyle("nazar"),
-        { meta: roleMeta("nazar", (this as any).lastMessage) },
+        { meta: roleMeta("nazar", lastMessage), align: "right" },
       );
-    }
-    const nazar = roleAvatarCell(this, "assistant");
-    const lines = originals.assistantRender.call(this, bodyColumnWidth(width, nazar.width));
-    if (trimOuterBlankLines(lines).length === 0) return [];
-    return composeMessagePanel(
-      lines, nazar, nazar.width, width, PANEL_TOP_PADDING_ASSISTANT,
-      roleTitle("nazar"), rolePanelStyle("nazar"),
-      { meta: roleMeta("nazar", (this as any).lastMessage), align: "right" },
-    );
+    };
+    if (this === activeAssistantComponent) return render();
+    return cachedPanelRender(this, "assistant", width, state, render);
   };
 
   ToolExecutionComponent.prototype.render = function patchedToolRender(width: number): string[] {
     const status = toolStatus(this);
-    if (!shouldUseRichAvatar(this, status === "running", stablePanelKey(this, "tool"))) {
-      const name = String((this as any)?.toolName || "tool").trim() || "tool";
-      const style = toolStyle(status);
-      const lines = originals.toolRender.call(this, bodyOnlyColumnWidth(width));
+    const any = this as any;
+    const state = [
+      status,
+      any?.toolName ?? "",
+      any?.elapsedMs ?? any?.elapsed_ms ?? "",
+      Boolean(any?.result),
+      Boolean(any?.result?.isError),
+    ].join(":");
+    const render = () => {
+      if (!shouldUseRichAvatar(this, status === "running", stablePanelKey(this, "tool"))) {
+        const name = String(any?.toolName || "tool").trim() || "tool";
+        const style = toolStyle(status);
+        const lines = originals.toolRender.call(this, bodyOnlyColumnWidth(width));
+        if (trimOuterBlankLines(lines).length === 0) return [];
+        return composeBodyOnlyPanel(
+          lines, width, PANEL_TOP_PADDING_ASSISTANT,
+          toolTitle(name, style), style,
+          { meta: toolMeta(this, style) },
+        );
+      }
+      const tool = toolCell(this);
+      const name = String(any?.toolName || "tool").trim() || "tool";
+      const lines = originals.toolRender.call(this, bodyColumnWidth(width, tool.width));
       if (trimOuterBlankLines(lines).length === 0) return [];
-      return composeBodyOnlyPanel(
-        lines, width, PANEL_TOP_PADDING_ASSISTANT,
+      const style = toolStyle(status);
+      // Self-driving sprite animation while the tool is still running: the
+      // tick scheduled here calls invalidate() in 180ms, which triggers a
+      // re-render with a fresh frame index. When status becomes "ok" or
+      // "error", no new tick is scheduled and the loop stops on its own.
+      if (status === "running") scheduleToolAnimationTick(this);
+      return composeMessagePanel(
+        lines, tool, tool.width, width, PANEL_TOP_PADDING_ASSISTANT,
         toolTitle(name, style), style,
-        { meta: toolMeta(this, style) },
+        { meta: toolMeta(this, style), align: "right" },
       );
-    }
-    const tool = toolCell(this);
-    const name = String((this as any)?.toolName || "tool").trim() || "tool";
-    const lines = originals.toolRender.call(this, bodyColumnWidth(width, tool.width));
-    if (trimOuterBlankLines(lines).length === 0) return [];
-    const style = toolStyle(status);
-    // Self-driving sprite animation while the tool is still running: the
-    // tick scheduled here calls invalidate() in 180ms, which triggers a
-    // re-render with a fresh frame index. When status becomes "ok" or
-    // "error", no new tick is scheduled and the loop stops on its own.
-    if (status === "running") scheduleToolAnimationTick(this);
-    return composeMessagePanel(
-      lines, tool, tool.width, width, PANEL_TOP_PADDING_ASSISTANT,
-      toolTitle(name, style), style,
-      { meta: toolMeta(this, style), align: "right" },
-    );
+    };
+    if (status === "running") return render();
+    return cachedPanelRender(this, "tool", width, state, render);
   };
 
   // ── Custom-message component patches ───────────────────────────────────

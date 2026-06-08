@@ -52,10 +52,12 @@ export default function (pi: ExtensionAPI) {
     toolAnimationTicker = undefined;
   }
 
-  function trackToolAnimation(id: unknown) {
-    if (typeof id !== "string" || !id) return;
+  function trackToolAnimation(id: unknown): boolean {
+    if (typeof id !== "string" || !id) return false;
+    const wasTracked = activeToolAnimations.has(id);
     activeToolAnimations.add(id);
     startToolAnimationTicker();
+    return !wasTracked;
   }
 
   function untrackToolAnimation(id: unknown) {
@@ -100,11 +102,13 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on("message_update", async (event: any) => {
-    if (event?.message?.role === "assistant" && Array.isArray(event.message.content)) {
-      for (const part of event.message.content) {
-        if (part?.type === "toolCall") trackToolAnimation(part.id);
-      }
-      try { renderTui?.requestRender?.(); } catch { /* ignore */ }
+    if (event?.message?.role !== "assistant" || !Array.isArray(event.message.content)) return;
+    // Pi already schedules streaming message redraws. Do not add another
+    // requestRender() per token here; in long answers that competes with input
+    // editing and makes the editor feel sticky. We only discover tool-call ids
+    // so the slower 180ms tool animation ticker can take over when needed.
+    for (const part of event.message.content) {
+      if (part?.type === "toolCall") trackToolAnimation(part.id);
     }
   });
 
