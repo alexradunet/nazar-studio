@@ -18,7 +18,7 @@ and copy choices.
 - [`../web/logo.png`](../web/logo.png) — the **compact mark**: gold nazar-eye medallion. Top bar, social/org avatar, favicon source.
 - [`pi-terminal.md`](pi-terminal.md) — rules for the `nazar` Pi terminal surface: chat-style
   panels, header / folk-band, editor flow, footer, thinking widget.
-- [`avatars.md`](avatars.md) — sprite-sheet avatar catalog, ANSI half-block / Kitty HD
+- [`avatars.md`](avatars.md) — sprite-sheet avatar catalog, ANSI/Chafa rendering
   backends, layout rules.
 
 > Source-of-truth rule: if two docs disagree, the one that *owns* that layer wins — `identity.md`

@@ -36,7 +36,7 @@ model; watch `~/.local/share/nazar/logs/local-llm.log`.
 ## 4. UI + model
 
 - Nazar theme and avatars load (run `/reload` if not).
-- Terminal experience check: truecolor ANSI terminal, kitty >= 0.35.0 preferred, and terminal font
+- Terminal experience check: truecolor ANSI terminal and terminal font
   `Departure Mono` (https://departuremono.com/) preferred. From a source checkout, the exact notice
   logic is covered by `npm test -- terminal-experience`.
 - Footer model matches the actual terminal model; `/model` switches back to

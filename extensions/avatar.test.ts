@@ -2,7 +2,7 @@
 import { expect, test } from "vitest";
 import { displayImagePath, thumbnailCellSize } from "./avatar.ts";
 
-test("generated images render as Kitty thumbnails capped at 256px", () => {
+test("generated images render as terminal thumbnails capped at 256px", () => {
   expect(thumbnailCellSize({ width: 512, height: 512 }, 8, 16)).toEqual({ columns: 32, rows: 16 });
   expect(thumbnailCellSize({ width: 512, height: 256 }, 8, 16)).toEqual({ columns: 32, rows: 8 });
   expect(thumbnailCellSize({ width: 128, height: 128 }, 8, 16)).toEqual({ columns: 16, rows: 8 });

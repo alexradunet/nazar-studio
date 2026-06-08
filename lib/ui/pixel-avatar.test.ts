@@ -30,7 +30,6 @@ const originalAnsiDetail = process.env.NAZAR_ANSI_DETAIL;
 const originalAnsiRenderer = process.env.NAZAR_ANSI_RENDERER;
 const originalGraphicsProtocol = process.env.NAZAR_GRAPHICS_PROTOCOL;
 const originalTerm = process.env.TERM;
-const originalKittyWindowId = process.env.KITTY_WINDOW_ID;
 const originalTmux = process.env.TMUX;
 const originalZellij = process.env.ZELLIJ;
 const originalSty = process.env.STY;
@@ -51,7 +50,6 @@ beforeEach(() => {
   delete process.env.NAZAR_ANSI_RENDERER;
   delete process.env.NAZAR_GRAPHICS_PROTOCOL;
   process.env.TERM = "xterm-256color";
-  delete process.env.KITTY_WINDOW_ID;
   delete process.env.TMUX;
   delete process.env.ZELLIJ;
   delete process.env.STY;
@@ -72,7 +70,6 @@ afterEach(() => {
   restoreEnv("NAZAR_ANSI_RENDERER", originalAnsiRenderer);
   restoreEnv("NAZAR_GRAPHICS_PROTOCOL", originalGraphicsProtocol);
   restoreEnv("TERM", originalTerm);
-  restoreEnv("KITTY_WINDOW_ID", originalKittyWindowId);
   restoreEnv("TMUX", originalTmux);
   restoreEnv("ZELLIJ", originalZellij);
   restoreEnv("STY", originalSty);
@@ -120,58 +117,30 @@ test("avatar renderer can calibrate cell dimensions for the live terminal font",
   expect(avatarPixelAspect(avatar.width + 2, avatar.height + 2)).toBeCloseTo(1, 1);
 });
 
-test("auto quality selects Kitty placeholder cells when supported", () => {
-  setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
-  const avatar = renderRoleAvatar("nazar")!;
-  expect(avatar.backend).toBe("kitty-placeholder");
-  expect(avatar.lines[0]?.text).toContain("\u{10eeee}");
-});
-
-test("default user avatar renders the soul sheet in HD mode", () => {
-  setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
-  const avatar = renderRoleAvatar("user", { backend: "kitty" })!;
-  expect(avatar.backend).toBe("kitty-placeholder");
-  expect(avatar.lines[0]?.text).toContain("\u{10eeee}");
-});
-
-test("basic quality stays on ANSI even when Kitty is supported", () => {
-  setGraphicsQuality("basic");
-  setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
+test("auto quality renders portable ANSI", () => {
   const avatar = renderRoleAvatar("nazar")!;
   expect(avatar.backend).toBe("ansi");
   expect(avatar.lines[0]?.text).not.toContain("\x1b_G");
 });
 
-test("HD quality selects Kitty placeholder cells when supported", () => {
-  setGraphicsQuality("hd");
-  setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
+test("basic quality renders portable ANSI", () => {
+  setGraphicsQuality("basic");
   const avatar = renderRoleAvatar("nazar")!;
-  expect(avatar.backend).toBe("kitty-placeholder");
-  expect(avatar.lines[0]?.text).toContain("\u{10eeee}");
+  expect(avatar.backend).toBe("ansi");
+  expect(avatar.lines[0]?.text).not.toContain("\x1b_G");
 });
 
-test("explicit Kitty backend uses Kitty placeholder cells", () => {
-  setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
-  const avatar = renderRoleAvatar("nazar", { backend: "kitty" })!;
-  expect(avatar.backend).toBe("kitty-placeholder");
-  expect(avatar.lines[0]?.text).toContain("\x1b_Ga=T,f=32");
-  expect(avatar.lines[0]?.text).toContain("U=1");
-  expect(avatar.lines[0]?.text).toContain("\u{10eeee}");
-  expect(avatar.lines[0]?.virtualWidth).toBe(avatar.width);
-  expect(avatar.lines).toHaveLength(9);
+test("legacy HD quality still renders portable ANSI", () => {
+  setGraphicsQuality("hd");
+  const avatar = renderRoleAvatar("nazar")!;
+  expect(avatar.backend).toBe("ansi");
+  expect(avatar.lines[0]?.text).not.toContain("\x1b_G");
 });
 
-test("explicit ANSI option ignores image capabilities", () => {
-  setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
+test("explicit ANSI option renders portable output", () => {
   const avatar = renderRoleAvatar("nazar", { backend: "ansi" })!;
   expect(avatar.backend).toBe("ansi");
   expect(avatar.lines[0]?.text).not.toContain("\x1b_G");
-});
-
-test("forced Kitty falls back to ANSI when unsupported", () => {
-  setCapabilities({ images: null, trueColor: true, hyperlinks: true });
-  const avatar = renderRoleAvatar("nazar", { backend: "kitty" })!;
-  expect(avatar.backend).toBe("ansi");
 });
 
 test("ANSI detail is always half-block", () => {

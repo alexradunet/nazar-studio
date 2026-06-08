@@ -119,13 +119,11 @@ export function analyzeTextCells(lines: string[]): MessageTextCell[] {
 // ── Background-fill helpers ────────────────────────────────────────────────
 
 /**
- * Pull every Kitty graphics APC and iTerm2 image OSC out of a line. The
- * image transmission sequences carry base64-encoded image data and are
- * fragile — any byte manipulation (truncation, replacement, sandwiching
- * inside a bg-paint frame) can corrupt them. We extract them up-front so
- * they can be emitted verbatim BEFORE the rest of the line goes through
- * normal paint/wrap. The terminal receives the APC first → stores the
- * image; the placeholder cells in `rest` then match it for overlay.
+ * Pull terminal image APC/OSC payloads out of a line. Image transmission
+ * sequences carry base64-encoded data and are fragile — any byte manipulation
+ * (truncation, replacement, sandwiching inside a bg-paint frame) can corrupt
+ * them. We extract them up-front so they can be emitted verbatim BEFORE the
+ * rest of the line goes through normal paint/wrap.
  */
 export function extractImageSequences(text: string): { apc: string; rest: string } {
   let apc = "";
@@ -133,11 +131,11 @@ export function extractImageSequences(text: string): { apc: string; rest: string
   let changed = true;
   while (changed) {
     changed = false;
-    // Kitty APC: ESC _ G ... ESC backslash
-    const kitty = rest.match(/\x1b_G[\s\S]*?\x1b\\/);
-    if (kitty && kitty.index !== undefined) {
-      apc += kitty[0];
-      rest = rest.slice(0, kitty.index) + rest.slice(kitty.index + kitty[0].length);
+    // Graphics APC: ESC _ G ... ESC backslash
+    const graphicsApc = rest.match(/\x1b_G[\s\S]*?\x1b\\/);
+    if (graphicsApc && graphicsApc.index !== undefined) {
+      apc += graphicsApc[0];
+      rest = rest.slice(0, graphicsApc.index) + rest.slice(graphicsApc.index + graphicsApc[0].length);
       changed = true;
       continue;
     }
@@ -165,11 +163,9 @@ export function extractImageSequences(text: string): { apc: string; rest: string
  *    should be. We rewrite the internal resets to re-open our bg, so
  *    the strip stays uniformly painted from edge to edge.
  *
- * 2. **Image protocol survival.** Kitty / iTerm2 image transmission
- *    sequences carry base64 image data and must reach the terminal
- *    untouched. We pull them out of `text` first and emit them BEFORE
- *    the bg-paint frame — the terminal stores the image, then receives
- *    the painted placeholders (which match by image ID) and overlays.
+ * 2. **Image protocol survival.** Terminal image transmission sequences carry
+ *    base64 image data and must reach the terminal untouched. We pull them out
+ *    of `text` first and emit them BEFORE the bg-paint frame.
  */
 export function paintBgStrip(text: string, background: AvatarBackground | undefined, width: number): string {
   const { apc, rest } = extractImageSequences(text);
@@ -406,7 +402,7 @@ export function composeMessagePanel(
   const meta = options.meta ?? "";
   const portraitRows = avatar.height + AVATAR_PAD_Y * 2;
 
-  // Avatar start column (1-indexed) for Kitty placeholder placement.
+  // Avatar start column (1-indexed) for zero-width/control avatar payloads.
   const leftStartColumn = align !== "right" ? PAD + 1 : PAD + BODYW + COLUMN_GAP + 1;
 
   // Row collection

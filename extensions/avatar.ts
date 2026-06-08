@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Local image generation for Nazar: small SD.cpp pictures rendered inline when Kitty is available.
+// Local image generation for Nazar: small SD.cpp pictures rendered inline when terminal images are available.
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { execFile } from "node:child_process";
@@ -100,7 +100,7 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "nazar_image_generate",
     label: "Generate Image",
-    description: "Generate a small local image/avatar with stable-diffusion.cpp and render it inline in the conversation when Kitty images are available.",
+    description: "Generate a small local image/avatar with stable-diffusion.cpp and render it inline in the conversation when terminal images are available.",
     parameters: Type.Object({
       prompt: Type.Optional(Type.String({ description: "Visual prompt. Prefer concise 8-bit/pixel-art avatar prompts." })),
       mode: Type.Optional(Type.Union([

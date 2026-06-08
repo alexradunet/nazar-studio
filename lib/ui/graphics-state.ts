@@ -9,7 +9,7 @@ let overrideQuality: GraphicsQuality | undefined;
 function envQuality(): GraphicsQuality {
   const raw = (process.env.NAZAR_UI_QUALITY || process.env.NAZAR_GRAPHICS_QUALITY || "auto").trim().toLowerCase();
   if (raw === "basic" || raw === "ansi") return "basic";
-  if (raw === "hd" || raw === "kitty") return "hd";
+  if (raw === "hd") return "hd";
   return "auto";
 }
 

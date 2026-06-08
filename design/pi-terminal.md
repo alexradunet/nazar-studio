@@ -7,7 +7,7 @@ The Pi terminal is Nazar's owned daily surface. It should feel like an old-schoo
 - Make Pi feel like **Nazar**, not a generic coding agent.
 - Keep private/local state legible.
 - Add RPG flavor through structure: portrait panels, ANSI-colored dialog frames, terse wise copy, and generated sprite avatars.
-- Keep canonical per-avatar 3×3, 9-frame, 64×64 PNG sprite sheets; render them through the selected terminal graphics backend.
+- Keep canonical per-avatar 3×3, 9-frame, 64×64 PNG sprite sheets; render them through the portable ANSI/Chafa backend.
 - Avoid taking over the whole screen.
 
 ## Current implemented pieces
@@ -15,7 +15,7 @@ The Pi terminal is Nazar's owned daily surface. It should feel like an old-schoo
 - Compact Basm/RPG framed header.
 - Fixed-width RPG portrait gutters:
   - avatars are shown only on the latest messages.
-  - ANSI half-block avatars are the baseline rendering path; HD mode uses Kitty Unicode placeholder cells when supported.
+  - ANSI/Chafa avatars are the single rendering path, with internal half-blocks as fallback.
   - role/tool names appear as the right panel title, using the same `╔═◆ label ◆═╗` double-line language as the input editor.
   - `NAZAR_AVATAR_RECENT_LIMIT=20`: cap avatars to the latest messages; older history keeps the nameplate/body styling, with no avatar column and no badge.
 - Working/thinking state is shown as a Nazar-owned transient chat-like assistant portrait widget, not as a sentence or Pi's default loader row.
@@ -25,7 +25,7 @@ The Pi terminal is Nazar's owned daily surface. It should feel like an old-schoo
   - dirty git state -> `git:branch*`
   - context usage -> compact text meter on wider terminals
 - Thinking blocks hidden by default with no placeholder line; the animated avatar is enough.
-- Quiet truecolor ANSI RPG panels around user, assistant, thinking, tool-call turns, and the input editor; avatars may use ANSI or Kitty graphics.
+- Quiet truecolor ANSI RPG panels around user, assistant, thinking, tool-call turns, and the input editor; avatars use ANSI/Chafa character art.
 - Tool output collapsed by default and wrapped in the same dialog-panel style.
 - Per-tool generated pixel icons for read/edit/write/bash/search/memory/doctor/skill-evolution states. Tool names appear as right-panel titles.
 
@@ -51,10 +51,10 @@ Rules:
 - Do not render `[ Name ]` badges; old history should keep the message nameplate/body render and drop only the avatar column.
 - Do not let user-message background bleed into the left portrait box.
 - Avoid emoji because terminal width varies; box drawing and ANSI truecolor are part of the canonical UI.
-- Avatar quality is selected by `/nazar-ui basic|hd|auto` or `NAZAR_UI_QUALITY=basic|hd|auto`; basic is ANSI, hd is Kitty placeholder cells when supported, and auto chooses HD when Kitty support is detected.
+- Avatar quality is selected by `/nazar-ui basic|auto` or `NAZAR_UI_QUALITY=basic|auto`; output remains portable ANSI/Chafa.
 - Border style is not configurable: RPG box drawing plus ANSI SGR color is canonical.
 - Performance cap: `NAZAR_AVATAR_RECENT_LIMIT=<n|all>`; default `20`, `0` means active-only avatars.
-- Role portraits and tool icons use canonical per-avatar 3×3, 9-frame, 64×64 PNG sprite sheets rendered through ANSI half-blocks or Kitty graphics.
+- Role portraits and tool icons use canonical per-avatar 3×3, 9-frame, 64×64 PNG sprite sheets rendered through ANSI/Chafa character art.
 
 ## Sprite rules
 
@@ -294,7 +294,7 @@ A terminal can only use one monospace family for the TUI. Nazar's default Basm t
 bash scripts/install-basm-terminal-fonts.sh
 ```
 
-That writes a small Kitty include at `~/.config/kitty/nazar.conf` and copies CozetteVector into local fontconfig. Departure Mono and JetBrains Mono remain available via `NAZAR_TERMINAL_FONT="Departure Mono" bash scripts/install-basm-terminal-fonts.sh` and `NAZAR_TERMINAL_FONT="JetBrains Mono" bash scripts/install-basm-terminal-fonts.sh`. Pixelify Sans and Silkscreen remain web/display fonts; do not force them into the daily terminal because they reduce code/chat readability.
+That copies CozetteVector into local fontconfig. Departure Mono and JetBrains Mono remain available via `NAZAR_TERMINAL_FONT="Departure Mono" bash scripts/install-basm-terminal-fonts.sh` and `NAZAR_TERMINAL_FONT="JetBrains Mono" bash scripts/install-basm-terminal-fonts.sh`. Pixelify Sans and Silkscreen remain web/display fonts; do not force them into the daily terminal because they reduce code/chat readability.
 
 ## Color rules
 
@@ -376,7 +376,7 @@ See [`avatars.md`](avatars.md).
 
 - Avatars always use canonical 64×64 PNG sprite sheets: one 3×3, 9-frame sheet per avatar/tool.
 - The runtime renders those sheets into generated ANSI half-block pixels.
-- There is no Kitty/image, Unicode, or ASCII avatar fallback to maintain.
+- There is no graphics-protocol or ASCII avatar fallback to maintain.
 
 ## Implementation notes
 

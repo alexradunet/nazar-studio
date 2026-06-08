@@ -5,7 +5,6 @@ import { extractThinkingPreview, renderThinkingPanel, ThinkingWidget, workingInd
 
 const originalAvatarMode = process.env.NAZAR_AVATAR_MODE;
 const originalTerm = process.env.TERM;
-const originalKittyWindowId = process.env.KITTY_WINDOW_ID;
 const originalTmux = process.env.TMUX;
 const originalZellij = process.env.ZELLIJ;
 const originalSty = process.env.STY;
@@ -28,24 +27,22 @@ afterEach(() => {
   if (originalAvatarMode === undefined) delete process.env.NAZAR_AVATAR_MODE;
   else process.env.NAZAR_AVATAR_MODE = originalAvatarMode;
   restoreEnv("TERM", originalTerm);
-  restoreEnv("KITTY_WINDOW_ID", originalKittyWindowId);
   restoreEnv("TMUX", originalTmux);
   restoreEnv("ZELLIJ", originalZellij);
   restoreEnv("STY", originalSty);
   resetCapabilitiesCache();
 });
 
-test("thinking widget auto-renders Kitty placeholder avatar when image protocol is available", () => {
+test("thinking widget renders portable ANSI", () => {
   delete process.env.TMUX;
   delete process.env.ZELLIJ;
   delete process.env.STY;
-  setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
   const widget = new ThinkingWidget({ requestRender() {} });
   try {
     const lines = widget.render(80);
     const frame = lines.join("\n");
-    expect(frame).toContain("\x1b_G");
-    expect(frame).toContain("\u{10eeee}");
+    expect(frame).not.toContain("\x1b_G");
+    expect(frame).not.toContain("\u{10eeee}");
     expect(plain(frame)).toContain("NAZAR");
     expect(plain(frame)).toContain("weighing the matter");
     expect(plain(frame)).not.toContain("[ Nazar ]");
@@ -56,9 +53,8 @@ test("thinking widget auto-renders Kitty placeholder avatar when image protocol 
   }
 });
 
-test("thinking panel renders ANSI avatar when image rendering is unsupported", () => {
+test("thinking panel renders ANSI avatar", () => {
   process.env.TERM = "xterm-256color";
-  delete process.env.KITTY_WINDOW_ID;
   setCapabilities({ images: null, trueColor: true, hyperlinks: false });
   const rawFrame = renderThinkingPanel(0);
   const frame = plain(rawFrame);
@@ -69,7 +65,6 @@ test("thinking panel renders ANSI avatar when image rendering is unsupported", (
 });
 
 test("thinking panel stays ANSI for Loader/Text fallback", () => {
-  setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
   const rawFrame = renderThinkingPanel(0, { loaderSafe: true });
   const frame = plain(rawFrame);
   expect(frame).not.toContain("[ Nazar ]");
@@ -95,7 +90,6 @@ test("thinking panel shows a live preview in the text pane", () => {
 
 test("thinking panel places Nazar avatar on the right", () => {
   process.env.TERM = "xterm-256color";
-  delete process.env.KITTY_WINDOW_ID;
   setCapabilities({ images: null, trueColor: true, hyperlinks: false });
 
   const lines = plain(renderThinkingPanel(0, { preview: "right side marker" })).split("\n");
@@ -125,7 +119,6 @@ test("thinking preview extraction never exposes redacted payloads", () => {
 });
 
 test("built-in working indicator remains Loader/Text-safe", () => {
-  setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
   const frame = workingIndicator().frames[0] ?? "";
   expect(frame).not.toContain("\x1b_G");
   expect(frame).toContain("\x1b[48;2;");

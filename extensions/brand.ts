@@ -150,21 +150,20 @@ export default function (pi: ExtensionAPI) {
     description: "Show Nazar's terminal graphics backend status.",
     handler: async (args: string, ctx: any) => {
       const requested = args.trim().split(/\s+/).filter(Boolean)[0]?.toLowerCase();
-      const validInputs = new Set(["", "basic", "hd", "auto", "ansi", "kitty", "status", "show", "help", "--help"]);
+      const validInputs = new Set(["", "basic", "auto", "ansi", "status", "show", "help", "--help"]);
 
       if (requested && !validInputs.has(requested)) {
-        try { ctx.ui.notify("Usage: /nazar-ui [basic|hd|auto|status].", "error"); } catch { /* ignore */ }
+        try { ctx.ui.notify("Usage: /nazar-ui [basic|auto|status].", "error"); } catch { /* ignore */ }
         return;
       }
 
       if (requested === "basic" || requested === "ansi") setGraphicsQuality("basic");
-      if (requested === "hd" || requested === "kitty") setGraphicsQuality("hd");
       if (requested === "auto") setGraphicsQuality("auto");
 
-      const mode = (requested === "basic" || requested === "ansi" || requested === "hd" || requested === "kitty" || requested === "auto")
-        ? `Set Nazar UI to ${requested === "ansi" ? "basic" : requested === "kitty" ? "hd" : requested as GraphicsQuality}. `
+      const mode = (requested === "basic" || requested === "ansi" || requested === "auto")
+        ? `Set Nazar UI to ${requested === "ansi" ? "basic" : requested as GraphicsQuality}. `
         : "";
-      const note = `${mode}Look: basic=ANSI cell avatars, hd=Kitty placeholder cell avatars. ${uiCapabilitySummary()}`;
+      const note = `${mode}Look: portable ANSI/Chafa avatars. ${uiCapabilitySummary()}`;
       try { ctx.ui.notify(note, "info"); } catch { /* ignore */ }
       try { renderTui?.requestRender?.(); } catch { /* ignore */ }
     },

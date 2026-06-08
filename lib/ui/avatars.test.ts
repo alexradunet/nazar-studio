@@ -345,12 +345,11 @@ test("stable user panels cache composed render across input redraws", async () =
   }
 });
 
-test("Kitty image APC sequences pass through the composer verbatim", async () => {
-  // Regression: in-message images (and HD avatar APC transmission rows)
-  // were showing as raw Kitty placeholder chars because the APC image data
-  // got sandwiched inside bg-paint wrappers and corrupted. The composer
-  // must extract APC sequences and emit them BEFORE the bg-paint frame,
-  // so the terminal stores the image first and then matches placeholders.
+test("terminal image APC sequences pass through the composer verbatim", async () => {
+  // Regression: in-message images were showing as raw placeholder chars because
+  // the APC image data got sandwiched inside bg-paint wrappers and corrupted.
+  // The composer must extract APC sequences and emit them BEFORE the bg-paint
+  // frame, so the terminal stores the image first and then matches placeholders.
   const { paintBgStrip, extractImageSequences } = await import("./turn-composer.ts");
   const fakeBase64 = "ZmFrZS1pbWFnZS1ieXRlcy1mb3ItdGVzdGluZw==";
   const apc = `\x1b_Ga=T,f=100,c=4,r=2,i=12345,U=1;${fakeBase64}\x1b\\`;
@@ -358,7 +357,7 @@ test("Kitty image APC sequences pass through the composer verbatim", async () =>
   const placeholderRow = `${apc}\x1b[38;2;0;48;57m\u{10eeee}\u{10eeee}\u{10eeee}\u{10eeee}\x1b[39m`;
   const out = paintBgStrip(placeholderRow, [16, 34, 31] as any, 8);
   // The APC sequence must appear in the output, fully intact, before any
-  // bg-paint wrapping. Once Kitty stores the image, placeholder cells can
+  // bg-paint wrapping. Once the terminal stores the image, placeholder cells can
   // match by ID — but only if the APC reached the terminal uncorrupted.
   expect(out).toContain(apc);
   // The APC should come BEFORE the bg-open code (so image transmission

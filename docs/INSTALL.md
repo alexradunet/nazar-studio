@@ -80,22 +80,10 @@ curl -s http://127.0.0.1:8082/health
 
 ## Preferred terminal setup
 
-Nazar Studio targets modern terminal standards. The preferred setup is:
+Nazar Studio targets portable terminal standards. The preferred setup is:
 
-- **kitty >= 0.35.0** — preferred terminal so Nazar can fully leverage the kitty protocol.
 - **Truecolor ANSI** (`COLORTERM=truecolor`, non-`dumb` `$TERM`).
 - **Departure Mono** as the terminal font: https://departuremono.com/
-
-Kitty config example:
-
-```conf
-font_family      Departure Mono
-bold_font        auto
-italic_font      auto
-bold_italic_font auto
-font_size        13.0
-disable_ligatures never
-```
 
 The `/skill:doctor` health check includes this terminal experience check; Nazar does not show it
 as a startup notice.

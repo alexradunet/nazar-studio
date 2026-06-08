@@ -2,10 +2,10 @@
 import { expect, test } from "vitest";
 import { ansiLayer, paintLayer, uiCapabilitySummary } from "./design.ts";
 
-test("Nazar design primitives report selected graphics backend", () => {
-  expect(uiCapabilitySummary()).toContain("chosen=");
+test("Nazar design primitives report portable ANSI graphics backend", () => {
+  expect(uiCapabilitySummary()).toContain("chosen=ansi");
   expect(uiCapabilitySummary()).toContain("ansi=yes");
-  expect(uiCapabilitySummary()).toContain("kitty=");
+  expect(uiCapabilitySummary()).toContain("renderer=chafa");
 });
 
 test("paintLayer uses truecolor ANSI SGR", () => {
