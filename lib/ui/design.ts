@@ -29,5 +29,5 @@ export function paintLayer(layer: UiLayer, text: string, palette: LayerPalette =
 }
 
 export function uiCapabilitySummary(): string {
-  return `${graphicsCapabilitySummary()} notes=portable ANSI truecolor panels, Chafa avatars`;
+  return `${graphicsCapabilitySummary()} notes=ANSI truecolor panels, Chafa sextant avatars`;
 }

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // PNG sprite-sheet avatars for Nazar's terminal UI graphics backends.
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, basename } from "node:path";
 import { inflateSync } from "node:zlib";
 import { getCellDimensions, setCellDimensions, type CellDimensions } from "@earendil-works/pi-tui";
 import { visibleWidth } from "./ansi.ts";
-import { imageToChafaAnsi } from "./chafa.ts";
 import { truecolorBg, truecolorFg, type GraphicsProtocolBackend } from "./graphics-protocol.ts";
+import { chafaLinesFor } from "./chafa-render.ts";
 import { type SpriteRole } from "./sprites.ts";
 import { AVATAR_FIELDS as BACKGROUNDS } from "./tokens.ts";
 import { moduleDir } from "../paths.ts";
@@ -17,7 +17,7 @@ const BG_RESET = "\x1b[49m";
 const ANSI_AVATAR_FRAME = { width: 16, height: 14 } as const;
 const ANSI_TOOL_FRAME = { width: 8, height: 6 } as const;
 // Source sheets are 768×768 RGBA (3×3 grid, 256px stride, transparent bg).
-// Chafa slices frames directly from these high-res sheets.
+// The Kitty/HD backend slices frames directly from these high-res sheets.
 const SOURCE_FRAME = { width: 256, height: 256 } as const;
 const SHEET_COLUMNS = 3;
 const AVATAR_FRAME_COUNT = 9;
@@ -25,7 +25,9 @@ const AVATAR_FRAME_COUNT = 9;
 // Compact daily-chat avatar size. Terminal cells are usually taller than wide,
 // so columns are derived from the live cell aspect ratio to keep the 64×64
 // sprite square in pixel terms and flush inside the avatar box.
-const DEFAULT_AVATAR_ROWS = 9;
+// Default Chafa/ANSI avatar height. 13 rows ≈ 27×13 cells = the "best daily
+// identity" size; 9 = compact fallback, 17 = showcase (set via NAZAR_AVATAR_ROWS).
+const DEFAULT_AVATAR_ROWS = 13;
 
 const AVATAR_ASSET_DIR = join(moduleDir(import.meta.url), "..", "..", "assets", "avatars");
 const ANSI_ASSET_DIR = join(AVATAR_ASSET_DIR, "ansi");
@@ -175,7 +177,6 @@ type PngImage = {
 };
 
 type AvatarFrame = PngImage & { id: string };
-type AnsiRenderer = "chafa" | "internal";
 
 export type AvatarRenderBackend = GraphicsProtocolBackend;
 export type AvatarRenderLine = {
@@ -560,86 +561,6 @@ function renderFrameAnsi(frame: AvatarFrame, background: Rgb, columns: number, r
   return renderFrameAnsiHalfBlock(frame, background, columns, rows * 2);
 }
 
-const CHAFA_SYMBOLS = "block";
-const chafaFrameCache = new Map<string, string[]>();
-
-function ansiRenderer(): AnsiRenderer {
-  const raw = (process.env.NAZAR_ANSI_RENDERER || "").trim().toLowerCase();
-  if (raw === "internal" || raw === "native" || raw === "builtin") return "internal";
-  return "chafa";
-}
-
-function byteHex(value: number): string {
-  const byte = Math.max(0, Math.min(255, Math.round(value)));
-  return byte.toString(16).padStart(2, "0");
-}
-
-function rgbHex(color: Rgb): string {
-  return `#${byteHex(color[0])}${byteHex(color[1])}${byteHex(color[2])}`;
-}
-
-function normalizeChafaOutput(output: string, columns: number, rows: number): string[] | undefined {
-  const nonSgrEscapes = output.replace(/\x1b\[[0-9;:]*m/g, "");
-  if (nonSgrEscapes.includes("\x1b")) return undefined;
-
-  const lines = output.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-  if (lines[lines.length - 1] === "") lines.pop();
-  if (lines.length !== rows) return undefined;
-
-  return lines.map((line) => {
-    const width = visibleWidth(line);
-    if (width > columns) throw new Error(`Chafa avatar line exceeded width: ${width} > ${columns}`);
-    return `${line}${" ".repeat(columns - width)}`;
-  });
-}
-
-function frameImageData(frame: AvatarFrame): { width: number; height: number; data: Uint8ClampedArray } {
-  return {
-    width: frame.width,
-    height: frame.height,
-    data: new Uint8ClampedArray(frame.pixels.buffer, frame.pixels.byteOffset, frame.pixels.byteLength),
-  };
-}
-
-function renderFrameChafa(frame: AvatarFrame, background: Rgb, columns: number, rows: number): string[] | undefined {
-  const bgHex = rgbHex(background);
-  const cacheKey = `${frame.id}:${frame.width}x${frame.height}:${columns}x${rows}:${bgHex}`;
-  const cached = chafaFrameCache.get(cacheKey);
-  if (cached) return cached;
-
-  try {
-    const output = imageToChafaAnsi(frameImageData(frame), {
-      format: "CHAFA_PIXEL_MODE_SYMBOLS",
-      width: columns,
-      height: rows,
-      fontRatio: 0.5,
-      colors: "CHAFA_CANVAS_MODE_TRUECOLOR",
-      colorExtractor: "CHAFA_COLOR_EXTRACTOR_AVERAGE",
-      colorSpace: "CHAFA_COLOR_SPACE_RGB",
-      symbols: CHAFA_SYMBOLS,
-      fill: "none",
-      fg: "#ffffff",
-      bg: bgHex,
-      fgOnly: false,
-      dither: "CHAFA_DITHER_MODE_NONE",
-      ditherGrainWidth: 4,
-      ditherGrainHeight: 4,
-      ditherIntensity: 1,
-      preprocess: false,
-      threshold: 0.5,
-      optimize: 5,
-      work: 5,
-    });
-    if (!output) return undefined;
-    const lines = normalizeChafaOutput(output, columns, rows);
-    if (!lines) return undefined;
-    chafaFrameCache.set(cacheKey, lines);
-    return lines;
-  } catch {
-    return undefined;
-  }
-}
-
 function textAvatarLine(text: string, background?: Rgb): AvatarRenderLine {
   return { text, background };
 }
@@ -669,7 +590,7 @@ export function avatarCellDimensions(): CellDimensions {
 
 function avatarRows(): number {
   const raw = envPositiveInteger("NAZAR_AVATAR_ROWS");
-  return raw !== undefined ? Math.max(3, Math.min(12, raw)) : DEFAULT_AVATAR_ROWS;
+  return raw !== undefined ? Math.max(6, Math.min(20, raw)) : DEFAULT_AVATAR_ROWS;
 }
 
 function avatarColumns(rows = avatarRows()): number {
@@ -685,18 +606,26 @@ function toolRows(): number {
   // symmetric across all panel kinds (Nazar/Cico/Bash/etc all line up).
   // NAZAR_TOOL_ROWS can still override (back-compat with the legacy half-size).
   const raw = envPositiveInteger("NAZAR_TOOL_ROWS");
-  if (raw !== undefined) return Math.max(2, Math.min(8, raw));
+  if (raw !== undefined) return Math.max(6, Math.min(20, raw));
   return avatarRows();
 }
 
 function ansiAvatar(frameId: string, rows = avatarRows()): RenderedAvatar {
-  const frame = frameFor(frameId);
   const background = backgroundForFrame(frameId);
   const columns = avatarColumns(rows);
-  const rendered = ansiRenderer() === "chafa"
-    ? renderFrameChafa(frameFor(frameId, SOURCE_SHEET_ASSETS), background, columns, rows) ?? renderFrameAnsi(frame, background, columns, rows)
-    : renderFrameAnsi(frame, background, columns, rows);
-  const lines = rendered.map((line) => textAvatarLine(line));
+  // Prefer the Chafa sextant cache (crisp 2×3 mosaics rendered from the HD
+  // master). When the cache is unbuilt/unavailable, fall back to the built-in
+  // half-block (▀) renderer sampling the same 768² master — no Kitty, no
+  // separate low-res asset set.
+  const source = frameSource(frameId);
+  const sheetName = basename(sheetAsset(source.sheet, SOURCE_SHEET_ASSETS).path).replace(/\.png$/, "");
+  const cached = chafaLinesFor(sheetName, source.index, rows);
+  if (cached) {
+    const lines = cached.map((line) => textAvatarLine(line, background));
+    return { lines, width: columns, height: lines.length, backend: "ansi" };
+  }
+  const frame = frameFor(frameId, SOURCE_SHEET_ASSETS);
+  const lines = renderFrameAnsi(frame, background, columns, rows).map((line) => textAvatarLine(line));
   return { lines, width: columns, height: lines.length, backend: "ansi" };
 }
 

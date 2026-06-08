@@ -17,19 +17,15 @@ function plain(lines: string[]): string[] {
   return lines.map((line) => line.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "").replace(/\x1b_G.*?\x1b\\/g, ""));
 }
 
-function expectTruecolorBackground(text: string): void {
-  expect(text).toMatch(/\x1b\[[0-9;]*48;2;/);
-}
-
 const originalAvatarRows = process.env.NAZAR_AVATAR_ROWS;
 const originalAvatarAspect = process.env.NAZAR_AVATAR_ASPECT;
 const originalCellWidth = process.env.NAZAR_CELL_WIDTH_PX;
 const originalCellHeight = process.env.NAZAR_CELL_HEIGHT_PX;
 const originalToolRows = process.env.NAZAR_TOOL_ROWS;
 const originalAnsiDetail = process.env.NAZAR_ANSI_DETAIL;
-const originalAnsiRenderer = process.env.NAZAR_ANSI_RENDERER;
 const originalGraphicsProtocol = process.env.NAZAR_GRAPHICS_PROTOCOL;
 const originalTerm = process.env.TERM;
+const originalKittyWindowId = process.env.KITTY_WINDOW_ID;
 const originalTmux = process.env.TMUX;
 const originalZellij = process.env.ZELLIJ;
 const originalSty = process.env.STY;
@@ -47,9 +43,9 @@ beforeEach(() => {
   delete process.env.NAZAR_CELL_HEIGHT_PX;
   delete process.env.NAZAR_TOOL_ROWS;
   delete process.env.NAZAR_ANSI_DETAIL;
-  delete process.env.NAZAR_ANSI_RENDERER;
   delete process.env.NAZAR_GRAPHICS_PROTOCOL;
   process.env.TERM = "xterm-256color";
+  delete process.env.KITTY_WINDOW_ID;
   delete process.env.TMUX;
   delete process.env.ZELLIJ;
   delete process.env.STY;
@@ -67,9 +63,9 @@ afterEach(() => {
   restoreEnv("NAZAR_CELL_HEIGHT_PX", originalCellHeight);
   restoreEnv("NAZAR_TOOL_ROWS", originalToolRows);
   restoreEnv("NAZAR_ANSI_DETAIL", originalAnsiDetail);
-  restoreEnv("NAZAR_ANSI_RENDERER", originalAnsiRenderer);
   restoreEnv("NAZAR_GRAPHICS_PROTOCOL", originalGraphicsProtocol);
   restoreEnv("TERM", originalTerm);
+  restoreEnv("KITTY_WINDOW_ID", originalKittyWindowId);
   restoreEnv("TMUX", originalTmux);
   restoreEnv("ZELLIJ", originalZellij);
   restoreEnv("STY", originalSty);
@@ -77,11 +73,12 @@ afterEach(() => {
 });
 
 test("role avatars render generated ANSI art", () => {
+  process.env.NAZAR_AVATAR_ROWS = "9";
   const nazar = renderAnsiAvatarFrame("nazar");
   expect(nazar).toHaveLength(9);
   expect(nazar.map((line) => visibleWidth(line))).toEqual([19, 19, 19, 19, 19, 19, 19, 19, 19]);
-  expectTruecolorBackground(nazar.join("\n"));
-  expectTruecolorBackground(renderAnsiAvatarFrame("user").join("\n"));
+  expect(nazar.join("\n")).toContain("\x1b[48;2;");
+  expect(renderAnsiAvatarFrame("user").join("\n")).toContain("\x1b[48;2;");
 });
 
 test("ANSI animations expose stable wrapping frames", () => {
@@ -91,6 +88,7 @@ test("ANSI animations expose stable wrapping frames", () => {
 });
 
 test("avatar renderer derives cell width from terminal aspect ratio for near-square sprite framing", () => {
+  process.env.NAZAR_AVATAR_ROWS = "9";
   setCellDimensions({ widthPx: 9, heightPx: 18 });
   let avatar = renderRoleAvatar("nazar")!;
   expect(avatar.backend).toBe("ansi");
@@ -108,6 +106,7 @@ test("avatar renderer derives cell width from terminal aspect ratio for near-squ
 });
 
 test("avatar renderer can calibrate cell dimensions for the live terminal font", () => {
+  process.env.NAZAR_AVATAR_ROWS = "9";
   process.env.NAZAR_CELL_WIDTH_PX = "9";
   process.env.NAZAR_CELL_HEIGHT_PX = "17";
   const avatar = renderRoleAvatar("nazar")!;
@@ -117,27 +116,32 @@ test("avatar renderer can calibrate cell dimensions for the live terminal font",
   expect(avatarPixelAspect(avatar.width + 2, avatar.height + 2)).toBeCloseTo(1, 1);
 });
 
-test("auto quality renders portable ANSI", () => {
+test("renderer always uses ANSI character art (Kitty removed)", () => {
+  setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
   const avatar = renderRoleAvatar("nazar")!;
   expect(avatar.backend).toBe("ansi");
+  expect(avatar.lines[0]?.text).not.toContain("\u{10eeee}");
   expect(avatar.lines[0]?.text).not.toContain("\x1b_G");
 });
 
-test("basic quality renders portable ANSI", () => {
-  setGraphicsQuality("basic");
-  const avatar = renderRoleAvatar("nazar")!;
+test("default user avatar renders the soul sheet as ANSI", () => {
+  const avatar = renderRoleAvatar("user")!;
   expect(avatar.backend).toBe("ansi");
-  expect(avatar.lines[0]?.text).not.toContain("\x1b_G");
+  expect(avatar.lines.map((l) => l.text).join("\n")).toContain("\x1b[48;2;");
 });
 
-test("legacy HD quality still renders portable ANSI", () => {
-  setGraphicsQuality("hd");
-  const avatar = renderRoleAvatar("nazar")!;
-  expect(avatar.backend).toBe("ansi");
-  expect(avatar.lines[0]?.text).not.toContain("\x1b_G");
+test("graphics quality never re-enables an image protocol", () => {
+  for (const quality of ["basic", "hd"] as const) {
+    setGraphicsQuality(quality);
+    setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
+    const avatar = renderRoleAvatar("nazar")!;
+    expect(avatar.backend).toBe("ansi");
+    expect(avatar.lines[0]?.text).not.toContain("\x1b_G");
+  }
 });
 
-test("explicit ANSI option renders portable output", () => {
+test("explicit ANSI option ignores image capabilities", () => {
+  setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
   const avatar = renderRoleAvatar("nazar", { backend: "ansi" })!;
   expect(avatar.backend).toBe("ansi");
   expect(avatar.lines[0]?.text).not.toContain("\x1b_G");
@@ -158,12 +162,12 @@ test("tool avatars are full-size generated ANSI icons matching role-avatar dimen
   expect(ansiRows).toBeGreaterThanOrEqual(5);
   const widths = read.map((line) => visibleWidth(line));
   expect(new Set(widths).size).toBe(1); // all rows the same width
-  expectTruecolorBackground(read.join("\n"));
+  expect(read.join("\n")).toContain("\x1b[48;2;");
 
   const bash = renderToolAvatar("bash", "pending", 0, '{"command":"git status"}');
   expect(bash).toHaveLength(ansiRows);
   expect(bash.map((line) => visibleWidth(line))).toEqual(widths);
-  expectTruecolorBackground(bash.join("\n"));
+  expect(bash.join("\n")).toContain("\x1b[48;2;");
   // Globe-on-pedestal sprites share the same half-block silhouette at 8×6 cells;
   // visual distinction is preserved through colour (the full coloured output differs).
   expect(bash.join("\n")).not.toEqual(read.join("\n"));
