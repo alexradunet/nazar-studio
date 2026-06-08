@@ -5,10 +5,10 @@
 // copy-safe by construction):
 //
 //   PAD │ portrait field │ GAP │ nameplate band (themed plaque)
-//   PAD │ portrait pixel │ GAP │ body row (ambient tint)
+//   PAD │ portrait pad   │ GAP │ body row (ambient tint)
 //   PAD │ portrait pixel │ GAP │ body row
 //   PAD │ portrait pixel │ GAP │ body row
-//   PAD │ portrait field │ GAP │ body row
+//   PAD │ portrait pad   │ GAP │ body row
 //   ─── blank row gap ───
 //
 // Copy-safety: SGR colour codes are never captured by terminal selection — only
@@ -37,6 +37,8 @@ const PANEL_BOTTOM_GAP = 1;
 const DEFAULT_OUTER_PAD_X = 2;
 const PANEL_RIGHT_PAD_X = 2;
 const COLUMN_GAP = 0;
+const AVATAR_PAD_X = 2;
+const AVATAR_PAD_Y = 1;
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -273,9 +275,13 @@ export function nameplateRow(
  * width exactly. This avoids the off-by-one that caused every Pi-padded
  * row to get truncated and decorated with a trailing "..." ellipsis.
  */
+function avatarBoxWidth(avatarWidth: number): number {
+  return Math.max(1, avatarWidth) + AVATAR_PAD_X * 2;
+}
+
 export function bodyColumnWidth(panelWidth: number, avatarWidth: number, options: { outerPadX?: number } = {}): number {
   const PAD = Math.max(0, options.outerPadX ?? DEFAULT_OUTER_PAD_X);
-  return Math.max(8, panelWidth - PAD - PANEL_RIGHT_PAD_X - Math.max(1, avatarWidth) - COLUMN_GAP - 1);
+  return Math.max(1, panelWidth - PAD - PANEL_RIGHT_PAD_X - avatarBoxWidth(avatarWidth) - COLUMN_GAP - 1);
 }
 
 export function bodyOnlyColumnWidth(panelWidth: number, options: { outerPadX?: number } = {}): number {
@@ -285,7 +291,7 @@ export function bodyOnlyColumnWidth(panelWidth: number, options: { outerPadX?: n
 
 /** Body cell width (the column the nameplate band + body rows occupy). */
 function bodyCellWidth(panelWidth: number, avatarWidth: number, outerPadX: number): number {
-  return Math.max(8, panelWidth - outerPadX - PANEL_RIGHT_PAD_X - Math.max(1, avatarWidth) - COLUMN_GAP);
+  return Math.max(1, panelWidth - outerPadX - PANEL_RIGHT_PAD_X - avatarBoxWidth(avatarWidth) - COLUMN_GAP);
 }
 
 function bodyOnlyCellWidth(panelWidth: number, outerPadX: number): number {
@@ -293,10 +299,6 @@ function bodyOnlyCellWidth(panelWidth: number, outerPadX: number): number {
 }
 
 // ── Panel compositor ──────────────────────────────────────────────────────
-
-function emptyAvatarSpaceRow(width: number): string {
-  return " ".repeat(width);
-}
 
 function paintAvatarRow(line: AvatarRenderLine, width: number, startCol: number, field: AvatarBackground): string {
   // centerAvatarLine handles fg-only painting; we need the cell bg to be the
@@ -394,15 +396,15 @@ export function composeMessagePanel(
   const textCells = analyzeTextCells(content);
 
   const PAD = Math.max(0, options.outerPadX ?? DEFAULT_OUTER_PAD_X);
-  const AVW = Math.max(1, avatar.width);
+  const AVW = avatarBoxWidth(avatar.width);
   const field = style.portraitField;
   const align: PanelAlignment = options.align ?? "left";
 
-  const BODYW = bodyCellWidth(width, AVW, PAD);
+  const BODYW = bodyCellWidth(width, avatar.width, PAD);
 
   const hasNameplate = Boolean(title);
   const meta = options.meta ?? "";
-  const portraitRows = avatar.height;
+  const portraitRows = avatar.height + AVATAR_PAD_Y * 2;
 
   // Avatar start column (1-indexed) for Kitty placeholder placement.
   const leftStartColumn = align !== "right" ? PAD + 1 : PAD + BODYW + COLUMN_GAP + 1;
@@ -432,11 +434,12 @@ export function composeMessagePanel(
   const innerRows = Math.max(portraitRows, bodyRowsNeeded);
 
   for (let i = 0; i < innerRows; i++) {
-    // Left avatar column
-    const avLine = i < portraitRows ? avatar.content(i) : null;
-    const avCell = avLine
-      ? paintAvatarRow(avLine, AVW, leftStartColumn, field)
-      : emptyAvatarSpaceRow(AVW);
+    // Avatar column: keep the same ambient field for the full message height.
+    const avatarIndex = i - AVATAR_PAD_Y;
+    const avLine = avatarIndex >= 0 && avatarIndex < avatar.height
+      ? avatar.content(avatarIndex)
+      : emptyAvatarLine(field);
+    const avCell = paintAvatarRow(avLine, AVW, leftStartColumn, field);
 
     // Body column (top padding, then text cells, then bottom padding)
     const textIdx = i - TEXT_PAD;

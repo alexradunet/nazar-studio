@@ -102,7 +102,7 @@ test("Pi-padded body lines do not get a stray '...' ellipsis appended", async ()
   }
 });
 
-test("avatar field background keeps the avatar box fixed instead of stretching to long bodies", async () => {
+test("avatar field background extends down the full message height", async () => {
   const { composeMessagePanel } = await import("./turn-composer.ts");
   const { panelStyle } = await import("./panel-style.ts");
   const portraitField = [1, 2, 3] as const;
@@ -128,7 +128,7 @@ test("avatar field background keeps the avatar box fixed instead of stretching t
   expect(visibleWidth(panel[0])).toBe(78);
   expect(panel[0]).not.toContain(portraitBg);
   expect(panel[1]).toContain(portraitBg);
-  expect(panel.filter((row) => row.includes(portraitBg))).toHaveLength(avatar.height);
+  expect(panel.filter((row) => row.includes(portraitBg))).toHaveLength(10);
 });
 
 test("right-align layout places the avatar on the right of the body", async () => {

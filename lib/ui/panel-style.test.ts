@@ -27,6 +27,13 @@ test("panel style colors tool states distinctly", () => {
   expect(ok).not.toBe(error);
 });
 
+test("avatar field uses the same ambient background as message text", () => {
+  for (const role of ["user", "assistant", "tool", "thinking", "system"] as const) {
+    const style = panelStyle(role, "idle");
+    expect(style.portraitField).toEqual(style.background);
+  }
+});
+
 test("running ANSI panels support pulse but no shadow layer", () => {
   const style = panelStyle("thinking", "running", { frame: 1 });
   expect(style.supports.pulse).toBe(true);

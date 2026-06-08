@@ -212,19 +212,18 @@ export const TERMINAL_STATE_ACCENTS: Record<string, PanelStateAccent> = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 3b. Avatar portrait fields — the background behind a rendered sprite.
-//     Intentionally brighter than the panel ambient tint so the pixel art keeps
-//     contrast. Single home for what pixel-avatar.ts + avatars.ts both consumed.
+// 3b. Avatar portrait fields — the background behind transparent sprite pixels.
+//     Match the message body ambient so avatars feel embedded in the panel.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const AVATAR_FIELDS = {
-  user: [31, 40, 64],
-  nazar: [54, 42, 30],
-  thinking: [24, 55, 58],
-  toolPending: [52, 43, 28],
-  toolRunning: [50, 51, 55],
-  toolOk: [22, 54, 58],
-  toolError: [70, 30, 27],
+  user: TERMINAL_ROLE_PALETTES.user.background,
+  nazar: TERMINAL_ROLE_PALETTES.assistant.background,
+  thinking: TERMINAL_ROLE_PALETTES.thinking.background,
+  toolPending: TERMINAL_ROLE_PALETTES.tool.background,
+  toolRunning: TERMINAL_ROLE_PALETTES.tool.background,
+  toolOk: TERMINAL_ROLE_PALETTES.tool.background,
+  toolError: TERMINAL_ROLE_PALETTES.tool.background,
 } as const satisfies Record<string, Rgb>;
 
 // ─────────────────────────────────────────────────────────────────────────────
