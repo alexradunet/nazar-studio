@@ -139,11 +139,11 @@ export function extractImageSequences(text: string): { apc: string; rest: string
       changed = true;
       continue;
     }
-    // iTerm2 inline image OSC: ESC ] 1337 ; File = ... BEL
-    const iterm = rest.match(/\x1b\]1337;File=[\s\S]*?\x07/);
-    if (iterm && iterm.index !== undefined) {
-      apc += iterm[0];
-      rest = rest.slice(0, iterm.index) + rest.slice(iterm.index + iterm[0].length);
+    // Inline image OSC: ESC ] 1337 ; File = ... BEL
+    const inlineImageOsc = rest.match(/\x1b\]1337;File=[\s\S]*?\x07/);
+    if (inlineImageOsc && inlineImageOsc.index !== undefined) {
+      apc += inlineImageOsc[0];
+      rest = rest.slice(0, inlineImageOsc.index) + rest.slice(inlineImageOsc.index + inlineImageOsc[0].length);
       changed = true;
     }
   }
@@ -163,7 +163,7 @@ export function extractImageSequences(text: string): { apc: string; rest: string
  *    should be. We rewrite the internal resets to re-open our bg, so
  *    the strip stays uniformly painted from edge to edge.
  *
- * 2. **Image protocol survival.** Terminal image transmission sequences carry
+ * 2. **Inline image survival.** Terminal image transmission sequences carry
  *    base64 image data and must reach the terminal untouched. We pull them out
  *    of `text` first and emit them BEFORE the bg-paint frame.
  */

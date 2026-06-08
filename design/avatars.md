@@ -2,12 +2,12 @@
 
 Nazar avatars use **one canonical source and one portable terminal backend**:
 
-1. **Per-avatar 64×64 PNG sprite sheets** — source of truth under `assets/avatars/`.
-2. **ANSI/Chafa rendering** — truecolor SGR character art, with Nazar's internal half-block rasterizer as fallback.
+1. **Per-avatar 256×256 PNG sprite sheets** — source of truth under `assets/avatars/`.
+2. **ANSI/Chafa rendering** — prebuilt 27×13 truecolor SGR character art, with Nazar's internal half-block rasterizer as fallback.
 
-Do not maintain separate terminal art by hand. New avatars start as 64×64 frames in their own sprite sheet, then the ANSI renderer scales them for the terminal.
+Do not maintain separate terminal art by hand. New avatars start as 256×256 frames in their own sprite sheet, then the Chafa cache builder scales them for the terminal.
 
-Current art direction follows **Basm**: 16-bit, woven, Romanian-fairy-tale pixel craft. Nazar and the operator are a **matched pair of floating crystal orbs** — deep-violet glass with gold Romanian-folk filigree, no pedestal, on a dark field. **Nazar is the cosmic eye** inside the orb: the compressed memory of all human knowledge, a single expressive iris over a starlit interior. **The operator ("the Seeker") is a soul-of-light** in the same orb: an abstract, idealized, universal human visage of radiant gold-teal light with calm open eyes. Same vessel, opposite natures — the one who *knows* and the one who *lives*.
+Current art direction follows **Basm**: 16-bit, woven, Romanian-fairy-tale pixel craft. Nazar and the operator are a matched pair on a dark field, but the old orb vessel is gone so the silhouette can read at 27×13 cells. **Nazar is the bare cosmic eye**: the compressed memory of all human knowledge, a single expressive iris over a starlit interior. **The operator ("the Seeker") is a bare soul-of-light face**: an abstract, idealized, universal human visage of radiant gold-teal light with calm open eyes. Same scale, opposite natures — the one who *knows* and the one who *lives*.
 
 ## Avatar backend
 
@@ -16,11 +16,11 @@ Avatars are always on. Backend selection is small and explicit:
 ```txt
 NAZAR_UI_QUALITY=auto        # auto | basic
 NAZAR_GRAPHICS_PROTOCOL=auto  # auto | ansi
-NAZAR_ANSI_RENDERER=chafa     # chafa | internal; Chafa WASM is default, internal half-blocks are fallback
+NAZAR_AVATAR_ROWS=13          # 13 rows = canonical 27×13 avatar target
 NAZAR_AVATAR_RECENT_LIMIT=20  # avatars only for latest N messages; 0 = active-only; all = uncapped
 ```
 
-ANSI is the supported terminal layer: 24-bit truecolor SGR and text attributes. The default ANSI renderer uses bundled `chafa-wasm` when its extension has initialized, with Nazar's internal half-block rasterizer as the synchronous fallback.
+ANSI is the supported terminal layer: 24-bit truecolor SGR and text attributes. Runtime loads `assets/avatars/chafa-cache.json` synchronously; regenerate it with `npm run build:chafa-cache` after avatar art changes. If the cache is missing, Nazar falls back to its internal half-block rasterizer reading the same source sheets.
 
 ## Rendering rules
 
@@ -31,14 +31,14 @@ ANSI is the supported terminal layer: 24-bit truecolor SGR and text attributes. 
 
 ## Sprite sheets
 
-Every avatar-like entity owns a dedicated 3×3 sheet: **9 frames**, each **64×64 px**.
+Every avatar-like entity owns a dedicated 3×3 sheet: **9 frames**, each **256×256 px**.
 
 ```txt
-assets/avatars/soul.png             3 columns × 3 rows, 9 frames, 64×64 each
-assets/avatars/nazar.png            3 columns × 3 rows, 9 frames, 64×64 each
-assets/avatars/nazar-expr.png       3 columns × 3 rows, 9 frames, 64×64 each
-assets/avatars/tools/eye-read.png   3 columns × 3 rows, 9 frames, 64×64 each
-assets/avatars/tools/eye-bash.png   3 columns × 3 rows, 9 frames, 64×64 each
+assets/avatars/soul.png             3 columns × 3 rows, 9 frames, 256×256 each
+assets/avatars/nazar.png            3 columns × 3 rows, 9 frames, 256×256 each
+assets/avatars/nazar-expr.png       3 columns × 3 rows, 9 frames, 256×256 each
+assets/avatars/tools/eye-read.png   3 columns × 3 rows, 9 frames, 256×256 each
+assets/avatars/tools/eye-bash.png   3 columns × 3 rows, 9 frames, 256×256 each
 ...
 ```
 
@@ -141,7 +141,7 @@ error      folk red / ember
 
 Sprites can evolve over time, but each change should remain:
 
-- single-source: edit that avatar's canonical 3×3, 9-frame, 64×64 PNG sprite sheet, not separate terminal-art copies;
+- single-source: edit that avatar's canonical 3×3, 9-frame, 256×256 PNG sprite sheet, not separate terminal-art copies;
 - versioned in git;
 - documented here;
 - legible in screenshots;

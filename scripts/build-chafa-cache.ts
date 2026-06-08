@@ -4,12 +4,11 @@
 // For every PNG master sheet (assets/avatars/{nazar,nazar-expr,soul}.png and
 // assets/avatars/tools/eye-*.png) this slices the 3×3 / 9-frame grid into 256px
 // frames and renders each frame to sextant TRUECOLOR ANSI with `chafa-wasm` at
-// the three target heights (9 / 13 / 17 rows). The result is written to
+// the canonical 27×13 cell target. The result is written to
 // assets/avatars/chafa-cache.json keyed by "<sheet>#<frame>#<rows>".
 //
-//   npm i -D chafa-wasm
-//   node scripts/build-chafa-cache.ts            # all sizes
-//   node scripts/build-chafa-cache.ts 13         # one size
+//   npm run build:chafa-cache       # canonical 27×13 cache
+//   node --import tsx/esm scripts/build-chafa-cache.ts 13
 //
 // Runtime then does a sync lookup (chafaLinesFor) and blits the cached lines.
 // NOTE: validated to the chafa-wasm README API (imageToAnsi(encodedImageBuffer,
@@ -29,7 +28,7 @@ const TOOLS = join(AV, "tools");
 const OUT = join(AV, "chafa-cache.json");
 const SHEET_PX = 256, GRID = 3, FRAMES = 9;
 const SIZES = (process.argv.slice(2).map(Number).filter((n) => n > 0)) ;
-const ROWS = SIZES.length ? SIZES : [9, 13, 17];
+const ROWS = SIZES.length ? SIZES : [13];
 const FIELD = 0x0f1117; // transparent areas filled with the panel field colour
 
 type Img = { width: number; height: number; pixels: Buffer };
@@ -95,14 +94,21 @@ async function main() {
     const name = basename(path).replace(/\.png$/, ""); const sheet = decodePng(path);
     for (let i = 0; i < FRAMES; i++) {
       const png = encodePng(frame(sheet, i));
+      const image = png.buffer.slice(png.byteOffset, png.byteOffset + png.byteLength);
       for (const rows of ROWS) {
-        const { ansi } = await imageToAnsi(png.buffer, {
+        const options = {
           format: chafa.ChafaPixelMode.CHAFA_PIXEL_MODE_SYMBOLS.value,
-          height: rows, fontRatio: 0.5,
+          width: rows * 2 + 1, height: rows, fontRatio: 0.5,
           colors: chafa.ChafaCanvasMode.CHAFA_CANVAS_MODE_TRUECOLOR.value,
           symbols: "sextant", fg: 0xffffff, bg: FIELD, preprocess: true, optimize: 5, work: 5,
-        });
-        cache[`${name}#${i}#${rows}`] = String(ansi).replace(/\x1b\[0m\s*$/, "").split("\n");
+        };
+        let result: { ansi: string };
+        try {
+          result = await imageToAnsi(image, options);
+        } catch {
+          result = await imageToAnsi(image, options);
+        }
+        cache[`${name}#${i}#${rows}`] = String(result.ansi).replace(/\x1b\[0m\s*$/, "").split("\n");
       }
     }
     process.stdout.write(`cached ${name}\n`);

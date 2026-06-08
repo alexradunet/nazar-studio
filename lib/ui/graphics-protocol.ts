@@ -3,11 +3,11 @@
 //
 // Nazar renders avatars purely as Unicode/ANSI character art now — half-block
 // (▀) as the dependency-free baseline and Chafa (sextant 2×3, TRUECOLOR) as the
-// crisp upgrade (see lib/ui/chafa-render.ts). The legacy Kitty graphics-protocol
-// path was removed: Pi redraws the whole surface on every change, and Kitty
-// re-transmits image bytes each draw, which is far more costly than blitting a
-// cached ANSI string. One PNG master set feeds everything; there is no second
-// hand-maintained low-res asset set.
+// crisp upgrade (see lib/ui/chafa-render.ts). The legacy image-protocol path
+// was removed: Pi redraws the whole surface on every change, and retransmitting
+// image bytes each draw is far more costly than blitting a cached ANSI string.
+// One PNG master set feeds everything; there is no second hand-maintained
+// low-res asset set.
 import { graphicsQuality } from "./graphics-state.ts";
 
 // Kept as a single-member union (instead of just `string`) so existing call
@@ -35,5 +35,5 @@ export function paintTruecolor(layer: "fg" | "bg", color: Rgb, text: string): st
 }
 
 export function graphicsCapabilitySummary(): string {
-  return `mode=${graphicsQuality()} chosen=ansi renderer=chafa+halfblock kitty=removed`;
+  return `mode=${graphicsQuality()} chosen=ansi ansi=yes renderer=chafa+halfblock`;
 }

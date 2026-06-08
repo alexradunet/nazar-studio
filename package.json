@@ -50,12 +50,13 @@
     "reindex": "tsx scripts/reindex.ts",
     "skill-check": "tsx scripts/skill-validate.ts",
     "build:avatars": "tsx scripts/build-ansi-avatar-assets.ts",
+    "build:chafa-cache": "tsx scripts/build-chafa-cache.ts",
+    "review:avatars": "tsx scripts/review-chafa-cache.ts",
     "build:tokens": "tsx scripts/build-tokens.ts",
     "prepublishOnly": "npm run build:tokens -- --check && npm run typecheck && npm run test"
   },
   "dependencies": {
     "@earendil-works/pi-tui": "^0.78.1",
-    "chafa-wasm": "^0.3.3",
     "typebox": "1.1.38"
   },
   "peerDependencies": {
@@ -64,6 +65,7 @@
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^0.78.1",
     "@types/node": "^24.0.0",
+    "chafa-wasm": "^0.3.3",
     "esbuild": "^0.24.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",

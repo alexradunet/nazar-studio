@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Visual design primitives for Nazar's Pi terminal UI.
-// ANSI remains the minimal compatibility layer; richer terminals may use a
-// graphics protocol backend for avatars while panels stay truecolor SGR.
+// ANSI/Chafa is the portable avatar layer; panels stay truecolor SGR.
 import { graphicsCapabilitySummary } from "./graphics-protocol.ts";
 import { LAYER_COLORS } from "./tokens.ts";
 

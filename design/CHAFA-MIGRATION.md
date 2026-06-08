@@ -1,20 +1,20 @@
-# Nazar avatars → ANSI/Chafa (no orb, Kitty removed)
+# Nazar avatars → ANSI/Chafa (no orb, direct image backend removed)
 
-This change drops the floating-orb framing and the Kitty image protocol, and
-moves every avatar to a single PNG master set rendered as Unicode/ANSI character
-art. Nazar is now a bare cosmic **eye**, the Seeker a bare **soul-of-light face**,
-and each tool a bare **icon** — no orb. One master set feeds everything; there is
-no second hand-maintained low-res asset set.
+This change drops the floating-orb framing and direct terminal image avatars,
+and moves every avatar to a single PNG master set rendered as Unicode/ANSI
+character art. Nazar is now a bare cosmic **eye**, the Seeker a bare
+**soul-of-light face**, and each tool a bare **icon** — no orb. One master set
+feeds everything; there is no second hand-maintained low-res asset set.
 
 ## Why
-- **Performance.** Pi redraws the whole surface on every change. Kitty
-  re-transmits image bytes each draw — costly. Chafa output is plain ANSI text we
-  render **once** and cache, then blit on redraw (near-free).
-- **One source of truth.** No more maintaining HD (Kitty) art *and* a separate
+- **Performance.** Pi redraws the whole surface on every change. Re-transmitting
+  image bytes each draw is costly. Chafa output is plain ANSI text we render
+  **once** and cache, then blit on redraw (near-free).
+- **One source of truth.** No more maintaining direct terminal image art and a separate
   low-res ANSI set. The PNG masters are the only hand-maintained art; terminal
   output is derived.
 - **Legibility.** Without the orb eating the cell budget, the eye/face/icon fills
-  the frame and reads crisply even at ~19×9 cells.
+  the frame and is judged at the canonical 27×13 cells.
 
 ## Rendering model
 - **Primary:** Chafa **sextant** (2×3 mosaics), TRUECOLOR, `fontRatio 0.5`.
@@ -23,9 +23,8 @@ no second hand-maintained low-res asset set.
 - **Fallback:** if the cache is absent, `lib/ui/pixel-avatar.ts` renders the same
   768² master with its built-in **half-block (▀)** sampler. So avatars always
   render, even before you build the cache.
-- **Sizes (terminal cells, not pixels):** default **27×13** (`NAZAR_AVATAR_ROWS=13`),
-  **19×9** compact, **35×17** showcase. Set `NAZAR_AVATAR_ROWS` / `NAZAR_TOOL_ROWS`
-  (clamped 6–20). Columns are derived from the live cell aspect (~2.0), so 13 rows ≈ 27 cols.
+- **Size (terminal cells, not pixels):** canonical **27×13** (`NAZAR_AVATAR_ROWS=13`).
+  Columns are derived from the live cell aspect (~2.0), so 13 rows ≈ 27 cols.
 
 ## Files
 **New**
@@ -33,13 +32,13 @@ no second hand-maintained low-res asset set.
 - `scripts/build-chafa-cache.ts` — prewarm the cache with `chafa-wasm`.
 
 **Changed**
-- `lib/ui/graphics-protocol.ts` — Kitty removed (no `kittyImage` / `kittyPlaceholderGrid`
-  / `terminalSupportsKitty` / `KittyImageOptions`); `GraphicsProtocolBackend = "ansi"`;
-  `selectGraphicsBackend()` always returns `"ansi"`; truecolor helpers kept.
-- `lib/ui/pixel-avatar.ts` — Kitty path removed; `ansiAvatar` samples the **768² master**
-  (`SOURCE_SHEET_ASSETS`) and first consults the Chafa cache; default rows 9→**13**
-  (clamp 6–20); `tool` rows clamp raised to 20.
-- `lib/ui/pixel-avatar.test.ts` — Kitty tests replaced with ANSI-only assertions;
+- `lib/ui/graphics-protocol.ts` — direct image avatar backend removed;
+  `GraphicsProtocolBackend = "ansi"`; `selectGraphicsBackend()` always returns
+  `"ansi"`; truecolor helpers kept.
+- `lib/ui/pixel-avatar.ts` — direct image path removed; `ansiAvatar` samples the
+  **768² master** (`SOURCE_SHEET_ASSETS`) and first consults the Chafa cache;
+  default rows 9→**13** (clamp 6–20); `tool` rows clamp raised to 20.
+- `lib/ui/pixel-avatar.test.ts` — direct-image tests replaced with ANSI-only assertions;
   geometry tests pin `NAZAR_AVATAR_ROWS=9`.
 - `lib/ui/design.ts` — capability note wording.
 
@@ -51,10 +50,10 @@ no second hand-maintained low-res asset set.
 
 ## Build & validate (in your env — npm/chafa are firewalled in the authoring sandbox)
 ```sh
-npm i -D chafa-wasm
-node scripts/build-chafa-cache.ts        # writes assets/avatars/chafa-cache.json
+npm run build:chafa-cache        # writes assets/avatars/chafa-cache.json
+npm run review:avatars           # inspect canonical 27×13 output
 npm run typecheck
-npx vitest run lib/ui/pixel-avatar.test.ts
+npx vitest run lib/ui/pixel-avatar.test.ts lib/ui/chafa-render.test.ts
 npm run build:tokens -- --check
 ```
 Commit `chafa-cache.json` (or generate it in CI / on first run). `chafaLinesFor`
@@ -71,4 +70,4 @@ PNG buffer (one line in `main()`).
 - `scripts/build-ansi-avatar-assets.ts` + `assets/avatars/ansi/**` now only feed the
   half-block fallback. Once the Chafa cache is always built, they can be retired.
 - `assets/avatars/orbs/**` (orb templates) are legacy.
-- `mage-alien.png` remains an unused fallback sheet.
+- `mage-alien.png` remains a legacy fallback sheet.

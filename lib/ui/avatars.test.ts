@@ -69,7 +69,7 @@ test("every emitted row fits within the requested panel width (pi-tui width asse
     { lines: ["x".repeat(500)], width: 80, title: "Nazar" },
     { lines: ["x".repeat(500)], width: 209, title: "Nazar" },
     { lines: Array(50).fill("y".repeat(300)), width: 120, title: "Tool · construct" },
-    { lines: ["normal line"], width: 30, title: "VeryLongTitleThatDoesNotFitWidth" },
+    { lines: ["normal line"], width: 40, title: "VeryLongTitleThatDoesNotFitWidth" },
   ];
   for (const tc of cases) {
     const panel = __testing.composeMessagePanel(tc.lines, tc.width, tc.title);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// PNG sprite-sheet avatars for Nazar's terminal UI graphics backends.
+// PNG sprite-sheet avatars for Nazar's ANSI/Chafa terminal UI.
 import { readFileSync } from "node:fs";
 import { join, basename } from "node:path";
 import { inflateSync } from "node:zlib";
@@ -17,13 +17,13 @@ const BG_RESET = "\x1b[49m";
 const ANSI_AVATAR_FRAME = { width: 16, height: 14 } as const;
 const ANSI_TOOL_FRAME = { width: 8, height: 6 } as const;
 // Source sheets are 768×768 RGBA (3×3 grid, 256px stride, transparent bg).
-// The Kitty/HD backend slices frames directly from these high-res sheets.
+// Chafa slices frames directly from these high-res sheets.
 const SOURCE_FRAME = { width: 256, height: 256 } as const;
 const SHEET_COLUMNS = 3;
 const AVATAR_FRAME_COUNT = 9;
 
 // Compact daily-chat avatar size. Terminal cells are usually taller than wide,
-// so columns are derived from the live cell aspect ratio to keep the 64×64
+// so columns are derived from the live cell aspect ratio to keep the 256×256
 // sprite square in pixel terms and flush inside the avatar box.
 // Default Chafa/ANSI avatar height. 13 rows ≈ 27×13 cells = the "best daily
 // identity" size; 9 = compact fallback, 17 = showcase (set via NAZAR_AVATAR_ROWS).
@@ -615,8 +615,8 @@ function ansiAvatar(frameId: string, rows = avatarRows()): RenderedAvatar {
   const columns = avatarColumns(rows);
   // Prefer the Chafa sextant cache (crisp 2×3 mosaics rendered from the HD
   // master). When the cache is unbuilt/unavailable, fall back to the built-in
-  // half-block (▀) renderer sampling the same 768² master — no Kitty, no
-  // separate low-res asset set.
+  // half-block (▀) renderer sampling the same 768² master — no separate
+  // low-res asset set.
   const source = frameSource(frameId);
   const sheetName = basename(sheetAsset(source.sheet, SOURCE_SHEET_ASSETS).path).replace(/\.png$/, "");
   const cached = chafaLinesFor(sheetName, source.index, rows);

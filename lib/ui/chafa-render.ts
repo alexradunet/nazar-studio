@@ -5,7 +5,7 @@
 // (sextant 2×3 mosaics, TRUECOLOR) AHEAD OF TIME and cache the resulting escape
 // strings keyed by (sheet, frame, rows). At runtime the renderer does a cheap
 // synchronous lookup and blits the cached lines — so Pi's redraw-on-every-change
-// stays inexpensive (no per-draw image work, unlike the old Kitty path).
+// stays inexpensive (no per-draw image work).
 //
 // The cache is produced by `scripts/build-chafa-cache.ts` (which uses the
 // `chafa-wasm` npm package). If the cache file is absent, `chafaLinesFor`
