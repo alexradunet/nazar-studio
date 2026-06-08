@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// PNG sprite-sheet avatars for Nazar's ANSI/Chafa terminal UI.
+// PNG sprite-sheet avatars for Nazar's terminal UI graphics backends.
 import { readFileSync } from "node:fs";
-import { join, basename } from "node:path";
+import { join } from "node:path";
 import { inflateSync } from "node:zlib";
 import { getCellDimensions, setCellDimensions, type CellDimensions } from "@earendil-works/pi-tui";
 import { visibleWidth } from "./ansi.ts";
 import { truecolorBg, truecolorFg, type GraphicsProtocolBackend } from "./graphics-protocol.ts";
-import { chafaLinesFor } from "./chafa-render.ts";
+import { renderMosaic, type MosaicMode } from "./sextant.ts";
 import { type SpriteRole } from "./sprites.ts";
 import { AVATAR_FIELDS as BACKGROUNDS } from "./tokens.ts";
 import { moduleDir } from "../paths.ts";
@@ -17,17 +17,18 @@ const BG_RESET = "\x1b[49m";
 const ANSI_AVATAR_FRAME = { width: 16, height: 14 } as const;
 const ANSI_TOOL_FRAME = { width: 8, height: 6 } as const;
 // Source sheets are 768×768 RGBA (3×3 grid, 256px stride, transparent bg).
-// Chafa slices frames directly from these high-res sheets.
+// The Kitty/HD backend slices frames directly from these high-res sheets.
 const SOURCE_FRAME = { width: 256, height: 256 } as const;
 const SHEET_COLUMNS = 3;
 const AVATAR_FRAME_COUNT = 9;
 
 // Compact daily-chat avatar size. Terminal cells are usually taller than wide,
-// so columns are derived from the live cell aspect ratio to keep the 256×256
+// so columns are derived from the live cell aspect ratio to keep the 64×64
 // sprite square in pixel terms and flush inside the avatar box.
-// Default Chafa/ANSI avatar height. 13 rows ≈ 27×13 cells = the "best daily
-// identity" size; 9 = compact fallback, 17 = showcase (set via NAZAR_AVATAR_ROWS).
-const DEFAULT_AVATAR_ROWS = 13;
+// Default ANSI-mosaic avatar height. 11 rows ≈ 23×11 cells — the daily identity
+// size (octant holds the soul's face cleanly here while staying compact);
+// 9 = compact, 17 = showcase. Override via NAZAR_AVATAR_ROWS (clamped 6–20).
+const DEFAULT_AVATAR_ROWS = 11;
 
 const AVATAR_ASSET_DIR = join(moduleDir(import.meta.url), "..", "..", "assets", "avatars");
 const ANSI_ASSET_DIR = join(AVATAR_ASSET_DIR, "ansi");
@@ -610,22 +611,40 @@ function toolRows(): number {
   return avatarRows();
 }
 
+// Native mosaic render is pure + deterministic, so memoise per
+// (detail, frame, columns, rows, background) — redraws then blit cached lines.
+const mosaicMemo = new Map<string, string[]>();
+
+function ansiDetail(): "octant" | "sextant" | "block" {
+  // octant = 2×4 (Unicode 16, highest fidelity, needs a recent font / kitty);
+  // sextant = 2×3 (Unicode 13, broad support) is the safe default;
+  // block = half-block (▀) fallback for terminals lacking mosaic glyphs.
+  const raw = (process.env.NAZAR_ANSI_DETAIL || "").trim().toLowerCase();
+  if (raw === "block" || raw === "half" || raw === "half-block") return "block";
+  if (raw === "sextant") return "sextant";
+  return "octant"; // default: highest fidelity (kitty renders octants built-in)
+}
+
 function ansiAvatar(frameId: string, rows = avatarRows()): RenderedAvatar {
   const background = backgroundForFrame(frameId);
   const columns = avatarColumns(rows);
-  // Prefer the Chafa sextant cache (crisp 2×3 mosaics rendered from the HD
-  // master). When the cache is unbuilt/unavailable, fall back to the built-in
-  // half-block (▀) renderer sampling the same 768² master — no separate
-  // low-res asset set.
-  const source = frameSource(frameId);
-  const sheetName = basename(sheetAsset(source.sheet, SOURCE_SHEET_ASSETS).path).replace(/\.png$/, "");
-  const cached = chafaLinesFor(sheetName, source.index, rows);
-  if (cached) {
-    const lines = cached.map((line) => textAvatarLine(line, background));
-    return { lines, width: columns, height: lines.length, backend: "ansi" };
-  }
+  // Render the 768² master directly as native mosaic ANSI — crisp,
+  // dependency-free, no Kitty, no separate low-res asset set.
   const frame = frameFor(frameId, SOURCE_SHEET_ASSETS);
-  const lines = renderFrameAnsi(frame, background, columns, rows).map((line) => textAvatarLine(line));
+  const detail = ansiDetail();
+  let textLines: string[];
+  if (detail === "block") {
+    textLines = renderFrameAnsi(frame, background, columns, rows);
+  } else {
+    const key = `${detail}#${frameId}#${columns}#${rows}#${background.join(",")}`;
+    let memo = mosaicMemo.get(key);
+    if (!memo) {
+      memo = renderMosaic(frame, background, columns, rows, detail as MosaicMode);
+      mosaicMemo.set(key, memo);
+    }
+    textLines = memo;
+  }
+  const lines = textLines.map((line) => textAvatarLine(line));
   return { lines, width: columns, height: lines.length, backend: "ansi" };
 }
 
