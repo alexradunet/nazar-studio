@@ -32,7 +32,6 @@ function openDb(): DatabaseSync {
   mkdirSync(dirname(dbPath()), { recursive: true });
   const db = openDatabase(dbPath());
   db.exec("PRAGMA journal_mode = WAL");
-  db.exec("DROP TABLE IF EXISTS knowledge"); // drop the short-lived unified table if present
   db.exec(FTS_DDL);
   return db;
 }

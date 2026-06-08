@@ -29,11 +29,6 @@ export function hexToRgb(hex: string): Rgb {
   return [(value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff];
 }
 
-export function rgbToHex([r, g, b]: Rgb): Hex {
-  const h = (n: number) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
-  return `#${h(r)}${h(g)}${h(b)}`;
-}
-
 /** Linear mix of two colours. amount=0 → a, amount=1 → b. */
 export function mix(a: Rgb, b: Rgb, amount: number): Rgb {
   const t = Math.max(0, Math.min(1, amount));
@@ -144,7 +139,7 @@ export const LAYOUT = {
 //    Shape matches lib/ui/panel-style.ts RolePalette (all RGB tuples).
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type PanelRole = "user" | "assistant" | "tool" | "thinking" | "system";
+type PanelRole = "user" | "assistant" | "tool" | "thinking" | "system";
 
 export type RolePalette = {
   border: Rgb;
@@ -181,7 +176,7 @@ export const TERMINAL_ROLE_PALETTES: Record<PanelRole, RolePalette> = {
   system: roleFromHue(rgb(COLOR.smoke), rgb(COLOR.nightBlue)),
 };
 
-export type PanelStateAccent = Partial<RolePalette>;
+type PanelStateAccent = Partial<RolePalette>;
 
 /** State overlays — outcome colours that may override a role's accent/border. */
 export const TERMINAL_STATE_ACCENTS: Record<string, PanelStateAccent> = {
@@ -220,23 +215,7 @@ export const AVATAR_FIELDS = {
   user: TERMINAL_ROLE_PALETTES.user.background,
   nazar: TERMINAL_ROLE_PALETTES.assistant.background,
   thinking: TERMINAL_ROLE_PALETTES.thinking.background,
-  toolPending: TERMINAL_ROLE_PALETTES.tool.background,
-  toolRunning: TERMINAL_ROLE_PALETTES.tool.background,
-  toolOk: TERMINAL_ROLE_PALETTES.tool.background,
-  toolError: TERMINAL_ROLE_PALETTES.tool.background,
-} as const satisfies Record<string, Rgb>;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 4. Low-level UI layer palette (consumed by lib/ui/design.ts)
-// ─────────────────────────────────────────────────────────────────────────────
-
-export const LAYER_COLORS = {
-  background: rgb(COLOR.surface),
-  shadow: rgb(COLOR.surface2),
-  border: rgb(COLOR.smoke),
-  accent: rgb(COLOR.gold),
-  text: rgb(COLOR.onSurface),
-  muted: rgb(COLOR.muted),
+  tool: TERMINAL_ROLE_PALETTES.tool.background,
 } as const satisfies Record<string, Rgb>;
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -128,10 +128,3 @@ export function renderMosaic(frame: RgbaImage, background: Rgb, cols: number, ro
   }
   return lines;
 }
-
-export function renderSextant(frame: RgbaImage, background: Rgb, cols: number, rows: number): string[] {
-  return renderMosaic(frame, background, cols, rows, "sextant");
-}
-export function renderOctant(frame: RgbaImage, background: Rgb, cols: number, rows: number): string[] {
-  return renderMosaic(frame, background, cols, rows, "octant");
-}

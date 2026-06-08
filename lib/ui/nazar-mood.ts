@@ -41,8 +41,3 @@ export function getActiveTool(): string | null {
 export function setActiveTool(name: string | null): void {
   activeTool = name && name.trim() ? name.trim() : null;
 }
-
-/** Whether Nazar is actively working (non-resting mood). */
-export function isNazarWorking(): boolean {
-  return current === "thinking" || current === "focused";
-}
