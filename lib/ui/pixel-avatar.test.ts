@@ -81,20 +81,9 @@ test("role avatars render generated ANSI art", () => {
 });
 
 test("ANSI animations expose stable wrapping frames", () => {
-  const userTyping0 = renderUserTypingAvatarFrame(0);
-
-  // Animation loops for Nazar's think-state are 9-frame.
   expect(plain(renderThinkingAvatarFrame(9))).toEqual(plain(renderThinkingAvatarFrame(0)));
+  expect(plain(renderUserTypingAvatarFrame(9))).toEqual(plain(renderUserTypingAvatarFrame(0)));
   expect(new Set(Array.from({ length: 4 }, (_, index) => renderThinkingAvatarFrame(index).join("\n"))).size).toBeGreaterThan(1);
-
-  // User typing animation should be capped to 8 moving frames and use the
-  // animated user-typing sprites (not the static idle frame).
-  const idleUser = renderRoleAvatar("user", { backend: "ansi" })?.lines.map((line) => line.text).join("\n");
-  expect(userTyping0.join("\n")).not.toEqual(idleUser);
-  // The 9th typed frame should continue the 8-frame loop without returning to
-  // frame 0 (the draft stays in motion).
-  expect(new Set(Array.from({ length: 8 }, (_, index) => renderUserTypingAvatarFrame(index).join("\n"))).size).toBeGreaterThan(1);
-  expect(renderUserTypingAvatarFrame(8).join("\n")).toEqual(userTyping0.join("\n"));
 });
 
 test("avatar renderer derives cell width from terminal aspect ratio for near-square sprite framing", () => {

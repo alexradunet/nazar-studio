@@ -27,6 +27,7 @@ const SHEETS = [
     "eye-grep", "eye-browser", "eye-deploy", "eye-memory", "eye-skill", "eye-health",
     "eye-journal", "eye-gym", "eye-calendar", "eye-mail", "eye-music", "eye-time",
     "eye-terminal", "eye-rocket", "eye-gear", "eye-idle",
+    "eye-money", "eye-sports", "eye-diet", "eye-sleep", "eye-mind",
   ].map((name) => ({
     src: join(TOOL_DIR, `${name}.png`),
     dst: join(ANSI_TOOL_DIR, `${name}.png`),

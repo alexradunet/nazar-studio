@@ -47,6 +47,7 @@ const TOOL_KINDS = [
   // domain / life-tracking tools
   "journal",
   "dumbbell",
+  "running",
   "plate-fork",
   "heart-pulse",
   "moon-stars",
@@ -100,20 +101,22 @@ type ToolAvatarKind = typeof TOOL_KINDS[number];
 type EyeKind =
   | "read" | "write" | "edit" | "search" | "bash" | "files" | "grep" | "browser" | "deploy"
   | "memory" | "skill" | "health" | "journal" | "gym" | "calendar" | "mail" | "music" | "time"
-  | "terminal" | "rocket" | "gear" | "idle";
+  | "terminal" | "rocket" | "gear" | "idle"
+  | "money" | "sports" | "diet" | "sleep" | "mind";
 const EYE_KINDS: readonly EyeKind[] = [
   "read", "write", "edit", "search", "bash", "files", "grep", "browser", "deploy",
   "memory", "skill", "health", "journal", "gym", "calendar", "mail", "music", "time",
   "terminal", "rocket", "gear", "idle",
+  "money", "sports", "diet", "sleep", "mind",
 ];
 // Tool kind -> the eye Nazar shows while running it (idle cosmos is the fallback).
 const KIND_TO_EYE: Record<ToolAvatarKind, EyeKind> = {
   scroll: "read", needle: "edit", quill: "write", anvil: "bash", lens: "grep",
   folder: "files", keeper: "memory", warden: "health", seer: "search", "new-head": "skill", hammer: "gear",
-  journal: "journal", dumbbell: "gym", "plate-fork": "health", "heart-pulse": "health",
-  "moon-stars": "time", calendar: "calendar", envelope: "mail", "map-pin": "browser",
-  "coin-stack": "idle", "music-note": "music", camera: "idle", "pill-potion": "health",
-  brain: "memory", compass: "browser", seedling: "idle", hourglass: "time", key: "idle", bell: "idle",
+  journal: "journal", dumbbell: "gym", running: "sports", "plate-fork": "diet", "heart-pulse": "health",
+  "moon-stars": "sleep", calendar: "calendar", envelope: "mail", "map-pin": "browser",
+  "coin-stack": "money", "music-note": "music", camera: "idle", "pill-potion": "health",
+  brain: "mind", compass: "browser", seedling: "idle", hourglass: "time", key: "idle", bell: "idle",
   terminal: "terminal", code: "write", "git-branch": "deploy", "git-merge": "deploy",
   database: "files", cloud: "deploy", browser: "browser", container: "deploy", chat: "mail",
   gamepad: "idle", rocket: "rocket", gear: "gear",
@@ -681,11 +684,8 @@ export function renderUserTypingAvatar(
   frameIndex = 0,
   options: RenderAvatarOptions = {},
 ): RenderedAvatar | undefined {
-  // Keep typing animation in motion on frames 1–8 only while input is non-empty.
-  // Frame 0 is the static idle portrait (used by submit-ready panels), so we
-  // skip it for the draft animation to avoid visible "blips" every 9th key.
-  const index = modIndex(frameIndex, AVATAR_FRAME_COUNT - 1) + 1;
-  return renderFrameAvatar(`user-typing-${index}`, options);
+  const index = modIndex(frameIndex, AVATAR_FRAME_COUNT);
+  return renderFrameAvatar(index === 0 ? "user" : `user-typing-${index}`, options);
 }
 
 export function renderThinkingAvatar(
@@ -752,7 +752,8 @@ function toolKind(toolName: string, hintText = ""): ToolAvatarKind {
 
   // Domain / life-tracking tools
   if (hasAny(text, ["journal", "diary", "log", "note", "memo"])) return "journal";
-  if (hasAny(text, ["gym", "dumbbell", "workout", "exercise", "fitness", "sport"])) return "dumbbell";
+  if (hasAny(text, ["sport", "running", "run ", "cardio", "steps", "athletic", "jog"])) return "running";
+  if (hasAny(text, ["gym", "dumbbell", "workout", "exercise", "fitness", "lift"])) return "dumbbell";
   if (hasAny(text, ["nutrition", "meal", "diet", "food", "plate", "calorie"])) return "plate-fork";
   if (hasAny(text, ["heart", "pulse", "vitals", "hrv", "blood pressure", "heartbeat"])) return "heart-pulse";
   if (hasAny(text, ["sleep", "rest", "moon", "circadian", "bedtime"])) return "moon-stars";

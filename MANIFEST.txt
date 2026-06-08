@@ -1,32 +1,30 @@
-nazar-studio — avatar overhaul (extract at repo ROOT to replace files)
-Base: branched off origin/main 191a51c.
+nazar-studio — FULL avatar + tool overhaul (extract at repo ROOT). Base: origin/main 191a51c.
 
-THE PAIR — two floating crystal orbs (full-quality HD PNGs, gently Basm-token graded, no pedestal):
-  Nazar (assistant) = COOL teal/indigo + gold cosmic eye-orb.
-  The Seeker (you)  = WARM ethereal soul-of-light face-orb.
+AVATARS (768x768 3x3 sheets; feature-only animation, body held still; frame0 = still rest):
+  assets/avatars/nazar.png       cool teal/indigo cosmic EYE-orb; eye blinks/squints while thinking
+  assets/avatars/nazar-expr.png  = nazar sheet (mood frames reuse the eye states)
+  assets/avatars/soul.png        warm ethereal SOUL-of-light face-orb (the Seeker); mouth moves while typing
+  assets/avatars/ansi/{nazar,nazar-expr,soul}.png  half-block prerenders
 
-ASSETS — 9-frame 3x3 768x768 sheets. FEATURE-ONLY animation (the orb/face is held perfectly
-still; only the internal feature moves), frame 0 = still rest:
-  assets/avatars/nazar.png        eye: open -> squint -> centered blink -> open (smooth cross-fade)
-  assets/avatars/nazar-expr.png   = nazar sheet (mood frames reuse the eye states)
-  assets/avatars/soul.png         mouth: closed -> talk shapes (smooth cross-fade)
-  assets/avatars/ansi/{nazar,nazar-expr,soul}.png   rebuilt half-block prerenders
+TOOLS (27 sheets; colored icon inside a domain-colored orb; subtle GLOW-PULSE while a tool runs):
+  assets/avatars/tools/eye-*.png  read write edit search grep bash terminal files browser deploy rocket
+                                  memory skill gear calendar time mail music journal health gym idle
+                                  + NEW domains: money sports diet sleep mind
+  assets/avatars/ansi/tools/eye-*.png
+
+ORB TEMPLATES (base vessels to build on; 512 transparent, identical structure, gold filigree):
+  assets/avatars/orbs/orb-{teal,indigo,violet,gold,ember,red,green,slate}.png
 
 CODE:
-  lib/ui/pixel-avatar.ts               add "soul" to CharacterSheetKey + CHARACTER_SHEETS; userAvatarSheet() -> "soul"
-  lib/ui/pixel-avatar.test.ts          renamed the default-user-avatar test
-  scripts/build-ansi-avatar-assets.ts  add "soul" to the ANSI build list
-  design/avatars.md                    art direction -> matched floating-orb pair
-  extensions/brand.ts                  FIX: mount the animated ThinkingWidget on before_agent_start,
-                                       remove on agent_end. (It was implemented but never mounted, so
-                                       Nazar's eye never animated while thinking — now it does.)
+  lib/ui/pixel-avatar.ts   userAvatarSheet()->"soul"; +"soul" character sheet; +EyeKinds money/sports/
+                           diet/sleep/mind; +"running" tool kind; KIND_TO_EYE repointed (coin-stack->money,
+                           plate-fork->diet, moon-stars->sleep, brain->mind); inference: sport/run->running.
+  lib/ui/pixel-avatar.test.ts          renamed the default-user-avatar test.
+  scripts/build-ansi-avatar-assets.ts  +soul and +5 new tool eyes in the ANSI build list.
+  design/avatars.md                    matched floating-orb art direction.
+  extensions/brand.ts                  mount the animated ThinkingWidget on before_agent_start / remove on agent_end.
 
-BEHAVIOR:
-  Nazar : still beside messages; eye blinks/squints while he is thinking (ThinkingWidget @180ms).
-  Seeker: still beside your messages; mouth animates per keystroke while typing (existing editor cycling).
-  Only the eye/mouth move; the orb and face never wobble.
-
-AFTER REPLACING:
-  - Validate:  npm run build:tokens -- --check && npm run typecheck && npm run test
-  - Re-edit HD art later? rebuild prerenders:  node scripts/build-ansi-avatar-assets.ts
-  - "mage-alien" is kept as an unused fallback sheet (optional cleanup).
+AFTER EXTRACT:
+  Validate:  npm run build:tokens -- --check && npm run typecheck && npm run test
+  Rebuild ANSI after any art edit:  node scripts/build-ansi-avatar-assets.ts
+  "mage-alien" kept as an unused fallback sheet (optional cleanup).

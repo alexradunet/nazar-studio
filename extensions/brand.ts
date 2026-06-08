@@ -6,7 +6,7 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { uiCapabilitySummary } from "../lib/ui/design.ts";
 import { setGraphicsQuality, type GraphicsQuality } from "../lib/ui/graphics-state.ts";
-import { beginActiveAssistantAvatar, patchRpgAvatars, seedAvatarPanelOrderFromSessionEntries, settleActiveAssistantAvatar } from "../lib/ui/avatars.ts";
+import { patchRpgAvatars } from "../lib/ui/avatars.ts";
 import { renderChapterDivider, renderStitchLine } from "../lib/ui/divider.ts";
 import { editorFactory } from "../lib/ui/editor.ts";
 import { footerFactory } from "../lib/ui/footer.ts";
@@ -75,14 +75,7 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_start", async (_event: unknown, ctx: any) => {
     uiCtx = ctx;
     setNazarMood("neutral");
-    try { seedAvatarPanelOrderFromSessionEntries(ctx?.sessionManager?.getBranch?.() ?? []); } catch { /* ignore */ }
     applyNazarUI(pi, ctx, (tui) => { renderTui = tui; });
-    // First render can happen before all rich-avatar state has fully settled.
-    // Force one extra paint tick so post-load avatar-cap pruning applies
-    // immediately (when the history buffer is already rendered).
-    setTimeout(() => {
-      try { renderTui?.requestRender?.(); } catch { /* ignore */ }
-    }, 0);
   });
 
   // Pi resets workingVisible = true before every agent run (interactive-mode.ts
@@ -95,7 +88,6 @@ export default function (pi: ExtensionAPI) {
     try { ctx?.ui?.setWorkingVisible?.(false); } catch { /* ignore */ }
     turnHadError = false;
     setActiveTool(null);
-    beginActiveAssistantAvatar();
     setMood("thinking");
     // Mount Nazar's animated thinking panel. The widget owns a 180ms timer that
     // drives the calm eye-orb loop while he works (mood "thinking"/"neutral"),
@@ -137,7 +129,6 @@ export default function (pi: ExtensionAPI) {
     activeToolAnimations.clear();
     stopToolAnimationTicker();
     setActiveTool(null);
-    settleActiveAssistantAvatar();
     setMood(turnHadError ? "concerned" : "pleased");
     if (uiCtx) { try { hideThinkingWidget(uiCtx); } catch { /* ignore */ } }
   });
