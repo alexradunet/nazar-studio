@@ -59,6 +59,7 @@ full list. Common ones:
 | `NAZAR_DATA_DIR` | runtimes/models/logs/index dir; default same as vault |
 | `NAZAR_PERSONA` | set `0` to skip persona injection |
 | `NAZAR_USER_NAME` | name shown on the user avatar panel |
+| `NAZAR_UI_QUALITY` | avatar renderer quality: `low`, `medium` (default sextant), or `high` |
 | `NAZAR_LLM_CTX` | local model context window (default 128000) |
 | `NAZAR_LLM_REASONING_BUDGET` | LFM2.5 thinking budget before final answer (default 64) |
 | `LLAMA_LOCAL_KEY` | local endpoint key (auto-generated at `<data dir>/run/local-llm.key`) |
@@ -85,8 +86,8 @@ Nazar Studio targets portable terminal standards. The preferred setup is:
 - **Truecolor ANSI** (`COLORTERM=truecolor`, non-`dumb` `$TERM`).
 - **Departure Mono** as the terminal font: https://departuremono.com/
 
-The `/skill:doctor` health check includes this terminal experience check; Nazar does not show it
-as a startup notice.
+The `/nazar-ui low|medium|high` command switches avatar quality live. The `/skill:doctor`
+health check includes this terminal experience check; Nazar does not show it as a startup notice.
 
 ## Terminal font installer (optional, source checkout)
 

@@ -8,7 +8,7 @@
 //     resolution, the higher-fidelity option where the font/terminal supports it
 //     (e.g. kitty renders these built-in). Same 2-colours-per-cell limit.
 // A `cols × rows` block samples the frame at `subCols·cols × subRows·rows`.
-// No wasm, no Chafa, no build step — mirrors build-ansi-avatar-assets.ts's ethos.
+// No wasm and no build step.
 import type { Rgb } from "./graphics-protocol.ts";
 
 export type RgbaImage = { width: number; height: number; pixels: Buffer };
@@ -29,8 +29,8 @@ const SEXTANT_GLYPHS: string[] = (() => {
 
 // OCTANT (2×4): the 16 patterns expressible at 2×2 "quadrant" resolution reuse the
 // existing quadrant/half/full glyphs; the other 240 are U+1CD00 + sequential index.
-// NOTE: verify the 0x1CD00 base against your Unicode 16 font / `chafa` if octant
-// glyphs look shifted — it is isolated to this one constant.
+// NOTE: verify the 0x1CD00 base against your Unicode 16 font if octant glyphs
+// look shifted — it is isolated to this one constant.
 const OCTANT_BASE = 0x1cd00;
 const QUAD = [" ", "▘", "▝", "▀", "▖", "▌", "▞", "▛", "▗", "▚", "▐", "▜", "▄", "▙", "▟", "█"];
 const OCTANT_GLYPHS: string[] = (() => {

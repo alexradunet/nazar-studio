@@ -84,8 +84,8 @@ test("legacy badge/both modes are ignored; the avatar remains on", () => {
 test("thinking panel shows a live preview in the text pane", () => {
   const frame = plain(renderThinkingPanel(0, { preview: "Inspecting the stream and planning the smallest UI change." }));
   expect(frame).toContain("Inspecting the stream");
-  expect(frame).toContain("smallest UI");
-  expect(frame).toContain("change.");
+  expect(frame).toContain("smallest");
+  expect(frame).toContain("UI change.");
 });
 
 test("thinking panel places Nazar avatar on the right", () => {

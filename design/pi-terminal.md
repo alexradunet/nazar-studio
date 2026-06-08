@@ -7,7 +7,7 @@ The Pi terminal is Nazar's owned daily surface. It should feel like an old-schoo
 - Make Pi feel like **Nazar**, not a generic coding agent.
 - Keep private/local state legible.
 - Add RPG flavor through structure: portrait panels, ANSI-colored dialog frames, terse wise copy, and generated sprite avatars.
-- Keep canonical per-avatar 3×3, 9-frame, 64×64 PNG sprite sheets; render them through the portable ANSI/Chafa backend.
+- Keep canonical per-avatar 3×3, 9-frame, 64×64 PNG sprite sheets; render them through Nazar's native ANSI renderer.
 - Avoid taking over the whole screen.
 
 ## Current implemented pieces
@@ -15,7 +15,7 @@ The Pi terminal is Nazar's owned daily surface. It should feel like an old-schoo
 - Compact Basm/RPG framed header.
 - Fixed-width RPG portrait gutters:
   - avatars are shown only on the latest messages.
-  - ANSI/Chafa avatars are the single rendering path, with internal half-blocks as fallback.
+  - Native ANSI avatars are the single rendering path: low = half-block, medium = sextant, high = octant.
   - role/tool names appear as the right panel title, using the same `╔═◆ label ◆═╗` double-line language as the input editor.
   - `NAZAR_AVATAR_RECENT_LIMIT=20`: cap avatars to the latest messages; older history keeps the nameplate/body styling, with no avatar column and no badge.
 - Working/thinking state is shown as a Nazar-owned transient chat-like assistant portrait widget, not as a sentence or Pi's default loader row.
@@ -25,7 +25,7 @@ The Pi terminal is Nazar's owned daily surface. It should feel like an old-schoo
   - dirty git state -> `git:branch*`
   - context usage -> compact text meter on wider terminals
 - Thinking blocks hidden by default with no placeholder line; the animated avatar is enough.
-- Quiet truecolor ANSI RPG panels around user, assistant, thinking, tool-call turns, and the input editor; avatars use ANSI/Chafa character art.
+- Quiet truecolor ANSI RPG panels around user, assistant, thinking, tool-call turns, and the input editor; avatars use native ANSI character art.
 - Tool output collapsed by default and wrapped in the same dialog-panel style.
 - Per-tool generated pixel icons for read/edit/write/bash/search/memory/doctor/skill-evolution states. Tool names appear as right-panel titles.
 
@@ -51,14 +51,14 @@ Rules:
 - Do not render `[ Name ]` badges; old history should keep the message nameplate/body render and drop only the avatar column.
 - Do not let user-message background bleed into the left portrait box.
 - Avoid emoji because terminal width varies; box drawing and ANSI truecolor are part of the canonical UI.
-- Avatar quality is selected by `/nazar-ui basic|auto` or `NAZAR_UI_QUALITY=basic|auto`; output remains portable ANSI/Chafa.
+- Avatar quality is selected by `/nazar-ui low|medium|high` or `NAZAR_UI_QUALITY=low|medium|high`; default `medium` uses sextant glyphs.
 - Border style is not configurable: RPG box drawing plus ANSI SGR color is canonical.
 - Performance cap: `NAZAR_AVATAR_RECENT_LIMIT=<n|all>`; default `20`, `0` means active-only avatars.
-- Role portraits and tool icons use canonical per-avatar 3×3, 9-frame, 64×64 PNG sprite sheets rendered through ANSI/Chafa character art.
+- Role portraits and tool icons use canonical per-avatar 3×3, 9-frame, 64×64 PNG sprite sheets rendered through native ANSI character art.
 
 ## Sprite rules
 
-Backend/name source of truth: [`../lib/ui/sprites.ts`](../lib/ui/sprites.ts). Canonical role sprite source of truth: [`../lib/ui/pixel-avatar.ts`](../lib/ui/pixel-avatar.ts).
+Role/name source of truth: [`../lib/ui/sprites.ts`](../lib/ui/sprites.ts). Canonical role sprite source of truth: [`../lib/ui/pixel-avatar.ts`](../lib/ui/pixel-avatar.ts).
 
 Current internal sprite catalog:
 
@@ -375,7 +375,7 @@ Run `/reload` in the Nazar terminal after changing the theme.
 See [`avatars.md`](avatars.md).
 
 - Avatars always use canonical 64×64 PNG sprite sheets: one 3×3, 9-frame sheet per avatar/tool.
-- The runtime renders those sheets into generated ANSI half-block pixels.
+- The runtime renders those sheets into generated ANSI pixels at the selected quality.
 - There is no graphics-protocol or ASCII avatar fallback to maintain.
 
 ## Implementation notes

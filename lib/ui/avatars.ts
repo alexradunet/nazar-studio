@@ -36,7 +36,7 @@ import { panelStyle, type PanelState, type PanelStyle } from "./panel-style.ts";
 import { roleNameplate, type SpriteRole } from "./sprites.ts";
 import { nazarMarkdownTheme } from "./markdown-theme.ts";
 import { renderChapterDivider } from "./divider.ts";
-import { graphicsQuality } from "./graphics-state.ts";
+import { uiQuality } from "./graphics-state.ts";
 
 const AVATAR_ORIGINALS = Symbol.for("nazar.rpgAvatarOriginals");
 const DEFAULT_RICH_AVATAR_RECENT_LIMIT = 20;
@@ -57,9 +57,8 @@ type PanelRenderCache = {
 
 function panelRenderEnvKey(): string {
   return [
-    graphicsQuality(),
-    process.env.NAZAR_GRAPHICS_PROTOCOL ?? "",
-    process.env.NAZAR_AVATAR_BACKEND ?? "",
+    uiQuality(),
+    process.env.NAZAR_UI_QUALITY ?? "",
     process.env.NAZAR_AVATAR_ROWS ?? "",
     process.env.NAZAR_CELL_WIDTH_PX ?? "",
     process.env.NAZAR_CELL_HEIGHT_PX ?? "",

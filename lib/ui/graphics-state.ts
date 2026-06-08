@@ -1,22 +1,30 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Session-local Nazar UI graphics quality. Kept deliberately small: renderers
+// Session-local Nazar UI avatar quality. Kept deliberately small: renderers
 // read this at call time, and /nazar-ui can switch it without reloading Pi.
 
-export type GraphicsQuality = "basic" | "hd" | "auto";
+export type UiQuality = "low" | "medium" | "high";
+export type UiRenderer = "half-block" | "sextant" | "octant";
 
-let overrideQuality: GraphicsQuality | undefined;
+const DEFAULT_UI_QUALITY: UiQuality = "medium";
 
-function envQuality(): GraphicsQuality {
-  const raw = (process.env.NAZAR_UI_QUALITY || process.env.NAZAR_GRAPHICS_QUALITY || "auto").trim().toLowerCase();
-  if (raw === "basic" || raw === "ansi") return "basic";
-  if (raw === "hd") return "hd";
-  return "auto";
+let overrideQuality: UiQuality | undefined;
+
+function envQuality(): UiQuality {
+  const raw = (process.env.NAZAR_UI_QUALITY || "").trim().toLowerCase();
+  if (raw === "low" || raw === "medium" || raw === "high") return raw;
+  return DEFAULT_UI_QUALITY;
 }
 
-export function graphicsQuality(): GraphicsQuality {
+export function uiQuality(): UiQuality {
   return overrideQuality ?? envQuality();
 }
 
-export function setGraphicsQuality(quality: GraphicsQuality | undefined): void {
+export function uiRenderer(quality: UiQuality = uiQuality()): UiRenderer {
+  if (quality === "low") return "half-block";
+  if (quality === "high") return "octant";
+  return "sextant";
+}
+
+export function setUiQuality(quality: UiQuality | undefined): void {
   overrideQuality = quality;
 }

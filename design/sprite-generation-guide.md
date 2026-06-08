@@ -38,9 +38,8 @@ Sprites are generated at native **2048×2048** (Gemini 3 Pro Image) on the dark
    a smooth anti-aliased alpha edge.
 4. Reassemble into the 512×512 RGBA sheet.
 
-The 512px transparent sheets feed the ANSI/Chafa renderer directly; the
-ANSI half-block backend renders from the downsampled pre-renders built by
-`scripts/build-ansi-avatar-assets.ts` (which reads 170px source frames).
+The transparent sheets feed the native ANSI renderer directly. Low quality uses
+half-blocks; medium uses sextants; high uses octants.
 
 ### Color Palette & Style
 - **Palette:** Old-school 16-bit RPG pixel art

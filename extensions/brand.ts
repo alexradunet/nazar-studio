@@ -5,7 +5,7 @@
 // vendored bin/pi wrapper.
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { uiCapabilitySummary } from "../lib/ui/design.ts";
-import { setGraphicsQuality, type GraphicsQuality } from "../lib/ui/graphics-state.ts";
+import { setUiQuality, type UiQuality } from "../lib/ui/graphics-state.ts";
 import { patchRpgAvatars, seedAvatarPanelOrderFromSessionEntries } from "../lib/ui/avatars.ts";
 import { renderChapterDivider, renderStitchLine } from "../lib/ui/divider.ts";
 import { editorFactory } from "../lib/ui/editor.ts";
@@ -147,23 +147,21 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.registerCommand("nazar-ui", {
-    description: "Show Nazar's terminal graphics backend status.",
+    description: "Show or set Nazar's terminal avatar quality: low, medium, or high.",
     handler: async (args: string, ctx: any) => {
       const requested = args.trim().split(/\s+/).filter(Boolean)[0]?.toLowerCase();
-      const validInputs = new Set(["", "basic", "auto", "ansi", "status", "show", "help", "--help"]);
+      const validInputs = new Set(["", "low", "medium", "high", "status", "show", "help", "--help"]);
 
       if (requested && !validInputs.has(requested)) {
-        try { ctx.ui.notify("Usage: /nazar-ui [basic|auto|status].", "error"); } catch { /* ignore */ }
+        try { ctx.ui.notify("Usage: /nazar-ui [low|medium|high|status].", "error"); } catch { /* ignore */ }
         return;
       }
 
-      if (requested === "basic" || requested === "ansi") setGraphicsQuality("basic");
-      if (requested === "auto") setGraphicsQuality("auto");
+      const quality = (requested === "low" || requested === "medium" || requested === "high") ? requested as UiQuality : undefined;
+      if (quality) setUiQuality(quality);
 
-      const mode = (requested === "basic" || requested === "ansi" || requested === "auto")
-        ? `Set Nazar UI to ${requested === "ansi" ? "basic" : requested as GraphicsQuality}. `
-        : "";
-      const note = `${mode}Look: portable ANSI/Chafa avatars. ${uiCapabilitySummary()}`;
+      const mode = quality ? `Set Nazar UI to ${quality}. ` : "";
+      const note = `${mode}Look: native ANSI avatars. ${uiCapabilitySummary()}`;
       try { ctx.ui.notify(note, "info"); } catch { /* ignore */ }
       try { renderTui?.requestRender?.(); } catch { /* ignore */ }
     },

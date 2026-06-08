@@ -3,28 +3,27 @@
 Nazar avatars use **one canonical source and one portable terminal backend**:
 
 1. **Per-avatar 256×256 PNG sprite sheets** — source of truth under `assets/avatars/`.
-2. **ANSI/Chafa rendering** — prebuilt 27×13 truecolor SGR character art, with Nazar's internal half-block rasterizer as fallback.
+2. **Native ANSI rendering** — truecolor SGR character art generated directly from the source sheets: `low` = half-block, `medium` = sextant, `high` = octant.
 
-Do not maintain separate terminal art by hand. New avatars start as 256×256 frames in their own sprite sheet, then the Chafa cache builder scales them for the terminal.
+Do not maintain separate terminal art by hand. New avatars start as 256×256 frames in their own sprite sheet; Nazar's renderer samples those masters at runtime.
 
-Current art direction follows **Basm**: 16-bit, woven, Romanian-fairy-tale pixel craft. Nazar and the operator are a matched pair on a dark field, but the old orb vessel is gone so the silhouette can read at 27×13 cells. **Nazar is the bare cosmic eye**: the compressed memory of all human knowledge, a single expressive iris over a starlit interior. **The operator ("the Seeker") is a bare soul-of-light face**: an abstract, idealized, universal human visage of radiant gold-teal light with calm open eyes. Same scale, opposite natures — the one who *knows* and the one who *lives*.
+Current art direction follows **Basm**: 16-bit, woven, Romanian-fairy-tale pixel craft. Nazar and the operator are a matched pair on a dark field, but the old orb vessel is gone so the silhouette can read at 23×11 cells. **Nazar is the bare cosmic eye**: the compressed memory of all human knowledge, a single expressive iris over a starlit interior. **The operator ("the Seeker") is a bare soul-of-light face**: an abstract, idealized, universal human visage of radiant gold-teal light with calm open eyes. Same scale, opposite natures — the one who *knows* and the one who *lives*.
 
 ## Avatar backend
 
-Avatars are always on. Backend selection is small and explicit:
+Avatars are always on. Quality selection is small and explicit:
 
 ```txt
-NAZAR_UI_QUALITY=auto        # auto | basic
-NAZAR_GRAPHICS_PROTOCOL=auto  # auto | ansi
-NAZAR_AVATAR_ROWS=13          # 13 rows = canonical 27×13 avatar target
-NAZAR_AVATAR_RECENT_LIMIT=20  # avatars only for latest N messages; 0 = active-only; all = uncapped
+NAZAR_UI_QUALITY=medium      # low | medium | high
+NAZAR_AVATAR_ROWS=11         # 11 rows = default 23×11 avatar target
+NAZAR_AVATAR_RECENT_LIMIT=20 # avatars only for latest N messages; 0 = active-only; all = uncapped
 ```
 
-ANSI is the supported terminal layer: 24-bit truecolor SGR and text attributes. Runtime loads `assets/avatars/chafa-cache.json` synchronously; regenerate it with `npm run build:chafa-cache` after avatar art changes. If the cache is missing, Nazar falls back to its internal half-block rasterizer reading the same source sheets.
+ANSI is the supported terminal layer: 24-bit truecolor SGR and text attributes. Runtime renders directly from the source PNG sheets with no external graphics dependency or generated text cache.
 
 ## Rendering rules
 
-- Chat messages, input editor, thinking widget, and tool panels use the same PNG-sheet-to-backend renderer path.
+- Chat messages, input editor, thinking widget, and tool panels use the same PNG-sheet-to-ANSI renderer path.
 - For long conversations, avatars are capped to the latest 20 messages by default via `NAZAR_AVATAR_RECENT_LIMIT`; older history keeps the Nazar nameplate/body styling but drops the avatar column and badge.
 - Tool avatars animate only while the tool is actively running; pending/ok/error panels render frame 0 with their state background.
 - The transient thinking panel is a Nazar-owned widget, not Pi's built-in Loader/Text row.
@@ -95,7 +94,7 @@ Implementation:
   role styles, portrait fields, nameplate bg derivation.
 - Panel style: [`../lib/ui/panel-style.ts`](../lib/ui/panel-style.ts).
 - Two-column composer: [`../lib/ui/turn-composer.ts`](../lib/ui/turn-composer.ts).
-- Backend/name helpers: [`../lib/ui/sprites.ts`](../lib/ui/sprites.ts).
+- Role/name helpers: [`../lib/ui/sprites.ts`](../lib/ui/sprites.ts).
 - Sprite-sheet renderers: [`../lib/ui/pixel-avatar.ts`](../lib/ui/pixel-avatar.ts).
 - Message renderer patch (UserMessage / AssistantMessage / ToolExecution):
   [`../lib/ui/avatars.ts`](../lib/ui/avatars.ts).
@@ -146,6 +145,6 @@ Sprites can evolve over time, but each change should remain:
 - documented here;
 - legible in screenshots;
 - compact enough for daily chat;
-- legible through the generated ANSI half-block renderer.
+- legible through the default generated ANSI sextant renderer.
 
 Future work: add richer multi-frame pixel animations per tool/state without adding a second avatar implementation.

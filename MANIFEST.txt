@@ -1,30 +1,21 @@
-nazar-studio — FULL avatar + tool overhaul (extract at repo ROOT). Base: origin/main 191a51c.
+nazar-studio — native ANSI avatar renderer.
 
-AVATARS (768x768 3x3 sheets; feature-only animation, body held still; frame0 = still rest):
-  assets/avatars/nazar.png       cool teal/indigo cosmic EYE-orb; eye blinks/squints while thinking
-  assets/avatars/nazar-expr.png  = nazar sheet (mood frames reuse the eye states)
-  assets/avatars/soul.png        warm ethereal SOUL-of-light face-orb (the Seeker); mouth moves while typing
-  assets/avatars/ansi/{nazar,nazar-expr,soul}.png  half-block prerenders
+AVATARS (768x768 3x3 sheets; 9 frames; frame0 = still rest):
+  assets/avatars/nazar.png       cosmic eye; blink/think frames
+  assets/avatars/nazar-expr.png  expression sheet
+  assets/avatars/soul.png        Seeker soul-of-light face; typing pulse
+  assets/avatars/tools/eye-*.png tool/domain icons; glow pulse while running
 
-TOOLS (27 sheets; colored icon inside a domain-colored orb; subtle GLOW-PULSE while a tool runs):
-  assets/avatars/tools/eye-*.png  read write edit search grep bash terminal files browser deploy rocket
-                                  memory skill gear calendar time mail music journal health gym idle
-                                  + NEW domains: money sports diet sleep mind
-  assets/avatars/ansi/tools/eye-*.png
+RENDERER:
+  lib/ui/pixel-avatar.ts    samples the PNG masters directly
+  lib/ui/sextant.ts         pure TypeScript mosaic renderer
+  lib/ui/graphics-state.ts  low | medium | high quality config
 
-ORB TEMPLATES (base vessels to build on; 512 transparent, identical structure, gold filigree):
-  assets/avatars/orbs/orb-{teal,indigo,violet,gold,ember,red,green,slate}.png
+QUALITY:
+  low     half-block
+  medium  sextant (default)
+  high    octant
 
-CODE:
-  lib/ui/pixel-avatar.ts   userAvatarSheet()->"soul"; +"soul" character sheet; +EyeKinds money/sports/
-                           diet/sleep/mind; +"running" tool kind; KIND_TO_EYE repointed (coin-stack->money,
-                           plate-fork->diet, moon-stars->sleep, brain->mind); inference: sport/run->running.
-  lib/ui/pixel-avatar.test.ts          renamed the default-user-avatar test.
-  scripts/build-ansi-avatar-assets.ts  +soul and +5 new tool eyes in the ANSI build list.
-  design/avatars.md                    matched floating-orb art direction.
-  extensions/brand.ts                  mount the animated ThinkingWidget on before_agent_start / remove on agent_end.
-
-AFTER EXTRACT:
-  Validate:  npm run build:tokens -- --check && npm run typecheck && npm run test
-  Rebuild ANSI after any art edit:  node scripts/build-ansi-avatar-assets.ts
-  "mage-alien" kept as an unused fallback sheet (optional cleanup).
+VALIDATE:
+  npm run typecheck && npm test
+  npm run review:avatars

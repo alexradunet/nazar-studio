@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { getCellDimensions, resetCapabilitiesCache, setCapabilities, setCellDimensions } from "@earendil-works/pi-tui";
 import { visibleWidth } from "./ansi.ts";
-import { setGraphicsQuality } from "./graphics-state.ts";
+import { setUiQuality, uiRenderer } from "./graphics-state.ts";
 import {
   avatarPixelAspect,
   renderAnsiAvatarFrame,
@@ -22,8 +22,7 @@ const originalAvatarAspect = process.env.NAZAR_AVATAR_ASPECT;
 const originalCellWidth = process.env.NAZAR_CELL_WIDTH_PX;
 const originalCellHeight = process.env.NAZAR_CELL_HEIGHT_PX;
 const originalToolRows = process.env.NAZAR_TOOL_ROWS;
-const originalAnsiDetail = process.env.NAZAR_ANSI_DETAIL;
-const originalGraphicsProtocol = process.env.NAZAR_GRAPHICS_PROTOCOL;
+const originalUiQuality = process.env.NAZAR_UI_QUALITY;
 const originalTerm = process.env.TERM;
 const originalKittyWindowId = process.env.KITTY_WINDOW_ID;
 const originalTmux = process.env.TMUX;
@@ -42,15 +41,14 @@ beforeEach(() => {
   delete process.env.NAZAR_CELL_WIDTH_PX;
   delete process.env.NAZAR_CELL_HEIGHT_PX;
   delete process.env.NAZAR_TOOL_ROWS;
-  delete process.env.NAZAR_ANSI_DETAIL;
-  delete process.env.NAZAR_GRAPHICS_PROTOCOL;
+  delete process.env.NAZAR_UI_QUALITY;
   process.env.TERM = "xterm-256color";
   delete process.env.KITTY_WINDOW_ID;
   delete process.env.TMUX;
   delete process.env.ZELLIJ;
   delete process.env.STY;
   setCellDimensions({ widthPx: 9, heightPx: 18 });
-  setGraphicsQuality(undefined);
+  setUiQuality(undefined);
   setCapabilities({ images: null, trueColor: true, hyperlinks: false });
 });
 
@@ -62,14 +60,13 @@ afterEach(() => {
   restoreEnv("NAZAR_CELL_WIDTH_PX", originalCellWidth);
   restoreEnv("NAZAR_CELL_HEIGHT_PX", originalCellHeight);
   restoreEnv("NAZAR_TOOL_ROWS", originalToolRows);
-  restoreEnv("NAZAR_ANSI_DETAIL", originalAnsiDetail);
-  restoreEnv("NAZAR_GRAPHICS_PROTOCOL", originalGraphicsProtocol);
+  restoreEnv("NAZAR_UI_QUALITY", originalUiQuality);
   restoreEnv("TERM", originalTerm);
   restoreEnv("KITTY_WINDOW_ID", originalKittyWindowId);
   restoreEnv("TMUX", originalTmux);
   restoreEnv("ZELLIJ", originalZellij);
   restoreEnv("STY", originalSty);
-  setGraphicsQuality(undefined);
+  setUiQuality(undefined);
 });
 
 test("role avatars render generated ANSI art", () => {
@@ -77,8 +74,8 @@ test("role avatars render generated ANSI art", () => {
   const nazar = renderAnsiAvatarFrame("nazar");
   expect(nazar).toHaveLength(9);
   expect(nazar.map((line) => visibleWidth(line))).toEqual([19, 19, 19, 19, 19, 19, 19, 19, 19]);
-  expect(nazar.join("\n")).toContain("\x1b[48;2;");
-  expect(renderAnsiAvatarFrame("user").join("\n")).toContain("\x1b[48;2;");
+  expect(nazar.join("\n")).toContain(";48;2;");
+  expect(renderAnsiAvatarFrame("user").join("\n")).toContain(";48;2;");
 });
 
 test("ANSI animations expose stable wrapping frames", () => {
@@ -127,12 +124,12 @@ test("renderer always uses ANSI character art (Kitty removed)", () => {
 test("default user avatar renders the soul sheet as ANSI", () => {
   const avatar = renderRoleAvatar("user")!;
   expect(avatar.backend).toBe("ansi");
-  expect(avatar.lines.map((l) => l.text).join("\n")).toContain("\x1b[48;2;");
+  expect(avatar.lines.map((l) => l.text).join("\n")).toContain(";48;2;");
 });
 
-test("graphics quality never re-enables an image protocol", () => {
-  for (const quality of ["basic", "hd"] as const) {
-    setGraphicsQuality(quality);
+test("UI quality never re-enables an image protocol", () => {
+  for (const quality of ["low", "medium", "high"] as const) {
+    setUiQuality(quality);
     setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
     const avatar = renderRoleAvatar("nazar")!;
     expect(avatar.backend).toBe("ansi");
@@ -147,17 +144,19 @@ test("explicit ANSI option ignores image capabilities", () => {
   expect(avatar.lines[0]?.text).not.toContain("\x1b_G");
 });
 
-test("NAZAR_ANSI_DETAIL=block uses the half-block fallback", () => {
-  process.env.NAZAR_ANSI_DETAIL = "block";
+test("NAZAR_UI_QUALITY=low uses the half-block renderer", () => {
+  process.env.NAZAR_UI_QUALITY = "low";
   const frame = renderAnsiAvatarFrame("nazar");
+  expect(uiRenderer()).toBe("half-block");
   expect(frame.join("\n")).toContain("▀");
 });
 
-test("default detail renders octant mosaics in truecolor", () => {
-  delete process.env.NAZAR_ANSI_DETAIL;
+test("default UI quality renders sextant mosaics in truecolor", () => {
+  delete process.env.NAZAR_UI_QUALITY;
   const frame = renderAnsiAvatarFrame("nazar").join("\n");
+  expect(uiRenderer()).toBe("sextant");
   expect(frame).toContain("\x1b[38;2;"); // per-cell fg truecolor
-  expect(frame).toContain("\x1b[48;2;"); // per-cell bg truecolor
+  expect(frame).toContain(";48;2;"); // per-cell bg truecolor
 });
 
 test("tool avatars are full-size generated ANSI icons matching role-avatar dimensions", () => {
@@ -169,12 +168,12 @@ test("tool avatars are full-size generated ANSI icons matching role-avatar dimen
   expect(ansiRows).toBeGreaterThanOrEqual(5);
   const widths = read.map((line) => visibleWidth(line));
   expect(new Set(widths).size).toBe(1); // all rows the same width
-  expect(read.join("\n")).toContain("\x1b[48;2;");
+  expect(read.join("\n")).toContain(";48;2;");
 
   const bash = renderToolAvatar("bash", "pending", 0, '{"command":"git status"}');
   expect(bash).toHaveLength(ansiRows);
   expect(bash.map((line) => visibleWidth(line))).toEqual(widths);
-  expect(bash.join("\n")).toContain("\x1b[48;2;");
+  expect(bash.join("\n")).toContain(";48;2;");
   // Globe-on-pedestal sprites share the same half-block silhouette at 8×6 cells;
   // visual distinction is preserved through colour (the full coloured output differs).
   expect(bash.join("\n")).not.toEqual(read.join("\n"));

@@ -26,8 +26,8 @@ Nazar follows the design philosophy of Pi (the minimal terminal coding agent by 
 
 ## Architecture patterns
 
-- **Terminal avatar identity is ANSI/Chafa-only.** Nazar's daily terminal UI uses one portable avatar backend: pre-rendered Chafa truecolor ANSI from canonical PNG sprite sheets, with the internal ANSI half-block renderer only as a fallback. Do not add terminal-specific image-protocol avatar backends or hand-maintained ANSI art.
-- **27×13 cells is the canonical avatar review target.** Design and judge role/tool avatars at 27 columns × 13 rows (`NAZAR_AVATAR_ROWS=13`, the default). Keep source art as 3×3, 9-frame PNG sheets with 256×256 frames; regenerate `assets/avatars/chafa-cache.json` from those sources instead of editing cache output.
+- **Terminal avatar identity is native ANSI-only.** Nazar's daily terminal UI uses one portable renderer fed by canonical PNG sprite sheets: `low` = half-block, `medium` = sextant, `high` = octant. Do not add terminal-specific image-protocol backends, runtime graphics dependencies, cache builders, or hand-maintained terminal art.
+- **23×11 cells is the default avatar review target.** Design and judge role/tool avatars at 23 columns × 11 rows (`NAZAR_AVATAR_ROWS=11`, the default). Keep source art as 3×3, 9-frame PNG sheets with 256×256 frames; review generated ANSI with `npm run review:avatars` instead of editing renderer output.
 - **Focused extension entry points.** Extension files live in `extensions/*.ts`. Keep them focused on Pi registration and orchestration; move reusable or testable logic into `lib/*.ts` and `lib/ui/*.ts`.
 - **Small, single-purpose modules.** Split features into modules such as `paths.ts`, `provider.ts`, `sqlite.ts`, `memory.ts`, or UI render helpers. Pure/format/parse helpers belong in `lib/` so they are unit-testable without Pi or I/O. Treat a module past ~500 lines as a smell to decompose, not extend.
 - **Shared helpers live in `lib/`.** Reuse `lib/paths.ts`, `lib/provider.ts`, `lib/sqlite.ts`, and `lib/ui/*` instead of re-implementing path resolution, provider probing, SQLite loading, or UI rendering per extension.

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Verify the new default: 23x11 octant. Heroes big + a tool sampler."""
+"""Verify the default: 23x11 sextant. Heroes big + a tool sampler."""
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from ansi_render import over
-WV=np.array([0.299,0.587,0.114]); COLS=23; ROWS=11; SCX,SCY=2,4
+WV=np.array([0.299,0.587,0.114]); COLS=23; ROWS=11; SCX,SCY=2,3
 def quant(comp, cw, ch):
     subW,subH=COLS*SCX,ROWS*SCY
     a=np.array(comp.resize((subW,subH),Image.LANCZOS)).astype(float)
@@ -36,7 +36,7 @@ W=max(pad+len(heroes)*(htw+pad), pad+cols_t*(ttw+pad))
 rows_t=(len(tools)+cols_t-1)//cols_t
 H=30+ (hth+lblh+pad) + 24 + rows_t*(tth+lblh+pad)
 out=Image.new("RGB",(W,H),(8,9,12)); d=ImageDraw.Draw(out)
-d.text((pad,8),"DEFAULT = 23x11 OCTANT — heroes + tool sampler",fill=(150,235,205),font=font(17))
+d.text((pad,8),"DEFAULT = 23x11 SEXTANT — heroes + tool sampler",fill=(150,235,205),font=font(17))
 for i,(n,t) in enumerate(hero_tiles):
     x=pad+i*(htw+pad); d.text((x,30),n,fill=(255,210,150),font=font(14)); out.paste(t,(x,30+lblh))
 ty0=30+lblh+hth+pad+8

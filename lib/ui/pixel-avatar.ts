@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// PNG sprite-sheet avatars for Nazar's terminal UI graphics backends.
+// PNG sprite-sheet avatars for Nazar's terminal ANSI renderer.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { inflateSync } from "node:zlib";
 import { getCellDimensions, setCellDimensions, type CellDimensions } from "@earendil-works/pi-tui";
 import { visibleWidth } from "./ansi.ts";
 import { truecolorBg, truecolorFg, type GraphicsProtocolBackend } from "./graphics-protocol.ts";
+import { uiRenderer } from "./graphics-state.ts";
 import { renderMosaic, type MosaicMode } from "./sextant.ts";
 import { type SpriteRole } from "./sprites.ts";
 import { AVATAR_FIELDS as BACKGROUNDS } from "./tokens.ts";
@@ -14,10 +15,8 @@ import { moduleDir } from "../paths.ts";
 const RESET = "\x1b[0m";
 const BG_RESET = "\x1b[49m";
 
-const ANSI_AVATAR_FRAME = { width: 16, height: 14 } as const;
-const ANSI_TOOL_FRAME = { width: 8, height: 6 } as const;
 // Source sheets are 768×768 RGBA (3×3 grid, 256px stride, transparent bg).
-// The Kitty/HD backend slices frames directly from these high-res sheets.
+// The ANSI renderer samples frames directly from these high-res sheets.
 const SOURCE_FRAME = { width: 256, height: 256 } as const;
 const SHEET_COLUMNS = 3;
 const AVATAR_FRAME_COUNT = 9;
@@ -26,13 +25,11 @@ const AVATAR_FRAME_COUNT = 9;
 // so columns are derived from the live cell aspect ratio to keep the 64×64
 // sprite square in pixel terms and flush inside the avatar box.
 // Default ANSI-mosaic avatar height. 11 rows ≈ 23×11 cells — the daily identity
-// size (octant holds the soul's face cleanly here while staying compact);
+// size (sextant stays legible across common terminal fonts while compact);
 // 9 = compact, 17 = showcase. Override via NAZAR_AVATAR_ROWS (clamped 6–20).
 const DEFAULT_AVATAR_ROWS = 11;
 
 const AVATAR_ASSET_DIR = join(moduleDir(import.meta.url), "..", "..", "assets", "avatars");
-const ANSI_ASSET_DIR = join(AVATAR_ASSET_DIR, "ansi");
-const ANSI_TOOL_ASSET_DIR = join(ANSI_ASSET_DIR, "tools");
 
 const TOOL_KINDS = [
   // core file/code operations
@@ -198,11 +195,6 @@ export type RenderedAvatar = {
 
 const CHARACTER_SHEETS: CharacterSheetKey[] = ["mage-alien", "nazar", "nazar-expr", "soul"];
 
-const SHEET_ASSETS = Object.fromEntries([
-  ...CHARACTER_SHEETS.map((k) => [k, { path: join(ANSI_ASSET_DIR, `${k}.png`), frame: ANSI_AVATAR_FRAME }]),
-  ...TOOL_KINDS.map((kind) => [`tool:${kind}`, { path: join(ANSI_TOOL_ASSET_DIR, `eye-${KIND_TO_EYE[kind]}.png`), frame: ANSI_TOOL_FRAME }]),
-] as [SheetKey, SheetAsset][]) as Record<SheetKey, SheetAsset>;
-
 const SOURCE_SHEET_ASSETS = Object.fromEntries([
   ...CHARACTER_SHEETS.map((k) => [k, { path: join(AVATAR_ASSET_DIR, `${k}.png`), frame: SOURCE_FRAME }]),
   ...TOOL_KINDS.map((kind) => [`tool:${kind}`, { path: join(AVATAR_ASSET_DIR, "tools", `eye-${KIND_TO_EYE[kind]}.png`), frame: SOURCE_FRAME }]),
@@ -328,11 +320,11 @@ function decodePngRgba(path: string): PngImage {
   return { width, height, pixels: rgba };
 }
 
-function sheetAsset(key: SheetKey, assets: Record<SheetKey, SheetAsset> = SHEET_ASSETS): SheetAsset {
+function sheetAsset(key: SheetKey, assets: Record<SheetKey, SheetAsset> = SOURCE_SHEET_ASSETS): SheetAsset {
   return assets[key];
 }
 
-function sheet(key: SheetKey, assets: Record<SheetKey, SheetAsset> = SHEET_ASSETS): PngImage {
+function sheet(key: SheetKey, assets: Record<SheetKey, SheetAsset> = SOURCE_SHEET_ASSETS): PngImage {
   const asset = sheetAsset(key, assets);
   const cached = sheetCache.get(asset.path);
   if (cached) return cached;
@@ -375,7 +367,7 @@ function frameSource(id: string): FrameSource {
   throw new Error(`Unknown avatar frame: ${sourceId}`);
 }
 
-function frameFor(id: string, assets: Record<SheetKey, SheetAsset> = SHEET_ASSETS): AvatarFrame {
+function frameFor(id: string, assets: Record<SheetKey, SheetAsset> = SOURCE_SHEET_ASSETS): AvatarFrame {
   const source = frameSource(id);
   const asset = sheetAsset(source.sheet, assets);
   const cacheKey = `${asset.path}:${source.index}`;
@@ -616,21 +608,17 @@ function toolRows(): number {
 const mosaicMemo = new Map<string, string[]>();
 
 function ansiDetail(): "octant" | "sextant" | "block" {
-  // octant = 2×4 (Unicode 16, highest fidelity, needs a recent font / kitty);
-  // sextant = 2×3 (Unicode 13, broad support) is the safe default;
-  // block = half-block (▀) fallback for terminals lacking mosaic glyphs.
-  const raw = (process.env.NAZAR_ANSI_DETAIL || "").trim().toLowerCase();
-  if (raw === "block" || raw === "half" || raw === "half-block") return "block";
-  if (raw === "sextant") return "sextant";
-  return "octant"; // default: highest fidelity (kitty renders octants built-in)
+  const renderer = uiRenderer();
+  if (renderer === "half-block") return "block";
+  return renderer;
 }
 
 function ansiAvatar(frameId: string, rows = avatarRows()): RenderedAvatar {
   const background = backgroundForFrame(frameId);
   const columns = avatarColumns(rows);
   // Render the 768² master directly as native mosaic ANSI — crisp,
-  // dependency-free, no Kitty, no separate low-res asset set.
-  const frame = frameFor(frameId, SOURCE_SHEET_ASSETS);
+  // dependency-free, no image protocol, no separate low-res asset set.
+  const frame = frameFor(frameId);
   const detail = ansiDetail();
   let textLines: string[];
   if (detail === "block") {
@@ -855,7 +843,7 @@ export function renderToolPixelAvatar(
   options: RenderAvatarOptions = {},
 ): RenderedAvatar | undefined {
   const effectiveFrame = status === "running" ? frameIndex : 0;
-  return renderFrameAvatar(toolFrameId(toolName, status, hintText, effectiveFrame), { ...options, rows: toolRows() });
+  return renderFrameAvatar(toolFrameId(toolName, status, hintText, effectiveFrame), { ...options, rows: options.rows ?? toolRows() });
 }
 
 export function renderToolAvatar(

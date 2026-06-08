@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reusable faithful Chafa-style renderers (half-block 1x2 + sextant 2x3, TRUECOLOR)
+"""Reusable ANSI renderers (half-block 1x2 + sextant 2x3, TRUECOLOR)
 plus frame-fill normalization. Used to QA no-orb masters at terminal cell sizes."""
 import numpy as np
 from PIL import Image
