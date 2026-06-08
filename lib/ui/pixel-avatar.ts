@@ -116,7 +116,7 @@ type ToolAvatarKind = typeof TOOL_KINDS[number];
 // The distinct "eye" sprites Nazar can show. Many tool kinds share one eye, so
 // the tool sheets are deduped to these ~22 files (loaded once, keyed by path).
 type EyeKind =
-  | "read" | "write" | "edit" | "search" | "bash" | "files" | "grep" | "browser" | "deploy"
+  | "read" | "write" | "edit" | "search" | "bash" | "files" | "grep" | "browser"
   | "memory" | "skill" | "health" | "journal" | "gym" | "calendar" | "mail" | "music" | "time"
   | "terminal" | "rocket" | "gear" | "idle"
   | "money" | "sports" | "diet" | "sleep" | "mind"
@@ -126,7 +126,7 @@ type EyeKind =
   | "phone" | "video" | "chat" | "contacts" | "mic" | "bell"
   | "share" | "drive" | "card" | "map" | "media" | "docs";
 const EYE_KINDS: readonly EyeKind[] = [
-  "read", "write", "edit", "search", "bash", "files", "grep", "browser", "deploy",
+  "read", "write", "edit", "search", "bash", "files", "grep", "browser",
   "memory", "skill", "health", "journal", "gym", "calendar", "mail", "music", "time",
   "terminal", "rocket", "gear", "idle",
   "money", "sports", "diet", "sleep", "mind",
@@ -156,7 +156,7 @@ const KIND_TO_EYE: Record<ToolAvatarKind, EyeKind> = {
   share: "share", drive: "drive", card: "card", media: "media", docs: "docs",
 };
 
-type CharacterSheetKey = "mage-alien" | "nazar" | "nazar-expr" | "soul";
+type CharacterSheetKey = "nazar" | "nazar-expr" | "soul";
 type ToolSheetKey = `tool:${ToolAvatarKind}`;
 type SheetKey = CharacterSheetKey | ToolSheetKey;
 type FrameGeometry = { width: number; height: number };
@@ -193,7 +193,7 @@ export type RenderedAvatar = {
   background?: AvatarBackground;
 };
 
-const CHARACTER_SHEETS: CharacterSheetKey[] = ["mage-alien", "nazar", "nazar-expr", "soul"];
+const CHARACTER_SHEETS: CharacterSheetKey[] = ["nazar", "nazar-expr", "soul"];
 
 const SOURCE_SHEET_ASSETS = Object.fromEntries([
   ...CHARACTER_SHEETS.map((k) => [k, { path: join(AVATAR_ASSET_DIR, `${k}.png`), frame: SOURCE_FRAME }]),
