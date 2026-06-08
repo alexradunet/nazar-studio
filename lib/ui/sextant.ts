@@ -27,21 +27,46 @@ const SEXTANT_GLYPHS: string[] = (() => {
   return tbl;
 })();
 
-// OCTANT (2×4): the 16 patterns expressible at 2×2 "quadrant" resolution reuse the
-// existing quadrant/half/full glyphs; the other 240 are U+1CD00 + sequential index.
-// NOTE: verify the 0x1CD00 base against your Unicode 16 font if octant glyphs
-// look shifted — it is isolated to this one constant.
+// OCTANT (2×4): Unicode 16 did not encode all 256 patterns contiguously.
+// U+1CD00 starts at BLOCK OCTANT-3; 26 patterns reuse older/new companion block
+// glyphs (space/full/halves/quadrants/quarters). Source: official Unicode 16
+// names from UnicodeData.txt and the U1CC00 chart.
 const OCTANT_BASE = 0x1cd00;
-const QUAD = [" ", "▘", "▝", "▀", "▖", "▌", "▞", "▛", "▗", "▚", "▐", "▜", "▄", "▙", "▟", "█"];
+const OCTANT_SPECIAL: Record<number, string> = {
+  0: " ",
+  1: "\u{1cea8}", // LEFT HALF UPPER ONE QUARTER BLOCK
+  2: "\u{1ceab}", // RIGHT HALF UPPER ONE QUARTER BLOCK
+  3: "\u{1fb82}", // UPPER ONE QUARTER BLOCK
+  5: "▘",
+  10: "▝",
+  15: "▀",
+  20: "\u{1fbe6}", // MIDDLE LEFT ONE QUARTER BLOCK
+  40: "\u{1fbe7}", // MIDDLE RIGHT ONE QUARTER BLOCK
+  63: "\u{1fb85}", // UPPER THREE QUARTERS BLOCK
+  64: "\u{1cea3}", // LEFT HALF LOWER ONE QUARTER BLOCK
+  80: "▖",
+  85: "▌",
+  90: "▞",
+  95: "▛",
+  128: "\u{1cea0}", // RIGHT HALF LOWER ONE QUARTER BLOCK
+  160: "▗",
+  165: "▚",
+  170: "▐",
+  175: "▜",
+  192: "▂",
+  240: "▄",
+  245: "▙",
+  250: "▟",
+  252: "▆",
+  255: "█",
+};
 const OCTANT_GLYPHS: string[] = (() => {
-  const bit = (v: number, k: number) => (v >> k) & 1;
-  const tbl: string[] = []; let n = 0;
-  for (let v = 0; v < 256; v++) {
-    const rep = bit(v, 0) === bit(v, 2) && bit(v, 1) === bit(v, 3) && bit(v, 4) === bit(v, 6) && bit(v, 5) === bit(v, 7);
-    if (rep) {
-      const q = bit(v, 0) | (bit(v, 1) << 1) | (bit(v, 4) << 2) | (bit(v, 5) << 3);
-      tbl[v] = QUAD[q]!;
-    } else { tbl[v] = String.fromCodePoint(OCTANT_BASE + n); n++; }
+  const tbl: string[] = [];
+  let cp = OCTANT_BASE;
+  for (let pattern = 0; pattern < 256; pattern++) {
+    const special = OCTANT_SPECIAL[pattern];
+    if (special !== undefined) tbl[pattern] = special;
+    else tbl[pattern] = String.fromCodePoint(cp++);
   }
   return tbl;
 })();

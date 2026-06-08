@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 export const IOSEVKA_FONT_FAMILY = "Iosevka Term";
 export const IOSEVKA_URL = "https://github.com/be5invis/Iosevka";
-export const OCTANT_RANGE = "U+1CD00-U+1CDEF";
+export const OCTANT_RANGE = "U+1CC00-U+1CEBF,U+1FB00-U+1FBFF";
 
 export type TerminalKind = "kitty" | "unknown";
 
@@ -60,7 +60,8 @@ function setOctantSymbolMap(lines: string[], fontFamily: string): boolean {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? "";
     if (isComment(line) || !directivePattern("symbol_map").test(line)) continue;
-    if (!line.toUpperCase().includes("1CD00")) continue;
+    const upper = line.toUpperCase();
+    if (!upper.includes("1CD00") && !upper.includes("1CC00")) continue;
     if (line === next) return false;
     lines[i] = next;
     return true;

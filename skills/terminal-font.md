@@ -68,7 +68,7 @@ It should add or update:
 
 ```conf
 font_family Iosevka Term
-symbol_map U+1CD00-U+1CDEF Iosevka Term
+symbol_map U+1CC00-U+1CEBF,U+1FB00-U+1FBFF Iosevka Term
 ```
 
 Then restart Kitty or reload its config, run the octant glyph test again, and switch:
@@ -82,7 +82,7 @@ Then restart Kitty or reload its config, run the octant glyph test again, and sw
 Do not guess hidden config formats. Give manual instructions:
 
 1. Set the terminal font family to `Iosevka Term`.
-2. If the terminal has symbol fallback maps, map `U+1CD00-U+1CDEF` to Iosevka.
+2. If the terminal has symbol fallback maps, map `U+1CC00-U+1CEBF,U+1FB00-U+1FBFF` to Iosevka so the octant set and its companion block glyphs use the same font.
 3. Restart/reload the terminal.
 4. Run the octant glyph test.
 5. Use `/nazar-ui high` only after the test is clean; otherwise stay on `/nazar-ui medium`.

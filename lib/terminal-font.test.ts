@@ -24,14 +24,14 @@ test("upsertKittyFontConfig creates Nazar font directives", () => {
   const result = upsertKittyFontConfig("include theme.conf\n");
   expect(result.changed).toBe(true);
   expect(result.content).toContain("font_family Iosevka Term");
-  expect(result.content).toContain("symbol_map U+1CD00-U+1CDEF Iosevka Term");
+  expect(result.content).toContain("symbol_map U+1CC00-U+1CEBF,U+1FB00-U+1FBFF Iosevka Term");
 });
 
 test("upsertKittyFontConfig replaces existing active directives but preserves comments", () => {
   const result = upsertKittyFontConfig("# font_family Hack\nfont_family Hack\nsymbol_map U+1CD00-U+1CDEF Hack\n");
   expect(result.content).toContain("# font_family Hack");
   expect(result.content).toContain("font_family Iosevka Term");
-  expect(result.content).toContain("symbol_map U+1CD00-U+1CDEF Iosevka Term");
+  expect(result.content).toContain("symbol_map U+1CC00-U+1CEBF,U+1FB00-U+1FBFF Iosevka Term");
 });
 
 test("octantGlyphTestCommand prints Unicode escapes", () => {
