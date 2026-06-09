@@ -12,9 +12,10 @@
  *              name/description). Pi discovers, injects, and invokes them (/skill:name), so
  *              skill_write just writes the file — there is nothing to index. See SELF_EVOLUTION.md.
  *
- * On local/private models only, the extension injects relevant saved memory into the turn's
- * system prompt. It deliberately skips auto-recall on frontier models to avoid moving private
- * memory off the box without an explicit choice.
+ * The extension injects relevant saved memory into the turn's system prompt on EVERY turn, for
+ * all models. On a frontier/cloud model this sends recalled memory to that provider, so keep
+ * secrets out of memory (redact before persisting). Recall is owner-enabled for all models by
+ * design — see AGENTS.md; flipping it back to local-only is a deliberate privacy choice.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
@@ -35,11 +36,6 @@ function slugifySkill(s: string): string {
     .slice(0, 64).replace(/^-|-$/g, "") || "skill";
 }
 
-function isLocalModel(model: any): boolean {
-  const baseUrl = String(model?.baseUrl || "");
-  return /^(https?:\/\/)?(127\.0\.0\.1|localhost)(:|\/|$)/.test(baseUrl);
-}
-
 function log(pi: ExtensionAPI, message: string): void {
   (pi as unknown as { log?: (message: string) => void }).log?.(message);
 }
@@ -57,8 +53,9 @@ export default function (pi: ExtensionAPI) {
     try { ctx.ui.notify(prompt, "error"); } catch { /* ignore */ }
   });
 
-  pi.on("before_agent_start", (event, ctx) => {
-    if (!isLocalModel(ctx.model)) return;
+  pi.on("before_agent_start", (event) => {
+    // Recall fires on every turn for all models (owner decision). On frontier/cloud models this
+    // sends recalled memory to the provider — keep secrets out of memory. See AGENTS.md.
     const memory = recallContext(event.prompt);
     if (!memory) return;
     return { systemPrompt: `${event.systemPrompt}\n\n${memory}` };

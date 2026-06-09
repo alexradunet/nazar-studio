@@ -67,7 +67,7 @@ Nazar follows the design philosophy of Pi (the minimal terminal coding agent by 
 - `extensions/local-llm.ts` is the largest extension module; if it grows further, split provider detection/runtime setup into behavior-free `lib/*` helpers instead of mixing refactors with fixes.
 - `extensions/memory.ts` currently combines memory tools and `skill_write`; keep future changes surgical, or split only as a behavior-free refactor.
 - `memory_search` uses the dependency-free local Markdown source plus a disposable `node:sqlite` FTS5 accelerator; Markdown pages remain the source of truth.
-- The memory recall path auto-injects saved memory only for local/private models. Do not change that default without an explicit privacy review.
+- The memory recall path auto-injects saved memory on every turn, for all models (owner decision). On a frontier/cloud model this sends recalled memory to the provider — keep secrets out of memory (redact before persisting). Flipping it back to local-only is a deliberate privacy choice, not a default to change silently.
 - Node's built-in `node:sqlite` is required for the FTS5 index; maintain the Node 23.4+ minimum and prefer Node 24 LTS in docs.
 
 ## Safety
