@@ -253,3 +253,48 @@ test("skill_write refuses to overwrite an existing skill unless overwrite is set
   await write.execute("id", { name: "Guarded", description: "d", content: "third", overwrite: true });
   expect(readFileSync(path, "utf8")).toContain("third");
 });
+
+test("memory_suggest merges into a similar (different-title) note when chosen", async () => {
+  const { pi, tools } = fakePi();
+  memory(pi);
+  const write = tools.find((t) => t.name === "memory_write");
+  const suggest = tools.find((t) => t.name === "memory_suggest");
+  const get = tools.find((t) => t.name === "memory_get");
+  await write.execute("id", { title: "Deploy process", content: "deploy the app from the release branch", whenToUse: "when deploying" });
+  const { ctx, calls } = fakeCtx({ choice: (_t: string, o: string[]) => o[0] }); // first option = Merge
+  await suggest.execute("sug", { title: "Shipping the app", content: "always deploy from the release branch, never main" }, undefined, undefined, ctx);
+  expect(calls.select[0].title).toContain("Similar note exists");
+  const page = (await get.execute("id", { title: "Deploy process" })).content[0].text;
+  expect(page).toContain("release branch");
+  expect(page).toContain("never main");                 // merged in
+  expect(page).toContain('whenToUse: "when deploying"'); // existing frontmatter preserved
+  expect((await get.execute("id", { title: "Shipping the app" })).content[0].text).toContain("No page titled"); // no separate copy
+});
+
+test("memory_suggest can save a similar item as a separate note", async () => {
+  const { pi, tools } = fakePi();
+  memory(pi);
+  const write = tools.find((t) => t.name === "memory_write");
+  const suggest = tools.find((t) => t.name === "memory_suggest");
+  const get = tools.find((t) => t.name === "memory_get");
+  await write.execute("id", { title: "Deploy process", content: "deploy the app from the release branch" });
+  const { ctx } = fakeCtx({ choice: (_t: string, o: string[]) => o[1] }); // second option = Save as a new note
+  // NB: distinct content from the merge test — proposals must differ across tests because the
+  // session anti-nag set is module-scoped and would otherwise suppress an identical suggestion.
+  await suggest.execute("sug", { title: "Shipping the app", content: "ship from the release branch, not main (savenew-nonce)" }, undefined, undefined, ctx);
+  expect((await get.execute("id", { title: "Shipping the app" })).content[0].text).toContain("savenew-nonce");
+  expect((await get.execute("id", { title: "Deploy process" })).content[0].text).not.toContain("savenew-nonce");
+});
+
+test("memory_suggest shows the normal Save/Edit/Skip dialog for an unrelated fact", async () => {
+  const { pi, tools } = fakePi();
+  memory(pi);
+  const write = tools.find((t) => t.name === "memory_write");
+  const suggest = tools.find((t) => t.name === "memory_suggest");
+  const search = tools.find((t) => t.name === "memory_search");
+  await write.execute("id", { title: "Deploy process", content: "deploy the app from the release branch" });
+  const { ctx, calls } = fakeCtx({ choice: "Save" });
+  await suggest.execute("sug", { title: "Tea preference", content: "I drink oolong each morning, two cups" }, undefined, undefined, ctx);
+  expect(calls.select[0].options).toContain("Edit…");          // the fresh-save dialog, not dedupe
+  expect((await search.execute("id", { query: "oolong" })).details.hits.some((h: any) => h.title === "Tea preference")).toBe(true);
+});
