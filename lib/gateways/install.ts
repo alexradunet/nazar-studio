@@ -114,8 +114,8 @@ export function createGatewayController(pi: ExtensionAPI, deps: GatewayControlle
     void (async () => {
       const ascii = await renderQrAscii(qr);
       const text = `Link WhatsApp: open WhatsApp → Linked Devices → Link a device, then scan:\n\n${ascii}`;
-      if (ctxRef?.ui?.notify) ctxRef.ui.notify(text, "info");
-      else log(text);
+      log(text);
+      ctxRef?.ui?.notify?.(text, "info");
     })();
   };
 
