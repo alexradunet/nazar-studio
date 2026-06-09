@@ -42,7 +42,7 @@ pi remove npm:pi-nazar-studio
 
 | Resource | Source | How it loads |
 |---|---|---|
-| Extensions | `extensions/` | `pi` manifest (brand, terminal-font, personality, memory, vault, local-llm, avatar) |
+| Extensions | `extensions/` | `pi` manifest (brand, terminal-font, personality, memory, vault, local-llm) |
 | Skills | `skills/` | `pi` manifest (`/skill:name`) |
 | Theme | `themes/nazar.json` | `pi` manifest |
 | Persona + rules | `SYSTEM.md`, `AGENTS.md` | injected at `before_agent_start` by `extensions/personality.ts` |
