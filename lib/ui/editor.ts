@@ -13,7 +13,7 @@
 import { CustomEditor, type ExtensionAPI, type ExtensionContext, type KeybindingsManager } from "@earendil-works/pi-coding-agent";
 import { type EditorTheme, type TUI } from "@earendil-works/pi-tui";
 import { visibleWidth } from "./ansi.ts";
-import { rolePanelStyle, roleTitle } from "./avatars.ts";
+import { rolePanelStyle, roleTitle } from "./panel-presentation.ts";
 import {
   emptyAvatarLine,
   renderRoleAvatar,

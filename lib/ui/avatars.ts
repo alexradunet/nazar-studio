@@ -19,17 +19,13 @@ import {
   trimOuterBlankLines,
 } from "./turn-composer.ts";
 import {
-  emptyAvatarLine,
   renderNazarExpression,
   renderRoleAvatar,
   renderToolPixelAvatar,
-  type AvatarBackground,
-  type RenderedAvatar,
 } from "./pixel-avatar.ts";
 import { NAZAR_MOOD_FRAME, nazarMoodFrame } from "./nazar-mood.ts";
-import { AVATAR_FIELDS } from "./tokens.ts";
-import { panelStyle, type PanelState, type PanelStyle } from "./panel-style.ts";
-import { roleNameplate, type SpriteRole } from "./sprites.ts";
+import { panelStyle } from "./panel-style.ts";
+import { type SpriteRole } from "./sprites.ts";
 import { nazarMarkdownTheme } from "./markdown-theme.ts";
 import { renderChapterDivider } from "./divider.ts";
 import { uiQuality } from "./graphics-state.ts";
@@ -42,6 +38,24 @@ import type {
   SymbolBag,
   ToolComponentLike,
 } from "./pi-surface.ts";
+import { cachedPanelRender, clearPanelRenderCache } from "./panel-cache.ts";
+import {
+  badgeCell,
+  portraitCell,
+  roleBackground,
+  roleMessagePanelKey,
+  roleMeta,
+  rolePanelStyle,
+  roleTitle,
+  safeToolHint,
+  stablePanelKey,
+  toolMeta,
+  toolStatus,
+  toolStatusBackground,
+  toolStyle,
+  toolTitle,
+  type ToolStatus,
+} from "./panel-presentation.ts";
 
 // Pi's original prototype render/update methods, stashed before we patch them.
 type PiRender = (this: object, width: number) => string[];
@@ -70,13 +84,6 @@ const PANEL_KEY_SEQUENCE = new Map<string, number>();
 let panelSequenceCounter = 0;
 let refreshScheduled = false;
 
-const PANEL_RENDER_CACHE = Symbol.for("nazar.panelRenderCache");
-
-type PanelRenderCache = {
-  key: string;
-  lines: string[];
-};
-
 function panelRenderEnvKey(): string {
   return [
     uiQuality(),
@@ -90,31 +97,6 @@ function panelRenderEnvKey(): string {
 
 function panelRenderCacheKey(kind: string, width: number, state: string): string {
   return [kind, width, panelSequenceCounter, panelRenderEnvKey(), state].join("\0");
-}
-
-function clearPanelRenderCache(owner: unknown): void {
-  if ((typeof owner !== "object" && typeof owner !== "function") || owner === null) return;
-  delete (owner as SymbolBag)[PANEL_RENDER_CACHE];
-}
-
-function cachedPanelRender(
-  owner: unknown,
-  kind: string,
-  width: number,
-  state: string,
-  render: () => string[],
-): string[] {
-  if ((typeof owner !== "object" && typeof owner !== "function") || owner === null) return render();
-  const beforeKey = panelRenderCacheKey(kind, width, state);
-  const cache = (owner as SymbolBag)[PANEL_RENDER_CACHE] as PanelRenderCache | undefined;
-  if (cache?.key === beforeKey) return cache.lines;
-
-  const lines = render();
-  (owner as SymbolBag)[PANEL_RENDER_CACHE] = {
-    key: panelRenderCacheKey(kind, width, state),
-    lines,
-  };
-  return lines;
 }
 
 // The assistant message currently being generated in the live agent turn.
@@ -133,8 +115,6 @@ export function settleActiveAssistantAvatar(): void {
   activeAssistantComponent = null;
   assistantAvatarLive = false;
 }
-
-type ToolStatus = "pending" | "running" | "ok" | "error";
 
 // ── Recent-avatar perf cap ─────────────────────────────────────────────────
 
@@ -205,30 +185,6 @@ export function shouldUseRichAvatar(owner: unknown, active = false, stableKey?: 
   return sequence >= panelSequenceCounter - limit;
 }
 
-// ── Avatar cells ───────────────────────────────────────────────────────────
-
-function portraitCell(portrait: RenderedAvatar): AvatarCell {
-  return {
-    height: portrait.height,
-    width: portrait.width,
-    background: portrait.background,
-    content(index) { return portrait.lines[index] ?? emptyAvatarLine(portrait.background); },
-  };
-}
-
-function badgeCell(background: AvatarBackground, glyph = "◆"): AvatarCell {
-  return {
-    height: 1,
-    width: 3,
-    background,
-    content(index) { return index === 0 ? { text: ` ${glyph} `, background } : emptyAvatarLine(background); },
-  };
-}
-
-function roleBackground(role: SpriteRole): AvatarBackground {
-  return role === "user" ? AVATAR_FIELDS.user : AVATAR_FIELDS.nazar;
-}
-
 function activateAssistantAvatar(owner: unknown, previousMessage: unknown, message: unknown): void {
   if (!assistantAvatarLive) return;
   // Pi invalidates old AssistantMessageComponents by calling updateContent()
@@ -250,52 +206,6 @@ function avatarCell(owner: unknown, role: SpriteRole, active = false, stableKey?
 
 function shouldDecorateRolePanel(owner: unknown, role: "user" | "assistant", active = false, renderedLines?: string[]): boolean {
   return shouldUseRichAvatar(owner, active, stablePanelKey(owner, role, renderedLines));
-}
-
-// ── Stable identity key for rich-avatar limit ──────────────────────────────
-
-function stableHash(value: string): string {
-  let hash = 2166136261;
-  for (let i = 0; i < value.length; i++) { hash ^= value.charCodeAt(i); hash = Math.imul(hash, 16777619); }
-  return (hash >>> 0).toString(36);
-}
-
-function userComponentText(owner: unknown): string | undefined {
-  const markdown = (owner as RenderOwnerLike).contentBox?.children?.[0];
-  return typeof markdown?.text === "string" ? markdown.text : undefined;
-}
-
-function messageText(message: RenderableMessage): string | undefined {
-  if (typeof message?.content === "string") return message.content;
-  if (typeof message?.text === "string") return message.text;
-  if (Array.isArray(message?.content)) {
-    const text = message.content
-      .filter((part) => part?.type === "text" && typeof part.text === "string")
-      .map((part) => part.text)
-      .join("\n");
-    return text || undefined;
-  }
-  return undefined;
-}
-
-function roleMessagePanelKey(role: "user" | "assistant", message: RenderableMessage): string | undefined {
-  if (role === "user") {
-    const text = messageText(message);
-    return text !== undefined ? `${role}:${stableHash(text)}` : undefined;
-  }
-  return `${role}:${stableHash(JSON.stringify(message))}`;
-}
-
-function stablePanelKey(owner: unknown, role: string, renderedLines?: string[]): string | undefined {
-  const host = owner as RenderOwnerLike;
-  if (role === "user") {
-    const text = userComponentText(owner);
-    if (text !== undefined) return `${role}:${stableHash(text)}`;
-  }
-  if (role === "assistant" && host?.lastMessage) return roleMessagePanelKey("assistant", host.lastMessage);
-  if (role === "tool" && host?.toolCallId) return `${role}:${String(host.toolCallId)}`;
-  if (renderedLines && renderedLines.length > 0) return `${role}:${stableHash(renderedLines.join("\n"))}`;
-  return undefined;
 }
 
 export function seedAvatarPanelOrderFromSessionEntries(entries: readonly unknown[]): void {
@@ -327,132 +237,6 @@ export function seedAvatarPanelOrderFromSessionEntries(entries: readonly unknown
 function roleAvatarCell(owner: unknown, role: "user" | "assistant", renderedLines?: string[]): AvatarCell {
   if (role === "user") return avatarCell(owner, "user", false, stablePanelKey(owner, "user", renderedLines));
   return avatarCell(owner, "nazar", false, stablePanelKey(owner, "assistant", renderedLines));
-}
-
-// ── Role/tool styling helpers ──────────────────────────────────────────────
-
-const BOLD_ON = "\x1b[1m";
-const BOLD_OFF = "\x1b[22m";
-
-/** Map a sprite role to its canonical panel style — exported so the editor
- * can match the user-message panel exactly (same hue, same plaque). */
-export function rolePanelStyle(role: SpriteRole): PanelStyle {
-  return panelStyle(role === "user" ? "user" : "assistant");
-}
-
-/** Per-role icon glyph used in the nameplate band. */
-function roleIcon(role: SpriteRole): string {
-  return role === "user" ? "⛨" : "✦";
-}
-
-/** Per-role descriptor shown after the title (e.g. "the oracle"). */
-function roleDescriptor(role: SpriteRole): string {
-  return role === "user" ? "you" : "the oracle";
-}
-
-/**
- * Format the nameplate title: `<icon> NAME · descriptor`.
- * NAME is bold in the role title colour; descriptor is muted.
- * Exported so the input editor can render an IDENTICAL title to the
- * submitted user-message panel below it — visual continuity through submit.
- */
-export function roleTitle(role: SpriteRole): string {
-  const style = rolePanelStyle(role);
-  const icon = roleIcon(role);
-  const name = roleNameplate(role).toUpperCase();
-  const sub = roleDescriptor(role);
-  return `${style.paint.title(`${icon} ${BOLD_ON}${name}${BOLD_OFF}`)} ${style.paint.muted(`· ${sub}`)}`;
-}
-
-/** Per-role meta string for the right side of the nameplate. */
-function roleMeta(role: SpriteRole, lastMessage: RenderableMessage | undefined): string {
-  const style = rolePanelStyle(role);
-  if (role === "user") {
-    // User messages don't carry meta today. The right side of the nameplate
-    // stays empty so the panel reads as a clean speaker label — which also
-    // means the editor (which DOES show "drafting…" while live) is visually
-    // distinguishable from a submitted message only by that one indicator.
-    return "";
-  }
-  // Assistant: tokens (if available) + elapsed (if available).
-  const tokens = lastMessage?.usage?.output_tokens ?? lastMessage?.usage?.tokens;
-  const elapsedMs = lastMessage?.elapsedMs ?? lastMessage?.elapsed_ms;
-  const parts: string[] = [];
-  if (typeof tokens === "number") parts.push(`◇ ${formatTokens(tokens)}`);
-  if (typeof elapsedMs === "number") parts.push(formatElapsed(elapsedMs));
-  return parts.length ? style.paint.muted(parts.join(" · ")) : "";
-}
-
-function formatTokens(n: number): string {
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k tok`;
-  return `${n} tok`;
-}
-
-function formatElapsed(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(1)}s`;
-}
-
-function toolPanelState(status: ToolStatus): PanelState {
-  if (status === "running") return "running";
-  if (status === "ok") return "ok";
-  if (status === "error") return "error";
-  return "idle";
-}
-
-function toolStyle(status: ToolStatus): PanelStyle {
-  return panelStyle("tool", toolPanelState(status), { frame: status === "running" ? Date.now() / 180 : 0 });
-}
-
-function toolAccent(style: PanelStyle) {
-  return style.supports.pulse ? style.paint.pulse : style.paint.accent;
-}
-
-function toolDisplayName(name: string): string {
-  return name.replace(/^functions[._-]/, "").replace(/^multi_tool_use[._-]/, "multi").trim() || "tool";
-}
-
-/** Format the tool nameplate title: `<icon> NAME · construct`. */
-function toolTitle(name: string, style: PanelStyle): string {
-  const display = toolDisplayName(name).toUpperCase();
-  const sub = "construct";
-  return `${toolAccent(style)(`✦ ${BOLD_ON}${display}${BOLD_OFF}`)} ${style.paint.muted(`· ${sub}`)}`;
-}
-
-/** Per-tool meta string: exit/duration (ok/error) or `running` (pending/active). */
-function toolMeta(component: ToolComponentLike, style: PanelStyle): string {
-  const status = toolStatus(component);
-  const elapsedMs = component?.elapsedMs ?? component?.elapsed_ms;
-  if (status === "ok") {
-    const exit = component?.result?.exitCode ?? 0;
-    const parts = [`exit ${exit}`];
-    if (typeof elapsedMs === "number") parts.push(formatElapsed(elapsedMs));
-    return style.paint.muted(parts.join(" · "));
-  }
-  if (status === "error") {
-    const exit = component?.result?.exitCode;
-    return style.paint.muted(typeof exit === "number" ? `error · exit ${exit}` : "error");
-  }
-  if (status === "running") return toolAccent(style)("running…");
-  return style.paint.muted("pending");
-}
-
-// ── Tool status helpers ────────────────────────────────────────────────────
-
-export function toolStatus(component: ToolComponentLike): ToolStatus {
-  if (component?.result?.isError) return "error";
-  if (component?.result && !component?.isPartial) return "ok";
-  if (component?.isPartial || component?.executionStarted) return "running";
-  return "pending";
-}
-
-function toolStatusBackground(_status: ToolStatus): AvatarBackground {
-  return AVATAR_FIELDS.tool;
-}
-
-function safeToolHint(component: ToolComponentLike): string {
-  try { return JSON.stringify({ args: component?.args, result: component?.result?.details }) ?? ""; }
-  catch { return ""; }
 }
 
 function toolCell(component: ToolComponentLike): AvatarCell {
@@ -555,7 +339,7 @@ export function patchRpgAvatars() {
   };
 
   UserMessageComponent.prototype.render = function patchedUserRender(width: number): string[] {
-    return cachedPanelRender(this, "user", width, "static", () => {
+    return cachedPanelRender(this, () => panelRenderCacheKey("user", width, "static"), () => {
       const bodyOnlyLines = orig.userRender.call(this, bodyOnlyColumnWidth(width));
       if (!shouldDecorateRolePanel(this, "user", false, bodyOnlyLines)) {
         return composeBodyOnlyPanel(
@@ -630,7 +414,7 @@ export function patchRpgAvatars() {
       );
     };
     if (this === activeAssistantComponent) return render();
-    return cachedPanelRender(this, "assistant", width, state, render);
+    return cachedPanelRender(this, () => panelRenderCacheKey("assistant", width, state), render);
   };
 
   ToolExecutionComponent.prototype.render = function patchedToolRender(width: number): string[] {
@@ -672,7 +456,7 @@ export function patchRpgAvatars() {
       );
     };
     if (status === "running") return render();
-    return cachedPanelRender(this, "tool", width, state, render);
+    return cachedPanelRender(this, () => panelRenderCacheKey("tool", width, state), render);
   };
 
   // ── Custom-message component patches ───────────────────────────────────
