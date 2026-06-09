@@ -35,6 +35,7 @@
       "./extensions/local-llm.ts",
       "./extensions/avatar.ts",
       "./extensions/gateway.ts"
+      "./extensions/local-llm.ts"
     ],
     "skills": [
       "./skills"
