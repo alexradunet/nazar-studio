@@ -33,7 +33,6 @@
       "./extensions/memory.ts",
       "./extensions/vault.ts",
       "./extensions/local-llm.ts",
-      "./extensions/avatar.ts",
       "./extensions/gateway.ts"
     ],
     "skills": [
