@@ -10,14 +10,12 @@ import {
   UserMessageComponent,
 } from "@earendil-works/pi-coding-agent";
 import {
-  analyzeTextCells,
   AvatarCell,
   bodyColumnWidth,
   bodyOnlyColumnWidth,
   composeBodyOnlyPanel,
   composeMessagePanel,
   PANEL_TOP_PADDING_ASSISTANT,
-  splitLeadingControlSequences,
   trimOuterBlankLines,
 } from "./turn-composer.ts";
 import {
@@ -424,11 +422,8 @@ export function toolStatus(component: any): ToolStatus {
   return "pending";
 }
 
-function toolStatusBackground(status: ToolStatus): AvatarBackground {
-  if (status === "error") return AVATAR_FIELDS.toolError;
-  if (status === "ok") return AVATAR_FIELDS.toolOk;
-  if (status === "running") return AVATAR_FIELDS.toolRunning;
-  return AVATAR_FIELDS.toolPending;
+function toolStatusBackground(_status: ToolStatus): AvatarBackground {
+  return AVATAR_FIELDS.tool;
 }
 
 function safeToolHint(component: any): string {

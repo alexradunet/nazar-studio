@@ -2,8 +2,6 @@
 // Shared terminal border glyphs for Nazar's ANSI panels.
 import { visibleWidth } from "./ansi.ts";
 
-export const PANEL_GAP = 1;
-
 export type BorderGlyphs = {
   topLeft: string;
   topRight: string;

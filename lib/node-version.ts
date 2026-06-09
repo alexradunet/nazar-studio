@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-export const MIN_NODE_SQLITE_VERSION = "23.4.0";
+const MIN_NODE_SQLITE_VERSION = "23.4.0";
 
-export type NodeVersion = {
+type NodeVersion = {
   major: number;
   minor: number;
   patch: number;
@@ -18,7 +18,7 @@ export function parseNodeVersion(version: string): NodeVersion | undefined {
   };
 }
 
-export function compareNodeVersions(a: NodeVersion, b: NodeVersion): number {
+function compareNodeVersions(a: NodeVersion, b: NodeVersion): number {
   if (a.major !== b.major) return a.major - b.major;
   if (a.minor !== b.minor) return a.minor - b.minor;
   return a.patch - b.patch;

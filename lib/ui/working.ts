@@ -132,11 +132,6 @@ export function hasThinkingPreview(): boolean {
   return currentThinkingPreview.trim().length > 0;
 }
 
-export function updateThinkingPreviewFromMessage(message: unknown): boolean {
-  setThinkingPreview(extractThinkingPreview(message));
-  return hasThinkingPreview();
-}
-
 export function renderThinkingPanel(
   frameIndex: number,
   options: { loaderSafe?: boolean; mode?: unknown; preview?: string } = {},
@@ -236,13 +231,4 @@ export function workingIndicator() {
     frames: Array.from({ length: 9 }, (_, frame) => renderThinkingPanel(frame, { loaderSafe: true })),
     intervalMs: THINKING_INTERVAL_MS,
   };
-}
-
-export function workingMessage(): string {
-  return "";
-}
-
-export function setWorkingMessage(ctx: ExtensionContext, _turnIndex = 0) {
-  if (!ctx?.hasUI) return;
-  try { ctx.ui.setWorkingMessage?.(workingMessage()); } catch { /* ignore */ }
 }

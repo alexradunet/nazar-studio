@@ -218,10 +218,7 @@ function userAvatarSheet(): CharacterSheetKey {
 function backgroundForFrame(id: string): Rgb {
   if (id.startsWith("user")) return BACKGROUNDS.user;
   if (id.includes("thinking")) return BACKGROUNDS.thinking;
-  if (id.startsWith("tool-") && id.endsWith("-error")) return BACKGROUNDS.toolError;
-  if (id.startsWith("tool-") && id.endsWith("-ok")) return BACKGROUNDS.toolOk;
-  if (id.startsWith("tool-") && id.endsWith("-running")) return BACKGROUNDS.toolRunning;
-  if (id.startsWith("tool-")) return BACKGROUNDS.toolPending;
+  if (id.startsWith("tool-")) return BACKGROUNDS.tool;
   return BACKGROUNDS.nazar;
 }
 
@@ -565,7 +562,7 @@ function envPositiveInteger(name: string): number | undefined {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
-export function avatarCellDimensions(): CellDimensions {
+function avatarCellDimensions(): CellDimensions {
   const base = getCellDimensions();
   const widthPx = envPositiveInteger("NAZAR_CELL_WIDTH_PX") ?? base.widthPx;
   const heightPx = envPositiveInteger("NAZAR_CELL_HEIGHT_PX") ?? base.heightPx;
@@ -653,7 +650,7 @@ export function avatarLineWidth(line: AvatarRenderLine): number {
   return line.virtualWidth ?? visibleWidth(line.text);
 }
 
-export function terminalCellAspectRatio(): number {
+function terminalCellAspectRatio(): number {
   const { widthPx, heightPx } = avatarCellDimensions();
   if (!Number.isFinite(widthPx) || !Number.isFinite(heightPx) || widthPx <= 0 || heightPx <= 0) return 2;
   return heightPx / widthPx;
@@ -734,11 +731,6 @@ export function renderAnsiAvatarFrame(role: SpriteRole): string[] {
 
 export function renderUserTypingAvatarFrame(frameIndex = 0): string[] {
   return renderUserTypingAvatar(frameIndex, { backend: "ansi" })?.lines.map((line) => line.text) ?? [];
-}
-
-// Backward-compatible alias for the old implementation name.
-export function renderPixelAvatar(role: SpriteRole): string[] {
-  return renderAnsiAvatarFrame(role);
 }
 
 export function renderThinkingAvatarFrame(frameIndex = 0): string[] {
