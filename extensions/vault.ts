@@ -10,7 +10,7 @@
  *   diet/...  sport/...           — same shape
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { Type } from "typebox"; // VERIFY exact package/name against installed Pi (resolved via Pi's runtime)
+import { Type } from "typebox"; // TypeBox v1 — same package/version pi-coding-agent depends on
 import { writeFile, mkdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { vaultRoot } from "../lib/memory.ts";
