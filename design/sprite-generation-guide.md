@@ -1,5 +1,7 @@
 # Nazar Sprite Generation Guide
 
+> **Historical / superseded.** This guide documents the original crystal-globe-on-pedestal sprite era. The shipped avatars are now **bare** (cosmic eye, soul-of-light face, plain tool icons) rendered as ANSI mosaics — see `MANIFEST.md` and `design/ANSI-AVATAR-MIGRATION.md` for the current system. Some assets referenced below (globe templates, portraits, `mage-alien.png`) no longer exist. Kept for historical reference only.
+
 ## Overview
 
 This guide documents the complete sprite generation process for the Nazar visual family—a cohesive collection of pixel-art crystal globes mounted on Romanian folk-art gold pedestals. The visual language combines cosmic/mystical themes with traditional folk aesthetics, rendered in a classic 16-bit RPG pixel-art style.
@@ -51,9 +53,8 @@ half-blocks; medium uses sextants; high uses octants.
 
 ## Reference Image
 
-The **Nazar sprite sheet** (shortId: `tkgwfjwp`) is the established reference for this visual family and must be used as the seed image when generating new sprites.
+The committed **Nazar sprite sheet** (`assets/avatars/nazar.png`) is the established reference for this visual family and must be used as the seed image when generating new sprites.
 
-- **URL:** https://hyperagent.com/api/files/usergenerated/threads/cmq10i8dd0akp0cad765k8oji/images/
 - **Purpose:** Defines the pedestal style, orb design, background color, and overall visual language
 - **Usage:** Include as inputImages when generating new sprites to ensure consistency
 
@@ -62,7 +63,7 @@ The **Nazar sprite sheet** (shortId: `tkgwfjwp`) is the established reference fo
 Use this template as the foundation for all sprite generation. Append the specific icon or character description as needed.
 
 ```
-Pixel art sprite sheet, 3×3 grid, 9 frames, each frame 64×64 pixels, total 192×192px.
+Pixel art sprite sheet, 3×3 grid, 9 frames, each frame 256×256 pixels, total 768×768px.
 Style: RPG pixel art, old-school 16-bit palette. Romanian folk-art aesthetic.
 Each frame shows: a crystal/glass orb globe sitting on a decorative Romanian folk-art gold pedestal.
 The pedestal has intricate folk-art geometric patterns in gold and deep red.
@@ -80,11 +81,11 @@ Replace `[SPECIFIC CONTENT DESCRIPTION]` with the sprite-specific details (see S
 ### Model & Quality
 - **Model:** `gemini-3-pro-image` (Pro tier for maximum fidelity)
 - **Resolution:** 2K
-- **Aspect Ratio:** 1:1 (square, required for 192×192px output)
+- **Aspect Ratio:** 1:1 (square, required for 768×768px output)
 - **Quality Setting:** High (default or explicitly set)
 
 ### Seed Images
-- **Reference Input:** Always include the Nazar sprite sheet (shortId `tkgwfjwp`) as `inputImages`
+- **Reference Input:** Always include the Nazar sprite sheet (`assets/avatars/nazar.png`) as `inputImages`
 - **Purpose:** Ensures pedestal style, orb design, and color palette consistency across the family
 
 ## Sprite Catalog
@@ -95,7 +96,7 @@ Each character sprite contains 9 frames representing different emotions or state
 
 #### Nazar (Cosmic Eye Orb)
 - **File:** `assets/avatars/nazar.png`
-- **Shortcut ID:** `tkgwfjwp` (reference/seed image)
+- **Reference image:** `assets/avatars/nazar.png` (reference/seed image)
 - **Content:** Stylized cosmic eye inside crystal orb
 - **Frames:** 9 emotion states
   - Frame 0: Neutral
@@ -124,7 +125,6 @@ The arcane glow intensifies or dims to match emotional intensity.
 
 #### User Avatar — Mage Alien
 - **File:** `assets/avatars/mage-alien.png`
-- **Shortcut ID:** `xuth8abi`
 - **Character Details:** Alien humanoid, large eyes, no hair, pale or green tint, visible neck
 - **Gaze:** Straight forward
 - **Frames:** 9 typing/portrait states
@@ -147,54 +147,54 @@ Tool icons are mounted in the crystal globes. All 9 frames are currently identic
 **Generation Prompt Addition Template (for any tool):**
 ```
 Inside the orb: a [TOOL DESCRIPTION].
-Style: simple, iconic, immediately recognizable even at 64×64px.
+Style: simple, iconic, immediately recognizable even at 256×256px.
 The icon is rendered in pixel-art style with a limited palette.
 All 9 frames are identical (static icon, no animation).
 ```
 
 #### Original Tool Set
 
-- **anvil.png** (shortId: `9cn9kr6j`)
+- **anvil.png**
   - Content: Blacksmith anvil icon
   - Prompt: "a blacksmith anvil, drawn as a classic iron anvil on a base"
 
-- **scroll.png** (shortId: `n5l8bxw6`)
+- **scroll.png**
   - Content: Rolled parchment scroll
   - Prompt: "a rolled parchment scroll, tied with a ribbon"
 
-- **quill.png** (shortId: `exkj7r0c`)
+- **quill.png**
   - Content: Feather quill pen
   - Prompt: "a feather quill pen with a wooden stem and feather tip"
 
-- **needle.png** (shortId: `fe0ko900`)
+- **needle.png**
   - Content: Sewing needle with thread
   - Prompt: "a sewing needle with thread running through it"
 
-- **lens.png** (shortId: `h6cikzek`)
+- **lens.png**
   - Content: Magnifying lens
   - Prompt: "a magnifying lens or magnifying glass"
 
-- **folder.png** (shortId: `1xi13svy`)
+- **folder.png**
   - Content: Folder or files icon
   - Prompt: "a folder icon with multiple documents or files"
 
-- **keeper.png** (shortId: `1y5ygzak`)
+- **keeper.png**
   - Content: Key and lock keeper
   - Prompt: "a key and lock, representing a keeper or guardian"
 
-- **warden.png** (shortId: `od2q38hq`)
+- **warden.png**
   - Content: Shield warden
   - Prompt: "a shield or protective emblem, representing a warden"
 
-- **new-head.png** (shortId: `dcnvt024`)
+- **new-head.png**
   - Content: New/plus icon
   - Prompt: "a plus or 'new' icon, possibly with a head silhouette to represent new people"
 
-- **seer.png** (shortId: `k7riaj0k`)
+- **seer.png**
   - Content: All-seeing eye (alternate cosmic eye variant)
   - Prompt: "an all-seeing eye or cosmic eye, similar to but distinct from the Nazar eye"
 
-- **hammer.png** (shortId: `lnllromk`)
+- **hammer.png**
   - Content: Magical hammer
   - Prompt: "a magical hammer, possibly with glowing runes or ethereal effects"
 
@@ -202,75 +202,75 @@ All 9 frames are identical (static icon, no animation).
 
 These tools represent additional life domains beyond the original craft-focused set.
 
-- **journal.png** (shortId: `d9s66rc3`)
+- **journal.png**
   - Domain: Journaling / Reflection
   - Prompt: "an open journal or notebook with visible pages, suggesting writing and reflection"
 
-- **dumbbell.png** (shortId: `bqaxb7cd`)
+- **dumbbell.png**
   - Domain: Fitness / Exercise
   - Prompt: "a dumbbell or weight, representing physical training and fitness"
 
-- **plate-fork.png** (shortId: `ambj4np7`)
+- **plate-fork.png**
   - Domain: Nutrition / Food
   - Prompt: "a plate and fork, representing food, cooking, and nutrition"
 
-- **heart-pulse.png** (shortId: `noohtrxz`)
+- **heart-pulse.png**
   - Domain: Health / Wellness
   - Prompt: "a heart with a pulse or heartbeat line, representing health and vitality"
 
-- **moon-stars.png** (shortId: `5qe5o478`)
+- **moon-stars.png**
   - Domain: Sleep / Rest
   - Prompt: "a moon and stars, representing sleep, rest, and night"
 
-- **calendar.png** (shortId: `llqectmg`)
+- **calendar.png**
   - Domain: Schedule / Time Management
   - Prompt: "a calendar or date representation, indicating scheduling and time management"
 
-- **envelope.png** (shortId: `astn6isi`)
+- **envelope.png**
   - Domain: Communication / Mail
   - Prompt: "an envelope or letter, representing communication and correspondence"
 
-- **map-pin.png** (shortId: `7d6hr5r6`)
+- **map-pin.png**
   - Domain: Location / Travel
   - Prompt: "a map pin or location marker, representing places and navigation"
 
-- **coin-stack.png** (shortId: `rthpgmpy`)
+- **coin-stack.png**
   - Domain: Finance / Money
   - Prompt: "a stack of coins, representing finances, money, and wealth"
 
-- **music-note.png** (shortId: `q1q3jkfh`)
+- **music-note.png**
   - Domain: Music / Arts
   - Prompt: "a musical note or staff, representing music and creative arts"
 
-- **camera.png** (shortId: `s5h772vf`)
+- **camera.png**
   - Domain: Photography / Visual Media
   - Prompt: "a camera or photography symbol, representing visual media and creativity"
 
-- **pill-potion.png** (shortId: `majwqpx3`)
+- **pill-potion.png**
   - Domain: Medicine / Care
   - Prompt: "a pill or potion bottle, representing medicine, healthcare, and treatment"
 
-- **brain.png** (shortId: `rka4chdq`)
+- **brain.png**
   - Domain: Learning / Cognition
   - Prompt: "a brain or mind symbol, representing learning, thinking, and knowledge"
 
-- **compass.png** (shortId: `uvhvc88v`)
+- **compass.png**
   - Domain: Navigation / Direction
   - Prompt: "a compass, representing direction, guidance, and navigation"
 
-- **seedling.png** (shortId: `nzxqxjwf`)
+- **seedling.png**
   - Domain: Growth / Nature
   - Prompt: "a seedling or young plant, representing growth, nature, and development"
 
-- **hourglass.png** (shortId: `txl6axky`)
+- **hourglass.png**
   - Domain: Time / Patience
   - Prompt: "an hourglass, representing time, patience, and the passage of moments"
 
-- **key.png** (shortId: `j1p4kmsh`)
+- **key.png**
   - Domain: Access / Unlocking
   - Prompt: "a key, representing access, unlocking, and secrets"
 
-- **bell.png** (shortId: `v5iwxxbs`)
+- **bell.png**
   - Domain: Notifications / Awareness
   - Prompt: "a bell, representing notifications, alerts, and awareness"
 
@@ -321,7 +321,7 @@ their 9 frames (launch / rotation).
 Follow these steps to generate new sprites in the Nazar family:
 
 ### 1. Prepare the Reference
-- Obtain the Nazar sprite sheet (shortId: `tkgwfjwp`)
+- Obtain the Nazar sprite sheet (`assets/avatars/nazar.png`)
 - Use it as the seed/reference image (inputImages parameter)
 
 ### 2. Compose the Generation Prompt
@@ -333,22 +333,22 @@ Follow these steps to generate new sprites in the Nazar family:
 - **Model:** `gemini-3-pro-image`
 - **Resolution:** 2K
 - **Aspect Ratio:** 1:1
-- **Input Images:** `tkgwfjwp` (Nazar sprite sheet)
+- **Input Images:** `assets/avatars/nazar.png` (Nazar sprite sheet)
 
 ### 4. Generate the Sprite
 - Submit the prompt with all parameters
-- Verify the output is 192×192px with a 3×3 grid
+- Verify the output is 768×768px with a 3×3 grid
 - Check that the pedestal style matches the reference
 - Confirm the background color is #0d0d1a
 - Ensure no visible grid lines in the output
 
 ### 5. Validate the Output
-- **Dimensions:** Exactly 192×192px
+- **Dimensions:** Exactly 768×768px
 - **Grid Layout:** 3 columns × 3 rows, seamless
 - **Frame Count:** 9 distinct frames (or 9 identical copies for static icons)
 - **Visual Consistency:** Pedestal, orb, background, and color palette match the reference
 - **Quality:** Clean pixel art without anti-aliasing artifacts
-- **Readability:** Icons (if applicable) are clearly recognizable at 64×64px
+- **Readability:** Icons (if applicable) are clearly recognizable at 256×256px
 
 ### 6. Store and Catalog
 - Save the PNG file to the appropriate location
@@ -365,7 +365,7 @@ Follow these steps to generate new sprites in the Nazar family:
 - **Confirm background**: all sprites use #0d0d1a
 
 ### Prompt Clarity
-- Be specific about frame count and layout (3×3, 64×64px per frame, 192×192px total)
+- Be specific about frame count and layout (3×3, 256×256px per frame, 768×768px total)
 - Describe the content inside the orb clearly
 - Mention emotional states or variations if applicable
 - Specify "all 9 frames identical" for static icons
@@ -375,12 +375,12 @@ Follow these steps to generate new sprites in the Nazar family:
 - Use Pro-tier model for fidelity
 - Never scale down from a lower resolution
 - Review the spritesheet to ensure no visible grid lines
-- Check that each frame is properly centered in its 64×64px area
+- Check that each frame is properly centered in its 256×256px area
 
 ### Scaling & Reuse
-- The 64×64px frame size is the reference size
+- The 256×256px frame size is the reference size
 - Sprites can be scaled down 2× to 32×32px for UI usage
-- Do not upscale beyond 64×64px without re-generation
+- Do not upscale beyond 256×256px without re-generation
 - Always maintain integer scaling (2×, 3×, 4×) to preserve pixel-art quality
 
 ## Future Expansion
@@ -431,13 +431,13 @@ Potential additions:
 
 ## Related Assets
 
-- Nazar sprite sheet (reference): shortId `tkgwfjwp`
-- Nazar portrait: shortId `lhheol3v`
-- Male face (Mage): shortId `dqq3q4a8`
-- Female face (Mage): shortId `cj8u0ayi`
-- Alien face: shortId `xuth8abi`
-- Male portrait: shortId `isrkuhmp`
-- Empty globe: shortId `9rfb4wge`
+- Nazar sprite sheet (reference): `assets/avatars/nazar.png`
+- Nazar portrait:
+- Male face (Mage):
+- Female face (Mage):
+- Alien face:
+- Male portrait:
+- Empty globe:
 
 All tool sprites are catalogued in the Tool Icons section above with their respective shortIds.
 

@@ -4,7 +4,7 @@
 
 ### Step 1 — Add the workflow (you must do this via the GitHub UI — the API token can't write workflow files)
 
-1. Go to https://github.com/alexradunet/pi-nazar-studio
+1. Go to https://github.com/alexradunet/nazar-studio
 2. Click **Add file → Create new file**
 3. Type the filename: `.github/workflows/pages.yml`
 4. Paste the exact content from [`pages.yml`](../pages.yml) in the repo root (or from below)

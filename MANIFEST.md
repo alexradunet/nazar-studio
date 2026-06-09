@@ -12,7 +12,7 @@ Default size: 23x11 cells (NAZAR_AVATAR_ROWS=11); 19x9 compact, 35x17 showcase.
 ## Contents (mirrors the repo tree)
 ```
 assets/avatars/{nazar,nazar-expr,soul}.png   heroes (eye blink / soul radiance pulse)
-assets/avatars/tools/eye-*.png               57 no-orb tool icons (glow pulse)
+assets/avatars/tools/eye-*.png               56 no-orb tool icons (glow pulse)
 lib/ui/sextant.ts                             renderMosaic (sextant + octant), pure TS, 0 deps
 lib/ui/pixel-avatar.ts                        samples 768 masters; ansiDetail() picks mode; default 11 rows; memoised
 lib/ui/graphics-state.ts                      low | medium | high quality config
@@ -21,8 +21,6 @@ lib/ui/pixel-avatar.test.ts                   ANSI/mosaic tests
 lib/ui/design.ts                              capability note
 scripts/review-ansi-avatars.ts               terminal review helper
 design/ANSI-AVATAR-MIGRATION.md               full migration guide
-builders/                                      Python repro scripts + hero masters
-qa/                                            QA renders incl. modes_compare + ts_roundtrip
 ```
 
 ## Apply

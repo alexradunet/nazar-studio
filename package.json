@@ -7,10 +7,10 @@
   "homepage": "https://nazar.studio",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/alexradunet/pi-nazar-studio.git"
+    "url": "git+https://github.com/alexradunet/nazar-studio.git"
   },
   "bugs": {
-    "url": "https://github.com/alexradunet/pi-nazar-studio/issues"
+    "url": "https://github.com/alexradunet/nazar-studio/issues"
   },
   "keywords": [
     "pi-package",

@@ -11,7 +11,7 @@ character, voice, personas, positioning, and messaging. It is the sibling of
 | **Identity** | brand essence, character, eyes/personas, voice, messaging, positioning | `identity.md` (this file) |
 | **Visual system** | color tokens, type, layout, motifs, component recipes | `basm.md` |
 | **Product UI** | the `nazar` Pi terminal surface, panels, footer/header | `pi-terminal.md` |
-| **Avatars** | Canonical per-avatar 3×3, 9-frame, 64×64 PNG sprite sheets rendered as generated ANSI pixels | `avatars.md` |
+| **Avatars** | Canonical per-avatar 3×3, 9-frame, 256×256 PNG sprite sheets rendered as generated ANSI pixels | `avatars.md` |
 
 If two documents disagree, the one that *owns* that layer wins. Anything visual defers to
 `basm.md`; anything about voice or story defers to here.
@@ -204,7 +204,7 @@ Bun-era notes — the substrate is **a self-contained Pi package on Node, no con
 gateway service**.)
 
 **True today:** self-contained Pi package (`pi-nazar-studio`, `pi install npm:pi-nazar-studio`) on Node ·
-Pi coding-agent runtime · local model via **llamafile (Qwen3 default)**, no GPU required ·
+Pi coding-agent runtime · local model via **llamafile (LFM2.5 default)**, no GPU required ·
 local-first with **no auto-routing** · Markdown **vault** memory + disposable **node:sqlite
 FTS5** recall (`whenToUse`) · **Pi-native skills** · **suggest→approve** self-evolution in git ·
 life-tracking (journal/diet/sport) · backup git+Restic+Syncthing · terminal RPG UI.

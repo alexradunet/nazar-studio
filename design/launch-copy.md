@@ -17,7 +17,7 @@ I've been building Nazar — a personal AI companion you run on your own hardwar
 The idea: instead of a cloud service that knows you, you have a local agent that actually
 *grows* with you. Every new skill you teach it (via a git-gated suggest→approve loop) becomes
 a "new eye of the nazar" — a new domain it watches. Sounds whimsical; the mechanics are
-boring in the best way: a Pi terminal session, a local llamafile model (Qwen3 by default),
+boring in the best way: a Pi terminal session, a local llamafile model (LFM2.5 by default),
 Markdown memory files indexed by node:sqlite FTS5, and Pi-native skill files under skills/.
 
 What it gives you today:
@@ -32,7 +32,7 @@ No container, no GPU required, no cloud account. One command: `pi install npm:pi
 Named after the *nazar* — the watchful blue eye that wards the evil eye (deochi). It grows a new
 head for every skill. The design system is called *Basm* (fairy tale). Yes, I'm Romanian.
 
-Repo: https://github.com/alexradunet/pi-nazar-studio
+Repo: https://github.com/alexradunet/nazar-studio
 Feedback welcome — especially on the git-gated self-evolution flow, which is the most
 interesting (and most fragile) part.
 
@@ -50,7 +50,7 @@ is a new eye. The design system is called Basm (fairy tale).
 
 AGPL-3.0, one install script, no GPU required.
 
-https://github.com/alexradunet/pi-nazar-studio
+https://github.com/alexradunet/nazar-studio
 
 #selfhosted #localAI #FOSS #AI
 
@@ -86,7 +86,7 @@ design system is called *Basm* (fairy tale in Romanian). Built in Brașov.
 Would love feedback from anyone running local models or thinking about personal AI
 infrastructure — open to questions in the comments.
 
-https://github.com/alexradunet/pi-nazar-studio
+https://github.com/alexradunet/nazar-studio
 
 ---
 
@@ -113,4 +113,4 @@ git. Local model by default.
 Named for the watchful blue eye that wards the evil eye (deochi).
 
 AGPL · no GPU required · the repo is the system
-github.com/alexradunet/pi-nazar-studio
+github.com/alexradunet/nazar-studio
