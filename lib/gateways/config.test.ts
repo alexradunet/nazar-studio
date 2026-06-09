@@ -25,3 +25,22 @@ test("mirrorLocal defaults off; owner falls back to NAZAR_GATEWAY_OWNER", () => 
   expect(c.mirrorLocal).toBe(false);
   expect(c.owner).toBe("40712345678");
 });
+
+test("whatsapp auth defaults to qr; honors pairing, session dir, and number", () => {
+  const c = readGatewayConfig({
+    NAZAR_GATEWAY: "whatsapp",
+    NAZAR_WHATSAPP_OWNER: "1",
+    NAZAR_WHATSAPP_AUTH: "pairing",
+    NAZAR_WHATSAPP_SESSION_DIR: "/tmp/session",
+    NAZAR_WHATSAPP_NUMBER: "+40711000000",
+  });
+  expect(c.authMode).toBe("pairing");
+  expect(c.sessionDir).toBe("/tmp/session");
+  expect(c.pairingNumber).toBe("+40711000000");
+});
+
+test("auth defaults to qr and a session dir is always resolved", () => {
+  const c = readGatewayConfig({ NAZAR_GATEWAY: "whatsapp" });
+  expect(c.authMode).toBe("qr");
+  expect(c.sessionDir.length).toBeGreaterThan(0);
+});

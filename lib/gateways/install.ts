@@ -4,22 +4,34 @@
  *
  * Kept separate from the extension entry so it can be unit-tested with a fake
  * `pi`. The mapping is intentionally thin: Pi events → manager methods, gateway
- * inbound → manager, manager output → gateway. All policy lives in the manager.
+ * inbound → manager, manager output → gateway, gateway QR/status → Pi's UI. All
+ * policy lives in the manager.
  *
  * Pi 0.78.x surface used here (verified against the installed type defs):
  *   - pi.on("session_start" | "before_agent_start" | "message_end" |
  *           "agent_end" | "session_shutdown", handler)
  *   - pi.sendUserMessage(text, { deliverAs }) — via the manager's injector
  *   - ctx.abort() / ctx.compact() — for chat-control commands
+ *   - ctx.ui.notify() / ctx.ui.setStatus() — for QR + connection status
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { Gateway } from "./types.ts";
 import { GatewayManager } from "./manager.ts";
+import { renderQrAscii } from "./qr.ts";
 
 export interface InstalledGateway {
   gateway: Gateway;
   manager: GatewayManager;
   dispose: () => Promise<void>;
+}
+
+interface CtxLike {
+  abort?: () => void;
+  compact?: () => void;
+  ui?: {
+    notify?: (message: string, level?: string) => void;
+    setStatus?: (key: string, text: string | undefined) => void;
+  };
 }
 
 /** `pi.log` is not on the typed surface; mirror the codebase's cast pattern. */
@@ -44,9 +56,9 @@ export function installGateway(
   gateway: Gateway,
   manager: GatewayManager,
 ): InstalledGateway {
-  // Captured from the latest lifecycle event so chat-commands can act on the
-  // live session (ctx.abort / ctx.compact).
-  let ctxRef: { abort?: () => void; compact?: () => void } | undefined;
+  // Captured from the latest lifecycle event so chat-commands and UI surfacing
+  // can act on the live session (ctx.abort / ctx.compact / ctx.ui).
+  let ctxRef: CtxLike | undefined;
 
   gateway.onMessage((message) => {
     const outcome = manager.handleInbound(message);
@@ -62,6 +74,19 @@ export function installGateway(
     } catch (err) {
       piLog(pi, `[gateway] command "${outcome.command}" failed: ${String(err)}`);
     }
+  });
+
+  gateway.onStatus((status) => {
+    ctxRef?.ui?.setStatus?.("gateway", `${gateway.label}: ${status}`);
+  });
+
+  gateway.onQr((qr) => {
+    void (async () => {
+      const ascii = await renderQrAscii(qr);
+      const text = `Link ${gateway.label}: open WhatsApp → Linked Devices → Link a device, then scan:\n\n${ascii}`;
+      if (ctxRef?.ui?.notify) ctxRef.ui.notify(text, "info");
+      else piLog(pi, text);
+    })();
   });
 
   pi.on("session_start", async (_event: any, ctx: any) => {

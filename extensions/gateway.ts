@@ -12,9 +12,13 @@
  * compact working/done status.
  *
  * OFF by default. Enable with:
- *   NAZAR_GATEWAY=whatsapp        (PR2; =fake today for a wiring smoke)
- *   NAZAR_WHATSAPP_OWNER=<number> (your personal number — the master lock)
- *   NAZAR_GATEWAY_MIRROR_LOCAL=1  (optional: echo locally-typed turns too)
+ *   NAZAR_GATEWAY=whatsapp          (the transport; =fake for a wiring smoke)
+ *   NAZAR_WHATSAPP_OWNER=<number>   (your personal number — the master lock)
+ *   NAZAR_WHATSAPP_AUTH=qr|pairing  (default qr; pairing needs NAZAR_WHATSAPP_NUMBER)
+ *   NAZAR_GATEWAY_MIRROR_LOCAL=1    (optional: echo locally-typed turns too)
+ *
+ * WhatsApp needs the optional 'baileys' (and 'qrcode-terminal') packages; they
+ * are dynamically imported only when the gateway connects.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
@@ -33,7 +37,7 @@ export default function (pi: ExtensionAPI) {
   const config = readGatewayConfig(process.env);
   if (!config.enabled) return; // dormant unless NAZAR_GATEWAY selects a transport
 
-  const gateway = createGateway(config);
+  const gateway = createGateway(config, { log: (message) => piLog(pi, message) });
   if (!gateway) {
     piLog(pi, `[gateway] no implementation for "${config.gateway}" — not started.`);
     return;

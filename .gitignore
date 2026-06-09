@@ -16,3 +16,8 @@ packages/*/node_modules/**
 handoff/
 publish-audit/
 audit/
+
+# WhatsApp gateway linked-device session (secrets — never commit)
+.wwebjs_auth/
+**/whatsapp-auth/
+.nazar-data/

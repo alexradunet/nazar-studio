@@ -4,9 +4,11 @@
  *
  * The gateway is OFF unless NAZAR_GATEWAY selects a transport. Owner is the
  * single number allowed to drive Pi (the master lock). mirrorLocal controls
- * whether turns you type at the local terminal also echo to your phone
- * (default off, so the phone stays quiet unless it asked).
+ * whether turns typed at the local terminal also echo to your phone (default
+ * off). The WhatsApp fields configure the linked-device session + auth method.
  */
+import { join } from "node:path";
+import { dataDir } from "../paths.ts";
 
 export interface GatewayConfig {
   /** Whether the gateway extension should arm itself. */
@@ -17,6 +19,12 @@ export interface GatewayConfig {
   owner: string;
   /** Echo locally-typed turns to the chat too. */
   mirrorLocal: boolean;
+  /** Directory holding the persisted WhatsApp linked-device session. */
+  sessionDir: string;
+  /** WhatsApp auth method: scan a QR (default) or request a pairing code. */
+  authMode: "qr" | "pairing";
+  /** Nazar's own WhatsApp number — required only for pairing-code auth. */
+  pairingNumber: string;
 }
 
 const TRUEY = new Set(["1", "true", "yes", "on"]);
@@ -26,5 +34,8 @@ export function readGatewayConfig(env: NodeJS.ProcessEnv = process.env): Gateway
   const owner = (env.NAZAR_WHATSAPP_OWNER ?? env.NAZAR_GATEWAY_OWNER ?? "").trim();
   const mirrorLocal = TRUEY.has((env.NAZAR_GATEWAY_MIRROR_LOCAL ?? "").trim().toLowerCase());
   const enabled = gateway.length > 0 && gateway !== "none" && gateway !== "off";
-  return { enabled, gateway, owner, mirrorLocal };
+  const authMode = (env.NAZAR_WHATSAPP_AUTH ?? "").trim().toLowerCase() === "pairing" ? "pairing" : "qr";
+  const sessionDir = (env.NAZAR_WHATSAPP_SESSION_DIR ?? "").trim() || join(dataDir(), "whatsapp-auth");
+  const pairingNumber = (env.NAZAR_WHATSAPP_NUMBER ?? "").trim();
+  return { enabled, gateway, owner, mirrorLocal, sessionDir, authMode, pairingNumber };
 }
