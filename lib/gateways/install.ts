@@ -14,6 +14,7 @@
 import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { Component } from "@earendil-works/pi-tui";
 import type { Gateway, GatewayStatus, InboundMessage } from "./types.ts";
 import { GatewayManager } from "./manager.ts";
 import { MasterLock } from "./lock.ts";
@@ -28,6 +29,10 @@ interface CtxLike {
   ui?: {
     notify?: (message: string, level?: string) => void;
     setStatus?: (key: string, text: string | undefined) => void;
+    custom?: <T>(
+      factory: (tui: unknown, theme: unknown, keybindings: unknown, done: (value: T) => void) => Component,
+      options?: unknown,
+    ) => Promise<T>;
   };
 }
 
@@ -63,6 +68,57 @@ function assistantText(message: unknown): string {
   return typeof m?.text === "string" ? m.text : "";
 }
 
+interface QrOverlay extends Component {
+  setQr(ascii: string): void;
+  close(): void;
+}
+
+function fitLine(text: string, width: number): string {
+  if (text.length >= width) return text.slice(0, width);
+  return text + " ".repeat(width - text.length);
+}
+
+function createQrOverlay(initialQr: string, onClose: () => void): QrOverlay {
+  let qr = initialQr;
+  let closed = false;
+
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    onClose();
+  };
+
+  return {
+    setQr(ascii: string) {
+      qr = ascii;
+    },
+    close,
+    render(width: number): string[] {
+      const inner = Math.max(24, width - 2);
+      const body = [
+        "WhatsApp link QR",
+        "",
+        "Phone: WhatsApp → Linked Devices → Link a device",
+        "Scan this code. It refreshes automatically.",
+        "Press q or Esc to close this popup.",
+        "",
+        ...qr.split("\n"),
+      ];
+      return [
+        `┌${"─".repeat(inner)}┐`,
+        ...body.map((line) => `│${fitLine(line, inner)}│`),
+        `└${"─".repeat(inner)}┘`,
+      ];
+    },
+    handleInput(data: string): void {
+      if (data === "q" || data === "\u001b" || data === "\u0003") close();
+    },
+    invalidate(): void {
+      // No cached render state.
+    },
+  };
+}
+
 export function createGatewayController(pi: ExtensionAPI, deps: GatewayControllerDeps = {}): GatewayController {
   const env = deps.env ?? process.env;
   const make = deps.createGateway ?? defaultCreateGateway;
@@ -72,6 +128,8 @@ export function createGatewayController(pi: ExtensionAPI, deps: GatewayControlle
   let gateway: Gateway | undefined;
   let manager: GatewayManager | undefined;
   let ctxRef: CtxLike | undefined;
+  let qrOverlay: QrOverlay | undefined;
+  let qrOverlayHandle: { requestRender?: () => void; focus?: () => void } | undefined;
 
   const refreshConfig = (): EffectiveConfig => {
     config = resolveEffectiveConfig(env);
@@ -106,8 +164,46 @@ export function createGatewayController(pi: ExtensionAPI, deps: GatewayControlle
     }
   };
 
+  const closeQrOverlay = (): void => {
+    qrOverlay?.close();
+    qrOverlay = undefined;
+    qrOverlayHandle = undefined;
+  };
+
+  const showQrOverlay = (ascii: string): boolean => {
+    const custom = ctxRef?.ui?.custom;
+    if (!custom) return false;
+    if (qrOverlay) {
+      qrOverlay.setQr(ascii);
+      qrOverlayHandle?.requestRender?.();
+      qrOverlayHandle?.focus?.();
+      return true;
+    }
+
+    void custom<void>(
+      (_tui, _theme, _keybindings, done) => {
+        qrOverlay = createQrOverlay(ascii, () => {
+          qrOverlay = undefined;
+          qrOverlayHandle = undefined;
+          done();
+        });
+        return qrOverlay;
+      },
+      {
+        overlay: true,
+        overlayOptions: { anchor: "center", width: 58, maxHeight: "90%", margin: 1 },
+        onHandle: (handle: { requestRender?: () => void; focus?: () => void }) => {
+          qrOverlayHandle = handle;
+          handle.focus?.();
+        },
+      },
+    ).catch((err) => log(`QR popup failed: ${String(err)}`));
+    return true;
+  };
+
   const onStatus = (status: GatewayStatus): void => {
     ctxRef?.ui?.setStatus?.("gateway", `WhatsApp: ${status}`);
+    if (status === "connected" || status === "disconnected" || status === "error") closeQrOverlay();
   };
 
   const onQr = (qr: string): void => {
@@ -115,7 +211,7 @@ export function createGatewayController(pi: ExtensionAPI, deps: GatewayControlle
       const ascii = await renderQrAscii(qr);
       const text = `Link WhatsApp: open WhatsApp → Linked Devices → Link a device, then scan:\n\n${ascii}`;
       log(text);
-      ctxRef?.ui?.notify?.(text, "info");
+      if (!showQrOverlay(ascii)) ctxRef?.ui?.notify?.(text, "info");
     })();
   };
 

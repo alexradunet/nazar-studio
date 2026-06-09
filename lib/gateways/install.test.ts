@@ -100,6 +100,27 @@ describe("gateway controller", () => {
     expect(ctx.abort).toHaveBeenCalledOnce();
   });
 
+  test("QR events open a Pi overlay popup", async () => {
+    const { controller, handlers, gateway } = build();
+    controller.registerLifecycle();
+    controller.saveConfig({ gateway: "whatsapp", owner: OWNER });
+
+    let rendered: string[] = [];
+    const custom = vi.fn((factory: any, options: any) => {
+      options?.onHandle?.({ requestRender: vi.fn(), focus: vi.fn() });
+      const component = factory(undefined, undefined, undefined, () => {});
+      rendered = component.render(58);
+      return new Promise<void>(() => {});
+    });
+
+    await handlers.get("session_start")?.({}, { hasUI: true, ui: { custom, setStatus: vi.fn() } });
+    await controller.connect();
+    gateway.emitQr("test-qr-payload");
+
+    await vi.waitFor(() => expect(custom).toHaveBeenCalledOnce());
+    expect(rendered.join("\n")).toContain("WhatsApp link QR");
+  });
+
   test("disconnect tears down the gateway", async () => {
     const { controller, gateway } = build();
     controller.saveConfig({ gateway: "whatsapp", owner: OWNER });
