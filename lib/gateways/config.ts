@@ -25,6 +25,8 @@ export interface GatewayConfig {
   authMode: "qr" | "pairing";
   /** Nazar's own WhatsApp number — required only for pairing-code auth. */
   pairingNumber: string;
+  /** Send throttled per-tool activity pings to the chat (default off). */
+  toolPings: boolean;
 }
 
 const TRUEY = new Set(["1", "true", "yes", "on"]);
@@ -37,5 +39,6 @@ export function readGatewayConfig(env: NodeJS.ProcessEnv = process.env): Gateway
   const authMode = (env.NAZAR_WHATSAPP_AUTH ?? "").trim().toLowerCase() === "pairing" ? "pairing" : "qr";
   const sessionDir = (env.NAZAR_WHATSAPP_SESSION_DIR ?? "").trim() || join(dataDir(), "whatsapp-auth");
   const pairingNumber = (env.NAZAR_WHATSAPP_NUMBER ?? "").trim();
-  return { enabled, gateway, owner, mirrorLocal, sessionDir, authMode, pairingNumber };
+  const toolPings = TRUEY.has((env.NAZAR_GATEWAY_TOOL_PINGS ?? "").trim().toLowerCase());
+  return { enabled, gateway, owner, mirrorLocal, sessionDir, authMode, pairingNumber, toolPings };
 }

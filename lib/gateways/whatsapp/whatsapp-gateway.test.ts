@@ -143,6 +143,21 @@ describe("WhatsAppGateway", () => {
     expect(res.ok).toBe(false);
   });
 
+  test("answers are markdown-converted before sending", async () => {
+    const { gw, sock } = setup();
+    await gw.connect();
+    await gw.send("40712345678@s.whatsapp.net", { kind: "answer", text: "**bold** reply" });
+    expect(sock.sent[0].text).toContain("*bold*");
+    expect(sock.sent[0].text).not.toContain("**");
+  });
+
+  test("long answers are split into multiple sends", async () => {
+    const { gw, sock } = setup();
+    await gw.connect();
+    await gw.send("40712345678@s.whatsapp.net", { kind: "answer", text: "word ".repeat(2000) });
+    expect(sock.sent.length).toBeGreaterThan(1);
+  });
+
   test("pairing mode requests a code when unregistered", async () => {
     const { gw, sock, logs } = setup({ registered: false, authMode: "pairing", pairingNumber: "+40 712 345 678" });
     await gw.connect();
