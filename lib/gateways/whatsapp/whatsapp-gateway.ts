@@ -21,6 +21,8 @@ import type {
 } from "../types.ts";
 import { createBaileysSocket, type SocketFactory, type WAMessageLike, type WASocketLike } from "./socket.ts";
 import { extractText, toMillis } from "./text.ts";
+import { toWhatsAppChunks } from "./format.ts";
+import { stripAnsi } from "../format.ts";
 
 /** Baileys DisconnectReason.loggedOut — the one close we must NOT auto-reconnect. */
 const LOGGED_OUT = 401;
@@ -175,9 +177,17 @@ export class WhatsAppGateway implements Gateway {
 
   async send(chatId: string, message: OutboundMessage): Promise<SendResult> {
     if (!this.socket) return { ok: false, error: "not connected" };
+    // Answers are Markdown-converted + chunked; short status/notice lines are
+    // sent as-is (just ANSI-stripped).
+    const chunks = message.kind === "answer" ? toWhatsAppChunks(message.text) : [stripAnsi(message.text)];
+    if (chunks.length === 0) return { ok: true };
     try {
-      const result = await this.socket.sendMessage(chatId, { text: message.text });
-      return { ok: true, messageId: result?.key?.id ?? undefined };
+      let messageId: string | undefined;
+      for (const chunk of chunks) {
+        const result = await this.socket.sendMessage(chatId, { text: chunk });
+        messageId = result?.key?.id ?? undefined;
+      }
+      return { ok: true, messageId };
     } catch (err) {
       return { ok: false, error: String(err) };
     }

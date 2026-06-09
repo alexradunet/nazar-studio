@@ -44,3 +44,8 @@ test("auth defaults to qr and a session dir is always resolved", () => {
   expect(c.authMode).toBe("qr");
   expect(c.sessionDir.length).toBeGreaterThan(0);
 });
+
+test("toolPings defaults off and can be enabled", () => {
+  expect(readGatewayConfig({ NAZAR_GATEWAY: "whatsapp" }).toolPings).toBe(false);
+  expect(readGatewayConfig({ NAZAR_GATEWAY: "whatsapp", NAZAR_GATEWAY_TOOL_PINGS: "1" }).toolPings).toBe(true);
+});

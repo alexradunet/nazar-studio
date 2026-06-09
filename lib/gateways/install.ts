@@ -112,6 +112,10 @@ export function installGateway(
     manager.handleTurnEnd();
   });
 
+  pi.on("tool_execution_start", async (event: any) => {
+    manager.handleToolActivity(event?.toolName);
+  });
+
   pi.on("session_shutdown", async () => {
     try {
       await gateway.disconnect();

@@ -11,15 +11,16 @@
  *  - inject authorised messages into Pi via the injector with
  *    deliverAs: "followUp" — so Pi's own turn machinery serialises local +
  *    remote input. That is the whole "dual control, turns queued" behaviour;
- *    we do NOT reimplement a busy-queue here;
- *  - track which turn originated from the gateway and route that turn's
- *    assistant replies (plus a compact working/done status) back to the chat.
+ *  - track which turn originated from the gateway and route that turn's output
+ *    back to the chat as COMPACT status: a typing indicator while working, the
+ *    answer(s), and a short "done" note only when a turn produced no answer
+ *    (so an answered turn isn't followed by a redundant ping). Optional,
+ *    throttled per-tool pings can be enabled for noisier visibility.
  *
  * Turn-origin tracking: when we inject a message we remember its exact text.
  * before_agent_start hands us the turn's prompt; if it matches a pending
  * injected text the turn is gateway-originated (route its output), otherwise
- * it's a local turn (stays quiet unless mirrorLocal). Matching the exact text
- * is robust against interleaving of local and remote turns.
+ * it's a local turn (stays quiet unless mirrorLocal).
  */
 import type { InboundMessage, OutboundMessage, SendResult } from "./types.ts";
 import type { MasterLock } from "./lock.ts";
@@ -36,24 +37,27 @@ export type InboundOutcome =
 export type Injector = (text: string, options: { deliverAs: "followUp" | "steer" }) => void;
 /** Sends an outbound message (wired to gateway.send). */
 export type Sender = (chatId: string, message: OutboundMessage) => Promise<SendResult> | void;
+/** Sets a typing/paused presence (wired to gateway.sendPresence). */
+export type PresenceSink = (chatId: string, state: "composing" | "paused") => void;
 
 export interface GatewayManagerOptions {
   lock: MasterLock;
   inject: Injector;
   send: Sender;
+  /** Typing-indicator sink — the "working" signal. Optional. */
+  presence?: PresenceSink;
   /** Echo local-terminal turns to the chat too (default false). */
   mirrorLocal?: boolean;
   /** Build the prompt injected into Pi from an inbound message. */
   formatInbound?: (message: InboundMessage) => string;
-  /** Compact per-turn status text; return undefined to suppress that ping. */
-  statusText?: (phase: "working" | "done") => string | undefined;
+  /** Note sent only when a routed turn produced no answer (default "✓ done"). */
+  doneNote?: string;
+  /** Send throttled per-tool activity pings (default false). */
+  toolPings?: boolean;
+  /** Minimum gap between tool pings in ms (default 4000). */
+  toolPingThrottleMs?: number;
   log?: (message: string) => void;
 }
-
-const DEFAULT_STATUS: Record<"working" | "done", string | undefined> = {
-  working: "⚙️ Working…",
-  done: "✓ Done",
-};
 
 function defaultFormatInbound(message: InboundMessage): string {
   const who = message.senderName?.trim();
@@ -66,6 +70,8 @@ export class GatewayManager {
   private readonly opts: GatewayManagerOptions;
   private lastChatId: string | undefined;
   private currentOrigin: TurnOrigin | null = null;
+  private answeredThisTurn = false;
+  private lastToolPingAt = 0;
   /** Texts injected from the gateway, awaiting their before_agent_start. */
   private readonly pendingInjected: string[] = [];
 
@@ -92,7 +98,6 @@ export class GatewayManager {
       this.opts.log?.(`[gateway] ignored message from unauthorized sender ${message.senderId}`);
       return { action: "ignore", reason: "unauthorized" };
     }
-    // Authorised: remember where to route replies.
     this.lastChatId = message.chatId;
 
     const command = this.parseCommand(message.text);
@@ -117,12 +122,13 @@ export class GatewayManager {
         origin = "gateway";
       }
     } else if (this.pendingInjected.length > 0) {
-      // Prompt text unavailable: best-effort FIFO fallback.
       this.pendingInjected.shift();
       origin = "gateway";
     }
     this.currentOrigin = origin;
-    if (this.shouldRoute()) this.sendStatus("working");
+    this.answeredThisTurn = false;
+    this.lastToolPingAt = 0;
+    if (this.shouldRoute()) this.signalPresence("composing"); // "working" = typing
   }
 
   /** Call on each assistant message_end with the joined text content. */
@@ -130,12 +136,28 @@ export class GatewayManager {
     if (!this.shouldRoute()) return;
     const trimmed = text.trim();
     if (!trimmed) return;
+    this.answeredThisTurn = true;
     this.dispatch({ kind: "answer", text: trimmed });
+  }
+
+  /** Call on tool_execution_start; sends a throttled ping when enabled. */
+  handleToolActivity(toolName?: string): void {
+    if (!this.shouldRoute() || !this.opts.toolPings) return;
+    const now = Date.now();
+    const throttle = this.opts.toolPingThrottleMs ?? 4000;
+    if (now - this.lastToolPingAt < throttle) return;
+    this.lastToolPingAt = now;
+    this.dispatch({ kind: "status", text: toolName ? `running ${toolName}…` : "working…" });
   }
 
   /** Call on agent_end. */
   handleTurnEnd(): void {
-    if (this.shouldRoute()) this.sendStatus("done");
+    if (this.shouldRoute()) {
+      this.signalPresence("paused");
+      if (!this.answeredThisTurn) {
+        this.dispatch({ kind: "status", text: this.opts.doneNote ?? "✓ done" });
+      }
+    }
     this.currentOrigin = null;
   }
 
@@ -144,10 +166,9 @@ export class GatewayManager {
     return this.currentOrigin === "gateway" || this.opts.mirrorLocal === true;
   }
 
-  private sendStatus(phase: "working" | "done"): void {
-    const text = this.opts.statusText ? this.opts.statusText(phase) : DEFAULT_STATUS[phase];
-    if (!text) return;
-    this.dispatch({ kind: "status", text });
+  private signalPresence(state: "composing" | "paused"): void {
+    const chatId = this.lastChatId;
+    if (chatId) this.opts.presence?.(chatId, state);
   }
 
   private dispatch(message: OutboundMessage): void {

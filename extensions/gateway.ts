@@ -53,7 +53,11 @@ export default function (pi: ExtensionAPI) {
     lock,
     inject: (text, options) => pi.sendUserMessage(text, options),
     send: (chatId, message) => gateway.send(chatId, message),
+    presence: (chatId, state) => {
+      void gateway.sendPresence?.(chatId, state);
+    },
     mirrorLocal: config.mirrorLocal,
+    toolPings: config.toolPings,
     log: (message) => piLog(pi, message),
   });
 
