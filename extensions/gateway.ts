@@ -1,66 +1,74 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * gateway.ts — Nazar Pi extension: talk to Pi through a messaging gateway
- * (WhatsApp first; Signal/others later). Bound to the Pi session — it connects
- * on session_start and disconnects on session_shutdown. No daemon, no RPC; you
- * keep it alive by running Pi in tmux.
+ * (WhatsApp first; Signal/others later). Everything — device registration and
+ * config — is done from inside Pi via the /nazar-whatsapp command; settings
+ * persist to JSON under the nazar data dir (env vars remain an optional
+ * fallback). Bound to the Pi session: it connects on session_start (when linked
+ * and auto-connect is on) and disconnects on session_shutdown. No daemon, no
+ * RPC; keep it alive by running Pi in tmux.
  *
  * A single configured owner number may drive the agent (the master lock). The
- * local terminal stays usable alongside the chat (dual control): inbound
- * messages are injected with deliverAs:"followUp", so Pi's own one-turn-at-a-
- * time loop serialises local + remote input. The chat receives answers plus a
- * compact working/done status.
- *
- * OFF by default. Enable with:
- *   NAZAR_GATEWAY=whatsapp          (the transport; =fake for a wiring smoke)
- *   NAZAR_WHATSAPP_OWNER=<number>   (your personal number — the master lock)
- *   NAZAR_WHATSAPP_AUTH=qr|pairing  (default qr; pairing needs NAZAR_WHATSAPP_NUMBER)
- *   NAZAR_GATEWAY_MIRROR_LOCAL=1    (optional: echo locally-typed turns too)
- *
- * WhatsApp needs the optional 'baileys' (and 'qrcode-terminal') packages; they
- * are dynamically imported only when the gateway connects.
+ * local terminal stays usable alongside the chat (dual control). WhatsApp needs
+ * the optional 'baileys' (+ 'qrcode-terminal') packages, imported only on connect.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import {
-  createGateway,
-  GatewayManager,
-  installGateway,
-  MasterLock,
-  readGatewayConfig,
-} from "../lib/gateways/index.ts";
+import { applyMenuAction, buildMenuOptions, createGatewayController } from "../lib/gateways/index.ts";
 
 function piLog(pi: ExtensionAPI, message: string): void {
   (pi as unknown as { log?: (message: string) => void }).log?.(message);
 }
 
 export default function (pi: ExtensionAPI) {
-  const config = readGatewayConfig(process.env);
-  if (!config.enabled) return; // dormant unless NAZAR_GATEWAY selects a transport
+  const controller = createGatewayController(pi, { log: (message) => piLog(pi, message) });
+  controller.registerLifecycle();
 
-  const gateway = createGateway(config, { log: (message) => piLog(pi, message) });
-  if (!gateway) {
-    piLog(pi, `[gateway] no implementation for "${config.gateway}" — not started.`);
-    return;
-  }
+  pi.registerCommand("nazar-whatsapp", {
+    description: "Set up and control the WhatsApp gateway: connect/link, owner number, auth, toggles, logoff.",
+    handler: async (_args: string, ctx: any) => {
+      if (!ctx?.hasUI || typeof ctx?.ui?.select !== "function") {
+        try {
+          ctx?.ui?.notify?.("/nazar-whatsapp needs an interactive terminal.", "error");
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
 
-  if (!config.owner) {
-    piLog(pi, `[gateway] ${gateway.label} not started: set NAZAR_WHATSAPP_OWNER to your number (the master lock).`);
-    return;
-  }
+      const options = buildMenuOptions({
+        connected: controller.isConnected(),
+        status: controller.statusText(),
+        config: controller.getConfig(),
+      });
 
-  const lock = new MasterLock(config.owner);
-  const manager = new GatewayManager({
-    lock,
-    inject: (text, options) => pi.sendUserMessage(text, options),
-    send: (chatId, message) => gateway.send(chatId, message),
-    presence: (chatId, state) => {
-      void gateway.sendPresence?.(chatId, state);
+      let choice: string | undefined;
+      try {
+        choice = await ctx.ui.select(controller.statusText(), options.map((o) => o.label), { timeout: 60000 });
+      } catch {
+        return;
+      }
+      if (!choice) return;
+      const action = options.find((o) => o.label === choice)?.value;
+      if (!action) return;
+
+      try {
+        const summary = await applyMenuAction(action, {
+          getConfig: () => controller.getConfig(),
+          saveConfig: (patch) => controller.saveConfig(patch),
+          connect: () => controller.connect(),
+          disconnect: () => controller.disconnect(),
+          logoff: () => controller.logoff(),
+          statusText: () => controller.statusText(),
+          input: (label, initial) => ctx.ui.input(label, initial ?? "", { timeout: 60000 }),
+        });
+        ctx.ui.notify(summary, "info");
+      } catch (err) {
+        try {
+          ctx.ui.notify(`WhatsApp action failed: ${String(err)}`, "error");
+        } catch {
+          /* ignore */
+        }
+      }
     },
-    mirrorLocal: config.mirrorLocal,
-    toolPings: config.toolPings,
-    log: (message) => piLog(pi, message),
   });
-
-  installGateway(pi, gateway, manager);
-  piLog(pi, `[gateway] ${gateway.label} armed for owner ${lock.ownerId} (mirrorLocal=${config.mirrorLocal}).`);
 }

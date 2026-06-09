@@ -49,3 +49,8 @@ test("toolPings defaults off and can be enabled", () => {
   expect(readGatewayConfig({ NAZAR_GATEWAY: "whatsapp" }).toolPings).toBe(false);
   expect(readGatewayConfig({ NAZAR_GATEWAY: "whatsapp", NAZAR_GATEWAY_TOOL_PINGS: "1" }).toolPings).toBe(true);
 });
+
+test("autoConnect defaults on; NAZAR_WHATSAPP_AUTOCONNECT=0 disables it", () => {
+  expect(readGatewayConfig({ NAZAR_GATEWAY: "whatsapp" }).autoConnect).toBe(true);
+  expect(readGatewayConfig({ NAZAR_GATEWAY: "whatsapp", NAZAR_WHATSAPP_AUTOCONNECT: "0" }).autoConnect).toBe(false);
+});

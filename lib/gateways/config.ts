@@ -27,6 +27,8 @@ export interface GatewayConfig {
   pairingNumber: string;
   /** Send throttled per-tool activity pings to the chat (default off). */
   toolPings: boolean;
+  /** Reconnect automatically on startup once the device is linked (default on). */
+  autoConnect: boolean;
 }
 
 const TRUEY = new Set(["1", "true", "yes", "on"]);
@@ -40,5 +42,7 @@ export function readGatewayConfig(env: NodeJS.ProcessEnv = process.env): Gateway
   const sessionDir = (env.NAZAR_WHATSAPP_SESSION_DIR ?? "").trim() || join(dataDir(), "whatsapp-auth");
   const pairingNumber = (env.NAZAR_WHATSAPP_NUMBER ?? "").trim();
   const toolPings = TRUEY.has((env.NAZAR_GATEWAY_TOOL_PINGS ?? "").trim().toLowerCase());
-  return { enabled, gateway, owner, mirrorLocal, sessionDir, authMode, pairingNumber, toolPings };
+  const autoRaw = (env.NAZAR_WHATSAPP_AUTOCONNECT ?? "").trim().toLowerCase();
+  const autoConnect = autoRaw === "" ? true : TRUEY.has(autoRaw);
+  return { enabled, gateway, owner, mirrorLocal, sessionDir, authMode, pairingNumber, toolPings, autoConnect };
 }

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
- * gateways/index.ts — public surface + the transport factory.
+ * gateways/index.ts — public surface for the messaging-gateway layer.
  *
- * createGateway() resolves a Gateway from config. WhatsApp uses Baileys, which
- * is an optional peer dependency dynamically imported only on connect(), so the
- * core never loads it unless the gateway is enabled. The in-memory "fake"
- * gateway powers a wiring smoke (NAZAR_GATEWAY=fake) and tests. Adding a
- * transport is a one-line case here plus its implementation file.
+ * WhatsApp is the first transport (Baileys, an optional peer dep imported only
+ * on connect). The whole thing is set up and driven from inside Pi via the
+ * /nazar-whatsapp command; config persists to JSON under the nazar data dir
+ * (config-store) with env vars as an optional fallback. Adding a transport is a
+ * one-line case in factory.ts plus its implementation file.
  */
 export * from "./types.ts";
 export { MasterLock, normalizeId } from "./lock.ts";
@@ -16,36 +16,31 @@ export type {
   GatewayManagerOptions,
   InboundOutcome,
   Injector,
+  PresenceSink,
   Sender,
   TurnOrigin,
 } from "./manager.ts";
 export { FakeGateway, type RecordedSend } from "./fake-gateway.ts";
 export { readGatewayConfig, type GatewayConfig } from "./config.ts";
-export { installGateway, type InstalledGateway } from "./install.ts";
+export { createGateway, type CreateGatewayDeps } from "./factory.ts";
+export { createGatewayController, type GatewayController, type GatewayControllerDeps } from "./install.ts";
 export { renderQrAscii } from "./qr.ts";
+export { stripAnsi, chunkText } from "./format.ts";
 export { WhatsAppGateway, type WhatsAppGatewayOptions } from "./whatsapp/whatsapp-gateway.ts";
-
-import type { Gateway } from "./types.ts";
-import type { GatewayConfig } from "./config.ts";
-import { FakeGateway } from "./fake-gateway.ts";
-import { WhatsAppGateway } from "./whatsapp/whatsapp-gateway.ts";
-
-export interface CreateGatewayDeps {
-  log?: (message: string) => void;
-}
-
-export function createGateway(config: GatewayConfig, deps: CreateGatewayDeps = {}): Gateway | undefined {
-  switch (config.gateway) {
-    case "fake":
-      return new FakeGateway();
-    case "whatsapp":
-      return new WhatsAppGateway({
-        sessionDir: config.sessionDir,
-        authMode: config.authMode,
-        pairingNumber: config.pairingNumber || undefined,
-        log: deps.log,
-      });
-    default:
-      return undefined;
-  }
-}
+export {
+  gatewayConfigPath,
+  loadStoredConfig,
+  saveStoredConfig,
+  clearStoredConfig,
+  resolveEffectiveConfig,
+  type StoredConfig,
+  type EffectiveConfig,
+} from "./config-store.ts";
+export {
+  buildMenuOptions,
+  applyMenuAction,
+  type MenuAction,
+  type MenuOption,
+  type MenuState,
+  type MenuDeps,
+} from "./whatsapp/menu.ts";

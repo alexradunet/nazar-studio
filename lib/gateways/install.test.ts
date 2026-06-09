@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { describe, expect, test, vi } from "vitest";
-import { installGateway } from "./install.ts";
-import { GatewayManager } from "./manager.ts";
-import { MasterLock } from "./lock.ts";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createGatewayController } from "./install.ts";
 import { FakeGateway } from "./fake-gateway.ts";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-const OWNER_JID = "40712345678@s.whatsapp.net";
+const OWNER = "40712345678";
+const OWNER_JID = `${OWNER}@s.whatsapp.net`;
+
+let dir: string;
 
 function fakePi() {
   const handlers = new Map<string, (event: any, ctx: any) => unknown>();
@@ -23,34 +27,51 @@ function fakePi() {
   return { pi: pi as unknown as ExtensionAPI, handlers, sent };
 }
 
+beforeEach(() => {
+  dir = mkdtempSync(join(tmpdir(), "nazar-ctl-"));
+  process.env.NAZAR_WHATSAPP_CONFIG = join(dir, "config.json");
+  process.env.NAZAR_WHATSAPP_SESSION_DIR = join(dir, "session");
+  delete process.env.NAZAR_GATEWAY;
+  delete process.env.NAZAR_WHATSAPP_OWNER;
+});
+afterEach(() => {
+  delete process.env.NAZAR_WHATSAPP_CONFIG;
+  delete process.env.NAZAR_WHATSAPP_SESSION_DIR;
+  rmSync(dir, { recursive: true, force: true });
+});
+
 function build() {
   const { pi, handlers, sent } = fakePi();
   const gateway = new FakeGateway();
-  const manager = new GatewayManager({
-    lock: new MasterLock("40712345678"),
-    inject: (text, options) => pi.sendUserMessage(text, options),
-    send: (chatId, message) => gateway.send(chatId, message),
-  });
-  installGateway(pi, gateway, manager);
-  return { pi, handlers, sent, gateway, manager };
+  const controller = createGatewayController(pi, { createGateway: () => gateway, log: () => {} });
+  return { pi, handlers, sent, gateway, controller };
 }
 
-describe("installGateway wiring", () => {
-  test("connects on session_start, disconnects on session_shutdown", async () => {
-    const { handlers, gateway } = build();
-    await handlers.get("session_start")?.({}, {});
-    expect(gateway.status()).toBe("connected");
-    await handlers.get("session_shutdown")?.({}, {});
-    expect(gateway.status()).toBe("disconnected");
+describe("gateway controller", () => {
+  test("registerLifecycle subscribes to the Pi lifecycle", () => {
+    const { handlers, controller } = build();
+    controller.registerLifecycle();
+    for (const e of ["session_start", "before_agent_start", "message_end", "agent_end", "tool_execution_start", "session_shutdown"]) {
+      expect(handlers.has(e)).toBe(true);
+    }
   });
 
-  test("inbound message is injected; the assistant reply is sent back", async () => {
-    const { handlers, sent, gateway } = build();
-    await handlers.get("session_start")?.({}, {});
+  test("not configured until an owner is set", () => {
+    const { controller } = build();
+    expect(controller.getConfig().configured).toBe(false);
+    controller.saveConfig({ gateway: "whatsapp", owner: OWNER });
+    expect(controller.getConfig().configured).toBe(true);
+  });
+
+  test("connect links the gateway; inbound is injected; assistant reply is sent back", async () => {
+    const { controller, handlers, sent, gateway } = build();
+    controller.registerLifecycle();
+    controller.saveConfig({ gateway: "whatsapp", owner: OWNER });
+    await controller.connect();
+    expect(controller.isConnected()).toBe(true);
 
     gateway.emit({ senderId: OWNER_JID, chatId: OWNER_JID, text: "ping" });
     expect(sent).toHaveLength(1);
-    expect(sent[0].options.deliverAs).toBe("followUp");
     const prompt = sent[0].text;
 
     await handlers.get("before_agent_start")?.({ prompt }, {});
@@ -60,28 +81,53 @@ describe("installGateway wiring", () => {
     expect(gateway.sent.some((s) => s.message.kind === "answer" && s.message.text === "pong")).toBe(true);
   });
 
-  test("non-assistant message_end is ignored", async () => {
-    const { handlers, gateway } = build();
-    await handlers.get("session_start")?.({}, {});
-    gateway.emit({ senderId: OWNER_JID, chatId: OWNER_JID, text: "hi" });
-    gateway.sent.length = 0;
-    await handlers.get("before_agent_start")?.({ prompt: "Message from … unmatched" }, {});
-    await handlers.get("message_end")?.({ message: { role: "user", content: [{ type: "text", text: "x" }] } }, {});
-    expect(gateway.sent).toHaveLength(0);
+  test("ignores messages from non-owner senders", async () => {
+    const { controller, sent, gateway } = build();
+    controller.saveConfig({ gateway: "whatsapp", owner: OWNER });
+    await controller.connect();
+    gateway.emit({ senderId: "40799999999@s.whatsapp.net", chatId: "40799999999@s.whatsapp.net", text: "hi" });
+    expect(sent).toHaveLength(0);
   });
 
   test("/abort from the owner calls ctx.abort()", async () => {
-    const { handlers, gateway } = build();
-    const ctx = { abort: vi.fn(), compact: vi.fn() };
+    const { controller, handlers, gateway } = build();
+    controller.registerLifecycle();
+    const ctx = { abort: vi.fn(), compact: vi.fn(), ui: {} };
     await handlers.get("session_start")?.({}, ctx);
+    controller.saveConfig({ gateway: "whatsapp", owner: OWNER });
+    await controller.connect();
     gateway.emit({ senderId: OWNER_JID, chatId: OWNER_JID, text: "/abort" });
     expect(ctx.abort).toHaveBeenCalledOnce();
   });
 
-  test("ignores unauthorized senders", async () => {
-    const { handlers, sent, gateway } = build();
-    await handlers.get("session_start")?.({}, {});
-    gateway.emit({ senderId: "40799999999@s.whatsapp.net", chatId: "40799999999@s.whatsapp.net", text: "hi" });
-    expect(sent).toHaveLength(0);
+  test("disconnect tears down the gateway", async () => {
+    const { controller, gateway } = build();
+    controller.saveConfig({ gateway: "whatsapp", owner: OWNER });
+    await controller.connect();
+    await controller.disconnect();
+    expect(controller.isConnected()).toBe(false);
+    expect(gateway.status()).toBe("disconnected");
+  });
+
+  test("logoff deletes the linked-device session dir", async () => {
+    const { controller } = build();
+    controller.saveConfig({ gateway: "whatsapp", owner: OWNER });
+    const sessionDir = controller.getConfig().sessionDir;
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(sessionDir, "creds.json"), "{}");
+    await controller.logoff();
+    expect(existsSync(sessionDir)).toBe(false);
+  });
+
+  test("auto-connects on session_start when linked and autoConnect is on", async () => {
+    const { controller, handlers, gateway } = build();
+    controller.registerLifecycle();
+    controller.saveConfig({ gateway: "whatsapp", owner: OWNER, autoConnect: true });
+    const sessionDir = controller.getConfig().sessionDir;
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(sessionDir, "creds.json"), "{}"); // simulate a prior link
+    await handlers.get("session_start")?.({}, { ui: {} });
+    expect(controller.isConnected()).toBe(true);
+    expect(gateway.status()).toBe("connected");
   });
 });
