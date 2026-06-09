@@ -8,7 +8,8 @@
 // Pi's layout contract (footer always returns at least one row) while being
 // fully invisible. The only exception: a ctx-warning pip surfaces when usage
 // climbs to 85%+ so the alert is never silently hidden.
-import type { ExtensionAPI, ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
+import type { ContextUsage, ExtensionAPI, ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
+import type { TUI } from "@earendil-works/pi-tui";
 import { compact, visibleWidth } from "./ansi.ts";
 
 const FOOTER_HORIZONTAL_PADDING = 1;
@@ -22,7 +23,7 @@ function padFooter(line: string, width: number): string {
   return `${" ".repeat(FOOTER_HORIZONTAL_PADDING)}${inner}${" ".repeat(rightFill + FOOTER_HORIZONTAL_PADDING)}`;
 }
 
-function contextWarningPip(usage: any, theme: Theme): string | undefined {
+function contextWarningPip(usage: ContextUsage | undefined, theme: Theme): string | undefined {
   const percent = usage?.percent;
   if (percent == null || percent < 85) return undefined;
   const role = percent >= 95 ? "error" : "warning";
@@ -30,8 +31,8 @@ function contextWarningPip(usage: any, theme: Theme): string | undefined {
   return theme.fg(role, label);
 }
 
-export function footerFactory(_pi: ExtensionAPI, ctx: ExtensionContext, _onTui?: (tui: any) => void) {
-  return (_tui: any, theme: Theme, _footerData: any) => {
+export function footerFactory(_pi: ExtensionAPI, ctx: ExtensionContext, _onTui?: (tui: TUI) => void) {
+  return (_tui: TUI, theme: Theme, _footerData: unknown) => {
     return {
       dispose() {},
       invalidate() {},

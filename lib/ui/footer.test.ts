@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { expect, test } from "vitest";
+import type { TUI } from "@earendil-works/pi-tui";
 import { visibleWidth } from "./ansi.ts";
 import { footerFactory } from "./footer.ts";
+
+// The footer factory ignores its tui argument; a typed null stands in for it.
+const noTui = null as unknown as TUI;
 
 const theme: any = {
   fg(_name: string, text: string) { return text; },
@@ -18,7 +22,7 @@ function renderFooter(width: number, ctxOverrides: any = {}): string {
     getContextUsage: () => ({ percent: 42 }),
     ...ctxOverrides,
   };
-  const component = footerFactory(pi, ctx)(undefined, theme, undefined);
+  const component = footerFactory(pi, ctx)(noTui, theme, undefined);
   return component.render(width)[0] ?? "";
 }
 

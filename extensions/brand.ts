@@ -4,6 +4,8 @@
 // management is the host `pi` CLI's native job — this extension no longer shells out to a
 // vendored bin/pi wrapper.
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type { TUI } from "@earendil-works/pi-tui";
+import type { RenderableMessage } from "../lib/ui/pi-surface.ts";
 import { uiCapabilitySummary } from "../lib/ui/design.ts";
 import { setUiQuality, type UiQuality } from "../lib/ui/graphics-state.ts";
 import { patchRpgAvatars, seedAvatarPanelOrderFromSessionEntries } from "../lib/ui/avatars.ts";
@@ -17,7 +19,7 @@ import { setActiveTool, setNazarMood } from "../lib/ui/nazar-mood.ts";
 import { showThinkingWidget, hideThinkingWidget } from "../lib/ui/working.ts";
 import { compact, visibleWidth } from "../lib/ui/ansi.ts";
 
-function applyNazarUI(pi: ExtensionAPI, ctx: ExtensionContext, onTui?: (tui: any) => void) {
+function applyNazarUI(pi: ExtensionAPI, ctx: ExtensionContext, onTui?: (tui: TUI) => void) {
   if (!ctx?.hasUI) return; // no terminal UI to brand
   try { ctx.ui.setTitle?.("Nazar"); } catch { /* ignore */ }
   try { ctx.ui.setHeader?.(headerFactory); } catch { /* ignore */ }
@@ -34,7 +36,7 @@ function applyNazarUI(pi: ExtensionAPI, ctx: ExtensionContext, onTui?: (tui: any
 export default function (pi: ExtensionAPI) {
   patchRpgAvatars();
 
-  let renderTui: any;
+  let renderTui: TUI | undefined;
   let uiCtx: ExtensionContext | undefined;
   const activeToolAnimations = new Set<string>();
   let toolAnimationTicker: ReturnType<typeof setInterval> | undefined;
@@ -72,10 +74,15 @@ export default function (pi: ExtensionAPI) {
     try { renderTui?.requestRender?.(); } catch { /* ignore */ }
   };
 
-  pi.on("session_start", async (event: any, ctx: any) => {
+  pi.on("session_start", async (event, ctx) => {
     uiCtx = ctx;
     try {
-      const sessionManager = ctx?.sessionManager;
+      // getBranch/getEntries are not on the public ReadonlySessionManager type;
+      // probe them structurally and fall back to an empty transcript.
+      const sessionManager = ctx.sessionManager as {
+        getBranch?: () => unknown;
+        getEntries?: () => unknown;
+      };
       const branch = sessionManager?.getBranch?.() ?? sessionManager?.getEntries?.() ?? [];
       seedAvatarPanelOrderFromSessionEntries(Array.isArray(branch) ? branch : []);
     } catch {
@@ -91,7 +98,7 @@ export default function (pi: ExtensionAPI) {
   // at session_start, but Pi re-enables the default "Working..." indicator on
   // each subsequent agent invocation. before_agent_start fires right before Pi
   // shows the loader, so we suppress it here reliably every turn.
-  pi.on("before_agent_start", async (_event: unknown, ctx: any) => {
+  pi.on("before_agent_start", async (_event, ctx) => {
     uiCtx = ctx;
     try { ctx?.ui?.setWorkingVisible?.(false); } catch { /* ignore */ }
     turnHadError = false;
@@ -103,26 +110,27 @@ export default function (pi: ExtensionAPI) {
     try { showThinkingWidget(ctx); } catch { /* ignore */ }
   });
 
-  pi.on("model_select", async (_event: unknown, _ctx: any) => {
+  pi.on("model_select", async (_event, _ctx) => {
     try { renderTui?.requestRender?.(); } catch { /* ignore */ }
   });
 
-  pi.on("message_update", async (event: any) => {
-    if (event?.message?.role === "assistant" && Array.isArray(event.message.content)) {
-      for (const part of event.message.content) {
+  pi.on("message_update", async (event) => {
+    const message = event.message as RenderableMessage;
+    if (message?.role === "assistant" && Array.isArray(message.content)) {
+      for (const part of message.content) {
         if (part?.type === "toolCall") trackToolAnimation(part.id);
       }
       try { renderTui?.requestRender?.(); } catch { /* ignore */ }
     }
   });
 
-  pi.on("tool_execution_start", async (event: any) => {
+  pi.on("tool_execution_start", async (event) => {
     trackToolAnimation(event?.toolCallId);
     setActiveTool(event?.toolName ?? null);
     setMood("focused");
   });
 
-  pi.on("tool_execution_end", async (event: any) => {
+  pi.on("tool_execution_end", async (event) => {
     untrackToolAnimation(event?.toolCallId);
     setActiveTool(null);
     if (event?.isError) {
@@ -148,7 +156,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.registerCommand("nazar-ui", {
     description: "Show or set Nazar's terminal avatar quality: low, medium, or high.",
-    handler: async (args: string, ctx: any) => {
+    handler: async (args: string, ctx) => {
       const requested = args.trim().split(/\s+/).filter(Boolean)[0]?.toLowerCase();
       const validInputs = new Set(["", "low", "medium", "high", "status", "show", "help", "--help"]);
 
@@ -170,7 +178,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.registerCommand("nazar", {
     description: "About Nazar",
-    handler: async (_args: string, ctx: any) => {
+    handler: async (_args: string, ctx) => {
       const msg =
         "Nazar — your personal wise companion, installed as a Pi package. Local-first by default; " +
         "frontier models only when deliberately switched. Memory and life-tracking stay in your " +
@@ -185,7 +193,7 @@ export default function (pi: ExtensionAPI) {
   // catch regressions. Output is injected as a custom notification block.
   pi.registerCommand("nazar-style", {
     description: "Show the Nazar terminal style guide — every panel, divider, and tool state.",
-    handler: async (_args: string, ctx: any) => {
+    handler: async (_args: string, ctx) => {
       const BOLD_ON = "\x1b[1m";
       const BOLD_OFF = "\x1b[22m";
       const width = Math.max(60, (process.stdout.columns ?? 80) - 4);

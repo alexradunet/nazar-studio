@@ -12,6 +12,7 @@
 // separator between header and conversation. Disable via
 // NAZAR_FOLK_BAND=off if you'd rather have plain space.
 import type { Theme } from "@earendil-works/pi-coding-agent";
+import type { TUI } from "@earendil-works/pi-tui";
 import { compact } from "./ansi.ts";
 import { renderChapterDivider } from "./divider.ts";
 import { panelStyle } from "./panel-style.ts";
@@ -63,7 +64,7 @@ export function renderFolkBand(width: number): string {
   return out;
 }
 
-export function headerFactory(_tui: any, theme: Theme) {
+export function headerFactory(_tui: TUI, theme: Theme) {
   return {
     invalidate() {},
     render(width: number): string[] {
