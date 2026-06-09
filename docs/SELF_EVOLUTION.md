@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # Self-evolution — the software that grows with you
 
 Nazar gets more useful over time by **growing its own knowledge** — facts it remembers and

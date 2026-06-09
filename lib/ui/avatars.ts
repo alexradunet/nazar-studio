@@ -479,6 +479,26 @@ export const __testing = {
 // decorate the exported built-in components in one idempotent place.
 
 export function patchRpgAvatars() {
+  // Defensive guard: we monkeypatch private Pi render methods below. If a Pi
+  // upgrade renames or removes any of them, skip patching and fall back to Pi's
+  // built-in rendering rather than storing `undefined` and crashing on the next
+  // render. (lib/ui/avatars-patch.test.ts asserts this surface at CI; this is the
+  // matching runtime safety net.)
+  const patchTargets: Array<[any, string]> = [
+    [UserMessageComponent, "render"], [UserMessageComponent, "invalidate"],
+    [AssistantMessageComponent, "render"], [AssistantMessageComponent, "updateContent"], [AssistantMessageComponent, "invalidate"],
+    [ToolExecutionComponent, "render"], [ToolExecutionComponent, "invalidate"],
+    [CompactionSummaryMessageComponent, "render"],
+    [BranchSummaryMessageComponent, "render"],
+    [SkillInvocationMessageComponent, "render"],
+  ];
+  const missingPatchTargets = patchTargets.filter(([component, method]) => typeof component?.prototype?.[method] !== "function");
+  if (missingPatchTargets.length > 0) {
+    const surface = missingPatchTargets.map(([component, method]) => `${component?.name ?? "?"}.${method}`).join(", ");
+    try { console.error(`[nazar] RPG avatar patch skipped — Pi render surface changed: ${surface}`); } catch { /* ignore */ }
+    return;
+  }
+
   const g = globalThis as any;
   const originals = g[AVATAR_ORIGINALS] ?? {};
   originals.assistantRender ??= AssistantMessageComponent.prototype.render;

@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # Governance
 
 Nazar is, for now, a **maintainer-led** project. The maintainer is Alex Radunet.
