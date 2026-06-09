@@ -11,7 +11,8 @@
  *              memory_search / memory_get / memory_duplicates. memory_suggest realizes the
  *              "detect → suggest → approve" capture loop (SELF_EVOLUTION.md) for memory; a capture
  *              may carry outcome: success|failure (ReasoningBank-style) so failure lessons
- *              (guardrails) live alongside facts.
+ *              (guardrails) live alongside facts. Before asking it dedupes — offering to update a
+ *              same-title note or merge into a similar one rather than create a copy.
  *   - SKILLS → procedures as Pi-native skill files (skills/<name>.md, frontmatter
  *              name/description). Pi discovers, injects, and invokes them (/skill:name).
  *              Tools: skill_write (explicit) / skill_suggest (proactive, asks first); neither
@@ -26,7 +27,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { writeMemory, searchMemory, getMemory, findDuplicates, recallContext, reindexMemory, type Hit } from "../lib/memory.ts";
+import { writeMemory, appendMemory, searchMemory, getMemory, findDuplicates, recallContext, reindexMemory, type Hit } from "../lib/memory.ts";
 import { nodeSqliteUpgradePrompt } from "../lib/node-version.ts";
 import { moduleDir } from "../lib/paths.ts";
 
@@ -51,6 +52,7 @@ const OPT_EDIT = "Edit…";
 const OPT_SKIP = "Skip";
 const OPT_UPDATE = "Update the existing note";
 const OPT_UPDATE_SKILL = "Update the existing skill";
+const OPT_SAVE_NEW = "Save as a new note";
 
 /**
  * Proactive-capture suggestions already offered this Pi session, so Nazar never re-nags about the
@@ -76,6 +78,46 @@ function sameTitlePage(title: string): Hit | null {
   if (!want) return null;
   for (const h of searchMemory(title, 5)) {
     if (h.title.trim().toLowerCase() === want) return h;
+  }
+  return null;
+}
+
+const STOPWORDS = new Set("the a an and or but of to in for on with is are be it this that you your my our we they them then than so as at by from into over not no never always".split(" "));
+
+/** Distinctive lowercase tokens (>=3 chars, no stopwords) for cheap overlap scoring. */
+function tokenize(s: string): Set<string> {
+  const out = new Set<string>();
+  for (const t of String(s).toLowerCase().match(/[a-z0-9]+/g) ?? []) {
+    if (t.length >= 3 && !STOPWORDS.has(t)) out.add(t);
+  }
+  return out;
+}
+
+/** Body of a memory page (frontmatter stripped), by exact title. */
+function memoryBody(title: string): string {
+  const md = getMemory(title);
+  return md ? md.replace(/^---\n[\s\S]*?\n---\n?/, "").trim() : "";
+}
+
+/**
+ * Dedupe signal for a proposal. An exact (case-insensitive) title match is a "same-title" hit
+ * (update in place). Otherwise the top FTS candidate is a "similar" hit when it shares enough
+ * distinctive tokens — caught conservatively (>=3 shared AND >=50% coverage) so a genuinely new
+ * fact is rarely mistaken for a near-duplicate. FTS5 + token overlap; no embeddings.
+ */
+function findSimilarPage(title: string, content: string): { hit: Hit; kind: "same-title" | "similar" } | null {
+  const exact = sameTitlePage(title);
+  if (exact) return { hit: exact, kind: "same-title" };
+  const want = tokenize(`${title} ${content}`);
+  if (want.size < 3) return null;
+  const wantTitle = title.trim().toLowerCase();
+  for (const h of searchMemory(`${title} ${content}`, 6)) {
+    if (h.title.trim().toLowerCase() === wantTitle) continue;
+    const have = tokenize(`${h.title} ${memoryBody(h.title)}`);
+    if (!have.size) continue;
+    let shared = 0;
+    for (const t of want) if (have.has(t)) shared++;
+    if (shared >= 3 && shared / Math.min(want.size, have.size) >= 0.5) return { hit: h, kind: "similar" };
   }
   return null;
 }
@@ -193,13 +235,18 @@ export default function (pi: ExtensionAPI) {
 
       offeredThisSession.add(fp); // mark offered regardless of the answer
       const dialogOpts = { timeout: 30000, signal };
-      const dup = sameTitlePage(proposal.title);
+      const sim = findSimilarPage(proposal.title, proposal.content);
+      const mergeLabel = sim?.kind === "similar" ? `Merge into "${sim.hit.title}"` : "";
 
       let choice: string | undefined;
       try {
-        choice = dup
-          ? await ctx.ui.select(`Update memory? (similar note: ${dup.title})`, [OPT_UPDATE, OPT_SKIP], dialogOpts)
-          : await ctx.ui.select("Remember this?", [OPT_SAVE, OPT_EDIT, OPT_SKIP], dialogOpts);
+        if (sim?.kind === "same-title") {
+          choice = await ctx.ui.select(`Update memory? (note "${sim.hit.title}" exists)`, [OPT_UPDATE, OPT_SKIP], dialogOpts);
+        } else if (sim?.kind === "similar") {
+          choice = await ctx.ui.select(`Similar note exists: "${sim.hit.title}"`, [mergeLabel, OPT_SAVE_NEW, OPT_SKIP], dialogOpts);
+        } else {
+          choice = await ctx.ui.select("Remember this?", [OPT_SAVE, OPT_EDIT, OPT_SKIP], dialogOpts);
+        }
       } catch {
         return { content: [{ type: "text", text: "Suggestion dismissed." }], details: { skipped: "dialog-error" } };
       }
@@ -210,10 +257,17 @@ export default function (pi: ExtensionAPI) {
         return { content: [{ type: "text", text: "Skipped (not saved)." }], details: { skipped: "user" } };
       }
 
+      // Merge into a similar (different-title) note: append to it, preserving its frontmatter.
+      if (sim?.kind === "similar" && choice === mergeLabel) {
+        const m = appendMemory(sim.hit.title, proposal.content);
+        try { ctx.ui.notify(`Merged into ${m?.path ?? sim.hit.title}`, "info"); } catch { /* ignore */ }
+        return { content: [{ type: "text", text: `Merged into [[${sim.hit.title}]].` }], details: { merged: true, into: sim.hit.title, ...(m ?? {}) } };
+      }
+
       const toWrite: any = { ...proposal };
-      if (choice === OPT_UPDATE && dup) {
-        toWrite.title = dup.title;   // write back to the same page…
-        toWrite.type = dup.type;     // …in its existing folder, so it updates in place
+      if (sim?.kind === "same-title" && choice === OPT_UPDATE) {
+        toWrite.title = sim.hit.title;   // write back to the same page…
+        toWrite.type = sim.hit.type;     // …in its existing folder, so it updates in place
       }
 
       if (choice === OPT_EDIT) {

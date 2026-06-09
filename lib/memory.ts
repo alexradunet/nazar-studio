@@ -121,6 +121,39 @@ export function writeMemory(m: MemoryInput): { path: string; title: string } {
   return { path, title };
 }
 
+/**
+ * Append text to an existing page's body, preserving its frontmatter (only `updated` is bumped),
+ * then refresh its index row. The "merge" half of dedupe. Returns null if no page has that title.
+ */
+export function appendMemory(title: string, extra: string): { path: string; title: string } | null {
+  const add = String(extra ?? "").trim();
+  let path: string | undefined;
+  const db0 = openDb();
+  try {
+    const row = db0.prepare("SELECT path FROM memory WHERE title = ? LIMIT 1").get(title) as { path?: string } | undefined;
+    path = row?.path;
+  } finally { db0.close(); }
+  if (!path || !existsSync(path)) return null;
+  if (!add) return { path, title };
+
+  const raw = readFileSync(path, "utf8");
+  const fmMatch = raw.match(/^---\n[\s\S]*?\n---\n?/);
+  const fmBlock = (fmMatch ? fmMatch[0] : "").replace(/^updated:.*$/m, `updated: ${new Date().toISOString()}`);
+  const { meta, body } = parsePage(raw);
+  const newBody = `${body.trim()}\n\n${add}`.trim();
+  writeFileSync(path, `${fmBlock}\n${newBody}\n`);
+
+  const db = openDb();
+  try {
+    indexRow(db, {
+      path, title: meta.title ?? title, whenToUse: meta.whenToUse ?? meta.whentouse ?? "",
+      tags: meta.tags ?? "", type: meta.type ?? "notes", body: newBody,
+      pinned: /^(true|1|yes)$/i.test(meta.pinned ?? ""),
+    });
+  } finally { db.close(); }
+  return { path, title: meta.title ?? title };
+}
+
 export interface Hit { path: string; title: string; type: string; whenToUse: string; snippet: string; }
 
 /** Keyword/full-text recall over memory pages. Token-OR match — forgiving and FTS-safe. */
