@@ -35,7 +35,6 @@
       "./extensions/local-llm.ts",
       "./extensions/avatar.ts",
       "./extensions/gateway.ts"
-      "./extensions/local-llm.ts"
     ],
     "skills": [
       "./skills"
@@ -60,7 +59,17 @@
     "typebox": "1.1.38"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": ">=0.78.1"
+    "@earendil-works/pi-coding-agent": ">=0.78.1",
+    "baileys": "^6.7.0",
+    "qrcode-terminal": "^0.12.0"
+  },
+  "peerDependenciesMeta": {
+    "baileys": {
+      "optional": true
+    },
+    "qrcode-terminal": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^0.78.1",

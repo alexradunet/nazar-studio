@@ -2,10 +2,11 @@
 /**
  * gateways/index.ts — public surface + the transport factory.
  *
- * createGateway() resolves a Gateway from config. WhatsApp (Baileys) lands in a
- * follow-up PR; today only the in-memory "fake" gateway is built in, used for a
- * wiring smoke (NAZAR_GATEWAY=fake) and tests. Adding a transport is a one-line
- * case here plus its implementation file — nothing else in the core changes.
+ * createGateway() resolves a Gateway from config. WhatsApp uses Baileys, which
+ * is an optional peer dependency dynamically imported only on connect(), so the
+ * core never loads it unless the gateway is enabled. The in-memory "fake"
+ * gateway powers a wiring smoke (NAZAR_GATEWAY=fake) and tests. Adding a
+ * transport is a one-line case here plus its implementation file.
  */
 export * from "./types.ts";
 export { MasterLock, normalizeId } from "./lock.ts";
@@ -21,16 +22,29 @@ export type {
 export { FakeGateway, type RecordedSend } from "./fake-gateway.ts";
 export { readGatewayConfig, type GatewayConfig } from "./config.ts";
 export { installGateway, type InstalledGateway } from "./install.ts";
+export { renderQrAscii } from "./qr.ts";
+export { WhatsAppGateway, type WhatsAppGatewayOptions } from "./whatsapp/whatsapp-gateway.ts";
 
 import type { Gateway } from "./types.ts";
 import type { GatewayConfig } from "./config.ts";
 import { FakeGateway } from "./fake-gateway.ts";
+import { WhatsAppGateway } from "./whatsapp/whatsapp-gateway.ts";
 
-export function createGateway(config: GatewayConfig): Gateway | undefined {
+export interface CreateGatewayDeps {
+  log?: (message: string) => void;
+}
+
+export function createGateway(config: GatewayConfig, deps: CreateGatewayDeps = {}): Gateway | undefined {
   switch (config.gateway) {
     case "fake":
       return new FakeGateway();
-    // case "whatsapp": implemented in the WhatsApp gateway PR (Baileys)
+    case "whatsapp":
+      return new WhatsAppGateway({
+        sessionDir: config.sessionDir,
+        authMode: config.authMode,
+        pairingNumber: config.pairingNumber || undefined,
+        log: deps.log,
+      });
     default:
       return undefined;
   }
