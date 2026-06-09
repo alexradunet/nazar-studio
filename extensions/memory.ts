@@ -30,6 +30,7 @@ import { join } from "node:path";
 import { writeMemory, appendMemory, searchMemory, getMemory, findDuplicates, recallContext, reindexMemory, type Hit } from "../lib/memory.ts";
 import { nodeSqliteUpgradePrompt } from "../lib/node-version.ts";
 import { moduleDir } from "../lib/paths.ts";
+import { promptMemoryChoice } from "../lib/ui/memory-prompt.ts";
 
 /** Where Pi-native skill files live (declared in package.json `pi.skills`). */
 const skillsDir = (): string => process.env.NAZAR_SKILLS_DIR || join(moduleDir(import.meta.url), "..", "skills");
@@ -234,18 +235,33 @@ export default function (pi: ExtensionAPI) {
       }
 
       offeredThisSession.add(fp); // mark offered regardless of the answer
-      const dialogOpts = { timeout: 30000, signal };
+      const dialogOpts = { timeoutMs: 30000, signal };
       const sim = findSimilarPage(proposal.title, proposal.content);
       const mergeLabel = sim?.kind === "similar" ? `Merge into "${sim.hit.title}"` : "";
 
       let choice: string | undefined;
       try {
         if (sim?.kind === "same-title") {
-          choice = await ctx.ui.select(`Update memory? (note "${sim.hit.title}" exists)`, [OPT_UPDATE, OPT_SKIP], dialogOpts);
+          choice = await promptMemoryChoice(ctx, {
+            question: `Update memory? (note "${sim.hit.title}" exists)`,
+            proposal: { ...proposal, type: sim.hit.type },
+            heading: "Proposed replacement",
+            meta: "existing note found",
+            options: [{ label: OPT_UPDATE }, { label: OPT_SKIP }],
+          }, dialogOpts);
         } else if (sim?.kind === "similar") {
-          choice = await ctx.ui.select(`Similar note exists: "${sim.hit.title}"`, [mergeLabel, OPT_SAVE_NEW, OPT_SKIP], dialogOpts);
+          choice = await promptMemoryChoice(ctx, {
+            question: `Similar note exists: "${sim.hit.title}"`,
+            proposal,
+            meta: "possible duplicate",
+            options: [{ label: mergeLabel }, { label: OPT_SAVE_NEW }, { label: OPT_SKIP }],
+          }, dialogOpts);
         } else {
-          choice = await ctx.ui.select("Remember this?", [OPT_SAVE, OPT_EDIT, OPT_SKIP], dialogOpts);
+          choice = await promptMemoryChoice(ctx, {
+            question: "Remember this?",
+            proposal,
+            options: [{ label: OPT_SAVE }, { label: OPT_EDIT }, { label: OPT_SKIP }],
+          }, dialogOpts);
         }
       } catch {
         return { content: [{ type: "text", text: "Suggestion dismissed." }], details: { skipped: "dialog-error" } };
@@ -271,13 +287,13 @@ export default function (pi: ExtensionAPI) {
       }
 
       if (choice === OPT_EDIT) {
-        const t = await ctx.ui.input("Edit memory · title", proposal.title, dialogOpts);
+        const t = await ctx.ui.input("Edit memory · title", proposal.title, { timeout: dialogOpts.timeoutMs, signal });
         if (t === undefined) {
           try { ctx.ui.notify("Edit cancelled — not saved.", "info"); } catch { /* ignore */ }
           return { content: [{ type: "text", text: "Edit cancelled (not saved)." }], details: { skipped: "edit-cancelled" } };
         }
         if (t.trim()) toWrite.title = t.trim();
-        const c = await ctx.ui.input("Edit memory · content", proposal.content.slice(0, 100), dialogOpts);
+        const c = await ctx.ui.input("Edit memory · content", proposal.content.slice(0, 100), { timeout: dialogOpts.timeoutMs, signal });
         if (c === undefined) {
           try { ctx.ui.notify("Edit cancelled — not saved.", "info"); } catch { /* ignore */ }
           return { content: [{ type: "text", text: "Edit cancelled (not saved)." }], details: { skipped: "edit-cancelled" } };

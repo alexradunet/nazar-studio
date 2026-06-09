@@ -28,20 +28,33 @@ function fakePi() {
 
 // Fake Pi UI context for memory_suggest's hybrid dialog. `choice` is the select() answer
 // (a string, a fn, or undefined to simulate timeout/Esc); `inputs` feed successive input() calls.
-function fakeCtx(opts: { choice?: any; inputs?: any[]; hasUI?: boolean } = {}) {
+function plain(s: string): string {
+  return s.replace(/\x1b\[[0-9;]*m/g, "");
+}
+
+function fakeCtx(opts: { choice?: any; inputs?: any[]; hasUI?: boolean; custom?: boolean; customKeys?: string[] } = {}) {
   const choice = "choice" in opts ? opts.choice : "Save";
   const inputs = opts.inputs ?? [];
   const hasUI = opts.hasUI ?? true;
-  const calls: { select: any[]; input: any[]; notify: any[] } = { select: [], input: [], notify: [] };
+  const calls: { select: any[]; input: any[]; notify: any[]; custom: any[] } = { select: [], input: [], notify: [], custom: [] };
   let i = 0;
-  const ctx: any = {
-    hasUI,
-    ui: {
-      select: async (title: string, options: string[]) => { calls.select.push({ title, options }); return typeof choice === "function" ? choice(title, options) : choice; },
-      input: async (title: string, placeholder?: string) => { calls.input.push({ title, placeholder }); return inputs[i++]; },
-      notify: (message: string, type?: string) => { calls.notify.push({ message, type }); },
-    },
+  const ui: any = {
+    select: async (title: string, options: string[]) => { calls.select.push({ title, options }); return typeof choice === "function" ? choice(title, options) : choice; },
+    input: async (title: string, placeholder?: string) => { calls.input.push({ title, placeholder }); return inputs[i++]; },
+    notify: (message: string, type?: string) => { calls.notify.push({ message, type }); },
   };
+  if (opts.custom) {
+    ui.custom = async (factory: any, options?: any) => {
+      let result: string | undefined;
+      const call: any = { options, lines: [] };
+      calls.custom.push(call);
+      const component = factory({ requestRender() { call.rendered = true; } }, {}, {}, (value: string | undefined) => { result = value; });
+      call.lines = component.render(80);
+      for (const key of opts.customKeys ?? ["\r"]) component.handleInput?.(key);
+      return result;
+    };
+  }
+  const ctx: any = { hasUI, ui };
   return { ctx, calls };
 }
 
@@ -90,9 +103,30 @@ test("memory_suggest saves the proposed page when the user picks Save", async ()
   const { ctx, calls } = fakeCtx({ choice: "Save" });
   const r = await suggest.execute("sug", { title: "Coffee order", content: "oat flat white, no sugar" }, undefined, undefined, ctx);
   expect(calls.select.length).toBe(1);
+  expect(calls.select[0].title).toContain("Page: [[Coffee order]]");
+  expect(calls.select[0].title).toContain("Folder: notes");
+  expect(calls.select[0].title).toContain("Content:\noat flat white, no sugar");
   expect(r.details.saved).toBe(true);
   const hits = (await search.execute("id", { query: "oat flat white" })).details.hits;
   expect(hits.some((h: any) => h.title === "Coffee order")).toBe(true);
+});
+
+test("memory_suggest uses the Nazar-styled custom prompt when available", async () => {
+  const { pi, tools } = fakePi();
+  memory(pi);
+  const suggest = tools.find((t) => t.name === "memory_suggest");
+  const search = tools.find((t) => t.name === "memory_search");
+  const { ctx, calls } = fakeCtx({ custom: true });
+  const r = await suggest.execute("sug", { title: "Tea order", content: "oolong, two cups" }, undefined, undefined, ctx);
+  const panel = plain(calls.custom[0].lines.join("\n"));
+
+  expect(calls.custom.length).toBe(1);
+  expect(calls.select.length).toBe(0);
+  expect(panel).toContain("Nazar · memory");
+  expect(panel).toContain("Page [[Tea order]]");
+  expect(panel).toContain("oolong, two cups");
+  expect(r.details.saved).toBe(true);
+  expect((await search.execute("id", { query: "oolong" })).details.hits.some((h: any) => h.title === "Tea order")).toBe(true);
 });
 
 test("memory_suggest does not save when the user picks Skip", async () => {
