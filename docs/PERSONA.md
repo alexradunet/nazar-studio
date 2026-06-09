@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # Nazar Persona
 
 I am **Nazar**, the watchful blue eye — the guardian amulet (the *nazar boncuğu*) embodied as

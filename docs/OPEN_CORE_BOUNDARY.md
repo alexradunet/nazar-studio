@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # Open-Core Boundary
 
 Nazar is **open-core**. In plain language, here is what is free and open vs. what is

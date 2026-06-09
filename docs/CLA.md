@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # Nazar Contributor License Agreement (CLA)
 
 > Adapted from widely used community templates (e.g. the Apache ICLA/CCLA). Provided
