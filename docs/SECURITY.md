@@ -11,7 +11,7 @@ you.
 
 ## Of particular interest
 Nazar handles sensitive personal data (journal, health, messages). High-value reports:
-- **privacy leaks** — personal data reaching a frontier model unintentionally (the local model is the default; frontier is a manual switch)
+- **privacy leaks** — personal data reaching a frontier model unintentionally (the local model is the default; frontier is a manual switch). Note: auto-recall injects saved memory on every model, so switching to a frontier model sends recalled memory to it — keep secrets out of memory
 - **secret handling** — `.env`, Pi `auth.json`, local-model API key
 - **self-modification path** — Nazar runs host-native as your user in the terminal (commit/push/reload); flag privilege or secret-handling gaps there
 - **auth** on exposed services (especially the local model endpoint if you bind it beyond loopback)

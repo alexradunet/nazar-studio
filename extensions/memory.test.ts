@@ -42,21 +42,19 @@ test("memory_write persists a page that memory_search then recalls", async () =>
   expect(res.details.hits.some((h: any) => h.title === "Trip")).toBe(true);
 });
 
-test("recall only augments local-model turns, never frontier ones", async () => {
+test("recall augments every turn, frontier and local alike", async () => {
   const { pi, tools, handlers } = fakePi();
   memory(pi);
   await tools.find((t) => t.name === "memory_write")
     .execute("id", { title: "Pinned", content: "always-on fact", pinned: true });
 
-  const frontier = await handlers.before_agent_start(
-    { prompt: "anything", systemPrompt: "S" },
-    { model: { baseUrl: "https://api.openai.com/v1" } },
-  );
-  expect(frontier).toBeUndefined();
-
-  const local = await handlers.before_agent_start(
-    { prompt: "anything", systemPrompt: "S" },
-    { model: { baseUrl: "http://127.0.0.1:8082/v1" } },
-  );
-  expect(local?.systemPrompt).toContain("S");
+  // Gate dropped: recall now fires for all models (owner decision). Both turns get the memory.
+  for (const baseUrl of ["https://api.openai.com/v1", "http://127.0.0.1:8082/v1"]) {
+    const res = await handlers.before_agent_start(
+      { prompt: "anything", systemPrompt: "S" },
+      { model: { baseUrl } },
+    );
+    expect(res?.systemPrompt).toContain("S");
+    expect(res?.systemPrompt).toContain("Pinned");
+  }
 });

@@ -55,7 +55,7 @@ Nazar is a wise companion that lives on your box, grows with you, and answers to
 
 1. **Everyday people who want a real assistant** — *a wise companion that actually knows you
    and grows with you.* Lead with help, memory, and growth; ownership is the reassurance.
-2. **Self-hosters & privacy-minded people** — *your companion's memory never leaves the box.*
+2. **Self-hosters & privacy-minded people** — *your companion's memory lives in plain files you own.*
    Lead with ownership, plain files, local model, structural privacy.
 3. **Developers & public funders (e.g. NGI Zero)** — *the repo is the system; public-interest,
    open infrastructure.* Lead with the small-sharp-tools stack, git-native memory/skills, AGPL
