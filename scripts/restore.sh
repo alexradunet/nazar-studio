@@ -9,5 +9,5 @@ if [ -z "${RESTIC_REPOSITORY:-}" ]; then
 fi
 echo "==> restoring latest snapshot into $ROOT/vault"
 restic restore latest --target "$ROOT" --include vault
-echo "==> rebuild index"; "$ROOT/scripts/rebuild-index.sh" || true
+echo "==> rebuild index"; (cd "$ROOT" && npm run reindex) || true
 echo "==> done."
