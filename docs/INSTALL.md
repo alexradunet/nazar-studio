@@ -42,7 +42,7 @@ pi remove npm:pi-nazar-studio
 
 | Resource | Source | How it loads |
 |---|---|---|
-| Extensions | `extensions/` | `pi` manifest (memory, vault, personality, brand, local-llm) |
+| Extensions | `extensions/` | `pi` manifest (brand, terminal-font, personality, memory, vault, local-llm, avatar) |
 | Skills | `skills/` | `pi` manifest (`/skill:name`) |
 | Theme | `themes/nazar.json` | `pi` manifest |
 | Persona + rules | `SYSTEM.md`, `AGENTS.md` | injected at `before_agent_start` by `extensions/personality.ts` |
@@ -50,8 +50,7 @@ pi remove npm:pi-nazar-studio
 
 ## Configuration (all optional)
 
-Nazar reads environment variables; sensible defaults apply when unset. See `.env.example` for the
-full list. Common ones:
+Nazar reads environment variables; sensible defaults apply when unset. Common ones:
 
 | Variable | Meaning |
 |---|---|

@@ -13,7 +13,7 @@ edit  →  npm run typecheck && npm test  →  git commit  →  git push  →  t
 ## The loop
 
 ```bash
-git clone https://github.com/alexradunet/pi-nazar-studio.git
+git clone https://github.com/alexradunet/nazar-studio.git
 cd nazar
 npm install
 

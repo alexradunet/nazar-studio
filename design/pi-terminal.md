@@ -7,7 +7,7 @@ The Pi terminal is Nazar's owned daily surface. It should feel like an old-schoo
 - Make Pi feel like **Nazar**, not a generic coding agent.
 - Keep private/local state legible.
 - Add RPG flavor through structure: portrait panels, ANSI-colored dialog frames, terse wise copy, and generated sprite avatars.
-- Keep canonical per-avatar 3×3, 9-frame, 64×64 PNG sprite sheets; render them through Nazar's native ANSI renderer.
+- Keep canonical per-avatar 3×3, 9-frame, 256×256 PNG sprite sheets; render them through Nazar's native ANSI renderer.
 - Avoid taking over the whole screen.
 
 ## Current implemented pieces
@@ -54,7 +54,7 @@ Rules:
 - Avatar quality is selected by `/nazar-ui low|medium|high` or `NAZAR_UI_QUALITY=low|medium|high`; default `medium` uses sextant glyphs.
 - Border style is not configurable: RPG box drawing plus ANSI SGR color is canonical.
 - Performance cap: `NAZAR_AVATAR_RECENT_LIMIT=<n|all>`; default `20`, `0` means active-only avatars.
-- Role portraits and tool icons use canonical per-avatar 3×3, 9-frame, 64×64 PNG sprite sheets rendered through native ANSI character art.
+- Role portraits and tool icons use canonical per-avatar 3×3, 9-frame, 256×256 PNG sprite sheets rendered through native ANSI character art.
 
 ## Sprite rules
 
@@ -376,7 +376,7 @@ Run `/reload` in the Nazar terminal after changing the theme.
 
 See [`avatars.md`](avatars.md).
 
-- Avatars always use canonical 64×64 PNG sprite sheets: one 3×3, 9-frame sheet per avatar/tool.
+- Avatars always use canonical 256×256 PNG sprite sheets: one 3×3, 9-frame sheet per avatar/tool.
 - The runtime renders those sheets into generated ANSI pixels at the selected quality.
 - There is no graphics-protocol or ASCII avatar fallback to maintain.
 
