@@ -7,7 +7,9 @@
  *   - MEMORY → user-shaped pages in vault/memory/ — engine in ../lib/memory.ts, indexed by a
  *              disposable FTS5 accelerator and recalled by relevance. The extension must not
  *              impose life/coding/project categories; it preserves the user's wording.
- *              Tools: memory_write / memory_search / memory_get / memory_duplicates.
+ *              Tools: memory_write (explicit) / memory_suggest (proactive, asks first) /
+ *              memory_search / memory_get / memory_duplicates. memory_suggest realizes the
+ *              "detect → suggest → approve" capture loop (SELF_EVOLUTION.md) for memory.
  *   - SKILLS → procedures as Pi-native skill files (skills/<name>.md, frontmatter
  *              name/description). Pi discovers, injects, and invokes them (/skill:name), so
  *              skill_write just writes the file — there is nothing to index. See SELF_EVOLUTION.md.
@@ -21,7 +23,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { writeMemory, searchMemory, getMemory, findDuplicates, recallContext, reindexMemory } from "../lib/memory.ts";
+import { writeMemory, searchMemory, getMemory, findDuplicates, recallContext, reindexMemory, type Hit } from "../lib/memory.ts";
 import { nodeSqliteUpgradePrompt } from "../lib/node-version.ts";
 import { moduleDir } from "../lib/paths.ts";
 
@@ -38,6 +40,40 @@ function slugifySkill(s: string): string {
 
 function log(pi: ExtensionAPI, message: string): void {
   (pi as unknown as { log?: (message: string) => void }).log?.(message);
+}
+
+// Hybrid Save/Edit/Skip dialog labels (themed pi-tui Select; matches the approved design mockup).
+const OPT_SAVE = "Save";
+const OPT_EDIT = "Edit…";
+const OPT_SKIP = "Skip";
+const OPT_UPDATE = "Update the existing note";
+
+/**
+ * Proactive-capture suggestions already offered this Pi session, so Nazar never re-nags about the
+ * same fact. Process-scoped (dies with the session); intentionally not persisted.
+ */
+const offeredThisSession = new Set<string>();
+
+/** Cheap, stable fingerprint of a proposal for the anti-nag set (djb2 over title + content head). */
+function suggestFingerprint(title: string, content: string): string {
+  const s = `${title.trim().toLowerCase()}|${content.trim().toLowerCase().slice(0, 200)}`;
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
+/**
+ * Find an existing page with the same (case-insensitive) title — the dedupe signal. Returns the
+ * matching hit so an "update" writes back to the same page/type, or null. Same-title only by
+ * design: cheap and reliable on FTS5; fuzzy cross-title matching is intentionally out of scope.
+ */
+function sameTitlePage(title: string): Hit | null {
+  const want = title.trim().toLowerCase();
+  if (!want) return null;
+  for (const h of searchMemory(title, 5)) {
+    if (h.title.trim().toLowerCase() === want) return h;
+  }
+  return null;
 }
 
 export default function (pi: ExtensionAPI) {
@@ -77,6 +113,98 @@ export default function (pi: ExtensionAPI) {
     async execute(_id: string, p: any) {
       const r = writeMemory(p);
       return { content: [{ type: "text", text: `Remembered → ${r.path}` }], details: r };
+    },
+  });
+
+  pi.registerTool({
+    name: "memory_suggest",
+    label: "offer to remember",
+    description:
+      "PROACTIVELY offer to save a durable fact to long-term memory, asking the user to approve first (Save / Edit / Skip). Call this yourself when the user reveals something worth keeping across sessions — a stable preference, a decision, an identity/role fact, a recurring workflow detail, or a correction of an earlier assumption — that isn't already saved. Do NOT call for transient or task-only details, or for secrets/credentials. Nothing is written unless the user approves; prefer memory_write when the user explicitly asks to remember something.",
+    promptSnippet: "memory_suggest — offer (with the user's approval) to remember a durable fact you noticed.",
+    promptGuidelines: [
+      "When the user states a durable fact about themselves, their preferences, their projects, or a decision, offer to keep it with memory_suggest — it asks before saving.",
+      "Offer at most once per fact; never re-offer something already saved or skipped this session.",
+      "Never put secrets, credentials, or sensitive data the user didn't ask you to keep into a suggestion.",
+      "Use memory_write (not memory_suggest) when the user explicitly says to remember something.",
+    ],
+    parameters: Type.Object({
+      title: Type.String({ description: "Short page title for the fact; also the [[wikilink]] handle." }),
+      content: Type.String({ description: "The fact as free-form Markdown, in the user's wording." }),
+      type: Type.Optional(Type.String({ description: "Optional folder/category slug. Defaults to notes." })),
+      whenToUse: Type.Optional(Type.String({ description: "Optional retrieval hint in the user's terms." })),
+      tags: Type.Optional(Type.Array(Type.String({ description: "Optional tag." }))),
+    }),
+    async execute(_id: string, p: any, signal: any, _onUpdate: any, ctx: any): Promise<any> {
+      const proposal = {
+        title: String(p?.title ?? "").trim(),
+        content: String(p?.content ?? "").trim(),
+        type: p?.type as string | undefined,
+        whenToUse: p?.whenToUse as string | undefined,
+        tags: p?.tags as string[] | undefined,
+      };
+      if (!proposal.title || !proposal.content) {
+        return { content: [{ type: "text", text: "Nothing to suggest (empty title or content)." }], details: { skipped: "empty" } };
+      }
+
+      // Anti-nag: never re-offer the same fact within one session.
+      const fp = suggestFingerprint(proposal.title, proposal.content);
+      if (offeredThisSession.has(fp)) {
+        return { content: [{ type: "text", text: "Already offered this once this session; not asking again." }], details: { skipped: "already-offered" } };
+      }
+
+      // Headless / no dialog support → degrade to a text nudge instead of prompting.
+      if (!ctx?.hasUI || typeof ctx?.ui?.select !== "function") {
+        offeredThisSession.add(fp);
+        return {
+          content: [{ type: "text", text: `No interactive prompt here. If the user wants to keep "${proposal.title}", save it with memory_write.` }],
+          details: { headless: true, proposal },
+        };
+      }
+
+      offeredThisSession.add(fp); // mark offered regardless of the answer
+      const dialogOpts = { timeout: 30000, signal };
+      const dup = sameTitlePage(proposal.title);
+
+      let choice: string | undefined;
+      try {
+        choice = dup
+          ? await ctx.ui.select(`Update memory? (similar note: ${dup.title})`, [OPT_UPDATE, OPT_SKIP], dialogOpts)
+          : await ctx.ui.select("Remember this?", [OPT_SAVE, OPT_EDIT, OPT_SKIP], dialogOpts);
+      } catch {
+        return { content: [{ type: "text", text: "Suggestion dismissed." }], details: { skipped: "dialog-error" } };
+      }
+
+      // Timeout / Esc → undefined → Skip. Nothing is ever saved without an explicit choice.
+      if (!choice || choice === OPT_SKIP) {
+        try { ctx.ui.notify("Skipped — won't ask again this session.", "info"); } catch { /* ignore */ }
+        return { content: [{ type: "text", text: "Skipped (not saved)." }], details: { skipped: "user" } };
+      }
+
+      const toWrite: any = { ...proposal };
+      if (choice === OPT_UPDATE && dup) {
+        toWrite.title = dup.title;   // write back to the same page…
+        toWrite.type = dup.type;     // …in its existing folder, so it updates in place
+      }
+
+      if (choice === OPT_EDIT) {
+        const t = await ctx.ui.input("Edit memory · title", proposal.title, dialogOpts);
+        if (t === undefined) {
+          try { ctx.ui.notify("Edit cancelled — not saved.", "info"); } catch { /* ignore */ }
+          return { content: [{ type: "text", text: "Edit cancelled (not saved)." }], details: { skipped: "edit-cancelled" } };
+        }
+        if (t.trim()) toWrite.title = t.trim();
+        const c = await ctx.ui.input("Edit memory · content", proposal.content.slice(0, 100), dialogOpts);
+        if (c === undefined) {
+          try { ctx.ui.notify("Edit cancelled — not saved.", "info"); } catch { /* ignore */ }
+          return { content: [{ type: "text", text: "Edit cancelled (not saved)." }], details: { skipped: "edit-cancelled" } };
+        }
+        if (c.trim()) toWrite.content = c.trim();
+      }
+
+      const r = writeMemory(toWrite);
+      try { ctx.ui.notify(`Remembered → ${r.path}`, "info"); } catch { /* ignore */ }
+      return { content: [{ type: "text", text: `Remembered → ${r.path}` }], details: { saved: true, choice, ...r } };
     },
   });
 
@@ -147,5 +275,5 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
-  log(pi, "[memory] tools registered: memory_write, skill_write, memory_search, memory_get, memory_duplicates");
+  log(pi, "[memory] tools registered: memory_write, memory_suggest, skill_write, memory_search, memory_get, memory_duplicates");
 }
