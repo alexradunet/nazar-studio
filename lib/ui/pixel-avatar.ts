@@ -1,19 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // PNG sprite-sheet avatars for Nazar's terminal ANSI renderer.
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { inflateSync } from "node:zlib";
 import { getCellDimensions, setCellDimensions, type CellDimensions } from "@earendil-works/pi-tui";
 import { visibleWidth } from "./ansi.ts";
-import { truecolorBg, truecolorFg, type GraphicsProtocolBackend } from "./graphics-protocol.ts";
+import { type GraphicsProtocolBackend } from "./graphics-protocol.ts";
 import { uiRenderer } from "./graphics-state.ts";
 import { renderMosaic, type MosaicMode } from "./sextant.ts";
 import { type SpriteRole } from "./sprites.ts";
 import { AVATAR_FIELDS as BACKGROUNDS } from "./tokens.ts";
 import { moduleDir } from "../paths.ts";
-
-const RESET = "\x1b[0m";
-const BG_RESET = "\x1b[49m";
+import { decodePngRgba, type AvatarFrame, type PngImage, type Rgb } from "./png.ts";
+import { bg, BG_RESET, paintBg, renderFrameAnsiHalfBlock } from "./half-block.ts";
+import { KIND_TO_EYE, TOOL_KINDS, toolKind, type ToolAvatarKind } from "./tool-kind.ts";
 
 // Source sheets are 768×768 RGBA (3×3 grid, 256px stride, transparent bg).
 // The ANSI renderer samples frames directly from these high-res sheets.
@@ -31,120 +29,8 @@ const DEFAULT_AVATAR_ROWS = 11;
 
 const AVATAR_ASSET_DIR = join(moduleDir(import.meta.url), "..", "..", "assets", "avatars");
 
-const TOOL_KINDS = [
-  // core file/code operations
-  "scroll",
-  "needle",
-  "quill",
-  "anvil",
-  "lens",
-  "folder",
-  "keeper",
-  "warden",
-  "seer",
-  "new-head",
-  "hammer",
-  // domain / life-tracking tools
-  "journal",
-  "dumbbell",
-  "running",
-  "plate-fork",
-  "heart-pulse",
-  "moon-stars",
-  "calendar",
-  "envelope",
-  "map-pin",
-  "coin-stack",
-  "music-note",
-  "camera",
-  "pill-potion",
-  "brain",
-  "compass",
-  "seedling",
-  "hourglass",
-  "key",
-  "bell",
-  // dev / engineering
-  "terminal",
-  "code",
-  "git-branch",
-  "git-merge",
-  "database",
-  "cloud",
-  "browser",
-  "container",
-  "chat",
-  "gamepad",
-  "rocket",
-  "gear",
-  // objects / status / actions
-  "lightbulb",
-  "trophy",
-  "target",
-  "flask",
-  "atom",
-  "bug",
-  "lock",
-  "star",
-  "flag",
-  "gift",
-  "cart",
-  "paint-brush",
-  "wrench",
-  "bookmark",
-  // 30-tool library additions (2026-06-08): dedicated dev / life / calls / apps tools
-  "api",
-  "package",
-  "tasks",
-  "habit",
-  "weight",
-  "water",
-  "mood",
-  "phone",
-  "video",
-  "contacts",
-  "mic",
-  "share",
-  "drive",
-  "card",
-  "media",
-  "docs",
-] as const;
 
 type ToolAvatarStatus = "pending" | "running" | "ok" | "error";
-type ToolAvatarKind = typeof TOOL_KINDS[number];
-// The distinct "eye" sprites Nazar can show. Many tool kinds share one eye, so
-// the tool sheets are deduped to these ~22 files (loaded once, keyed by path).
-type EyeKind =
-  | "read" | "write" | "edit" | "search" | "bash" | "files" | "grep" | "browser"
-  | "memory" | "skill" | "health" | "journal" | "gym" | "calendar" | "mail" | "music" | "time"
-  | "terminal" | "rocket" | "gear" | "idle"
-  | "money" | "sports" | "diet" | "sleep" | "mind"
-  // 30-tool library (2026-06-08)
-  | "git" | "merge" | "database" | "cloud" | "container" | "bug" | "api" | "code" | "lock" | "package"
-  | "tasks" | "habit" | "weight" | "water" | "meds" | "mood" | "goal" | "cart"
-  | "phone" | "video" | "chat" | "contacts" | "mic" | "bell"
-  | "share" | "drive" | "card" | "map" | "media" | "docs";
-// Tool kind -> the eye Nazar shows while running it (idle cosmos is the fallback).
-const KIND_TO_EYE: Record<ToolAvatarKind, EyeKind> = {
-  scroll: "read", needle: "edit", quill: "write", anvil: "bash", lens: "grep",
-  folder: "files", keeper: "memory", warden: "health", seer: "search", "new-head": "skill", hammer: "gear",
-  journal: "journal", dumbbell: "gym", running: "sports", "plate-fork": "diet", "heart-pulse": "health",
-  "moon-stars": "sleep", calendar: "calendar", envelope: "mail", "map-pin": "map",
-  "coin-stack": "money", "music-note": "music", camera: "idle", "pill-potion": "meds",
-  brain: "mind", compass: "browser", seedling: "idle", hourglass: "time", key: "idle", bell: "bell",
-  terminal: "terminal", code: "code", "git-branch": "git", "git-merge": "merge",
-  database: "database", cloud: "cloud", browser: "browser", container: "container", chat: "chat",
-  gamepad: "idle", rocket: "rocket", gear: "gear",
-  lightbulb: "skill", trophy: "idle", target: "goal", flask: "skill", atom: "skill", bug: "bug",
-  lock: "lock", star: "skill", flag: "idle", gift: "idle", cart: "cart",
-  "paint-brush": "write", wrench: "gear", bookmark: "read",
-  // 30-tool library additions -> dedicated eyes
-  api: "api", package: "package",
-  tasks: "tasks", habit: "habit", weight: "weight", water: "water", mood: "mood",
-  phone: "phone", video: "video", contacts: "contacts", mic: "mic",
-  share: "share", drive: "drive", card: "card", media: "media", docs: "docs",
-};
 
 type CharacterSheetKey = "nazar" | "nazar-expr" | "soul";
 type ToolSheetKey = `tool:${ToolAvatarKind}`;
@@ -154,17 +40,8 @@ type SheetAsset = { path: string; frame: FrameGeometry };
 type FrameSource = { sheet: SheetKey; index: number; id: string };
 
 const TOOL_STATUS_SUFFIX = /-(pending|running|ok|error)$/;
-export type AvatarBackground = readonly [number, number, number];
-type Rgb = AvatarBackground;
-type Rgba = readonly [number, number, number, number];
+export type AvatarBackground = Rgb;
 
-type PngImage = {
-  width: number;
-  height: number;
-  pixels: Buffer; // RGBA
-};
-
-type AvatarFrame = PngImage & { id: string };
 
 export type AvatarRenderBackend = GraphicsProtocolBackend;
 export type AvatarRenderLine = {
@@ -216,96 +93,6 @@ function sheetFrameId(id: string): string {
   return id.replace(TOOL_STATUS_SUFFIX, "");
 }
 
-function readUInt32BE(buf: Buffer, offset: number): number {
-  return buf.readUInt32BE(offset);
-}
-
-function decodePngRgba(path: string): PngImage {
-  const data = readFileSync(path);
-  if (!data.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
-    throw new Error(`Invalid PNG signature: ${path}`);
-  }
-
-  let offset = 8;
-  let width = 0;
-  let height = 0;
-  let bitDepth = 0;
-  let colorType = 0;
-  let interlace = 0;
-  const idat: Buffer[] = [];
-
-  while (offset < data.length) {
-    const length = readUInt32BE(data, offset); offset += 4;
-    const type = data.subarray(offset, offset + 4).toString("ascii"); offset += 4;
-    const chunk = data.subarray(offset, offset + length); offset += length;
-    offset += 4; // CRC checked by Git/source control; skip at runtime
-
-    if (type === "IHDR") {
-      width = readUInt32BE(chunk, 0);
-      height = readUInt32BE(chunk, 4);
-      bitDepth = chunk[8]!;
-      colorType = chunk[9]!;
-      interlace = chunk[12]!;
-    } else if (type === "IDAT") {
-      idat.push(chunk);
-    } else if (type === "IEND") {
-      break;
-    }
-  }
-
-  if (bitDepth !== 8 || interlace !== 0 || (colorType !== 6 && colorType !== 2)) {
-    throw new Error(`Unsupported PNG format for ${path}: bitDepth=${bitDepth}, colorType=${colorType}, interlace=${interlace}`);
-  }
-
-  const channels = colorType === 6 ? 4 : 3;
-  const bpp = channels;
-  const inputStride = width * channels;
-  const inflated = inflateSync(Buffer.concat(idat));
-  const rgba = Buffer.alloc(width * height * 4);
-  let input = 0;
-  let prev = Buffer.alloc(inputStride);
-
-  for (let y = 0; y < height; y++) {
-    const filter = inflated[input++];
-    const scan = inflated.subarray(input, input + inputStride);
-    input += inputStride;
-    const out = Buffer.alloc(inputStride);
-
-    for (let x = 0; x < inputStride; x++) {
-      const a = x >= bpp ? out[x - bpp]! : 0;
-      const b = prev[x]!;
-      const c = x >= bpp ? prev[x - bpp]! : 0;
-      let value: number;
-      if (filter === 0) value = scan[x]!;
-      else if (filter === 1) value = (scan[x]! + a) & 0xff;
-      else if (filter === 2) value = (scan[x]! + b) & 0xff;
-      else if (filter === 3) value = (scan[x]! + Math.floor((a + b) / 2)) & 0xff;
-      else if (filter === 4) {
-        const p = a + b - c;
-        const pa = Math.abs(p - a);
-        const pb = Math.abs(p - b);
-        const pc = Math.abs(p - c);
-        const pr = pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
-        value = (scan[x]! + pr) & 0xff;
-      } else {
-        throw new Error(`Unsupported PNG filter ${filter} in ${path}`);
-      }
-      out[x] = value;
-    }
-
-    for (let x = 0; x < width; x++) {
-      const src = x * channels;
-      const dst = (y * width + x) * 4;
-      rgba[dst] = out[src]!;
-      rgba[dst + 1] = out[src + 1]!;
-      rgba[dst + 2] = out[src + 2]!;
-      rgba[dst + 3] = colorType === 6 ? out[src + 3]! : 255;
-    }
-    prev = out;
-  }
-
-  return { width, height, pixels: rgba };
-}
 
 function sheetAsset(key: SheetKey, assets: Record<SheetKey, SheetAsset> = SOURCE_SHEET_ASSETS): SheetAsset {
   return assets[key];
@@ -383,154 +170,6 @@ function frameFor(id: string, assets: Record<SheetKey, SheetAsset> = SOURCE_SHEE
   return { ...result, id };
 }
 
-function pixelAt(frame: AvatarFrame, x: number, y: number): Rgba {
-  const cx = Math.max(0, Math.min(frame.width - 1, x));
-  const cy = Math.max(0, Math.min(frame.height - 1, y));
-  const offset = (cy * frame.width + cx) * 4;
-  return [frame.pixels[offset]!, frame.pixels[offset + 1]!, frame.pixels[offset + 2]!, frame.pixels[offset + 3]!];
-}
-
-type RegionSample = { color: Rgb; coverage: number; contrast: number };
-
-function mixRgb(a: Rgb, b: Rgb, amount: number): Rgb {
-  const t = Math.max(0, Math.min(1, amount));
-  return [
-    Math.round(a[0] * (1 - t) + b[0] * t),
-    Math.round(a[1] * (1 - t) + b[1] * t),
-    Math.round(a[2] * (1 - t) + b[2] * t),
-  ];
-}
-
-function luminance([r, g, b]: Rgb): number {
-  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-}
-
-function colorDistance(a: Rgb, b: Rgb): number {
-  const dr = (a[0] - b[0]) / 255;
-  const dg = (a[1] - b[1]) / 255;
-  const db = (a[2] - b[2]) / 255;
-  return Math.sqrt(dr * dr + dg * dg + db * db) / Math.sqrt(3);
-}
-
-function sampleRegion(frame: AvatarFrame, x0: number, x1: number, y0: number, y1: number, background: Rgb = [0, 0, 0]): RegionSample {
-  let sr = 0;
-  let sg = 0;
-  let sb = 0;
-  let sa = 0;
-  let total = 0;
-  let dominant: Rgb = background;
-  let dominantScore = 0;
-  for (let y = y0; y < y1; y++) {
-    for (let x = x0; x < x1; x++) {
-      const [r, g, b, a] = pixelAt(frame, x, y);
-      const alpha = a / 255;
-      const rgb: Rgb = [r, g, b];
-      const pixelContrast = colorDistance(rgb, background);
-      const score = alpha * (0.55 + pixelContrast);
-      if (score > dominantScore) {
-        dominant = rgb;
-        dominantScore = score;
-      }
-      sr += r * alpha;
-      sg += g * alpha;
-      sb += b * alpha;
-      sa += alpha;
-      total++;
-    }
-  }
-  if (total === 0 || sa === 0) return { color: background, coverage: 0, contrast: 0 };
-  const average: Rgb = [Math.round(sr / sa), Math.round(sg / sa), Math.round(sb / sa)];
-  const coverage = Math.min(1, sa / total);
-  const averageContrast = Math.max(Math.abs(luminance(average) - luminance(background)), colorDistance(average, background));
-  // Half-block avatars are tiny. Pure averaging makes sprite edges muddy, so
-  // pull edge/low-coverage cells toward their strongest real source pixel.
-  const sharpen = Math.min(0.55, Math.max(0, (1 - coverage) * 0.42 + averageContrast * 0.28));
-  const color = mixRgb(average, dominant, sharpen);
-  const contrast = Math.max(Math.abs(luminance(color) - luminance(background)), colorDistance(color, background));
-  return { color, coverage, contrast };
-}
-
-function fg(color: Rgb): string {
-  return truecolorFg(color);
-}
-
-function bg(color: Rgb): string {
-  return truecolorBg(color);
-}
-
-function paintBg(text: string, color: Rgb | undefined): string {
-  return color ? `${bg(color)}${text}${BG_RESET}` : text;
-}
-
-function sampleWeight(sample: RegionSample): number {
-  // Coverage describes shape; contrast keeps thin but important lines alive.
-  return Math.max(0.08, sample.coverage + Math.min(0.35, sample.contrast * 0.45));
-}
-
-function desiredColor(sample: RegionSample, background: Rgb): Rgb {
-  return mixRgb(background, sample.color, Math.max(0, Math.min(1, sample.coverage)));
-}
-
-function candidateError(sample: RegionSample, displayed: Rgb, background: Rgb): number {
-  const desired = desiredColor(sample, background);
-  const colorError = colorDistance(displayed, desired);
-  const shapeError = colorDistance(displayed, background) < 0.03 ? sample.coverage : Math.max(0, 0.35 - sample.coverage) * 0.45;
-  return colorError * colorError * sampleWeight(sample) + shapeError * shapeError * 0.18;
-}
-
-function blendedForeground(a: RegionSample, b: RegionSample): Rgb {
-  const aw = sampleWeight(a);
-  const bw = sampleWeight(b);
-  return mixRgb(a.color, b.color, bw / Math.max(0.001, aw + bw));
-}
-
-function halfBlockFromSamples(topSample: RegionSample, bottomSample: RegionSample, background: Rgb): string {
-  const fullColor = blendedForeground(topSample, bottomSample);
-  const candidates = [
-    { char: " ", fg: background, bg: background, top: background, bottom: background },
-    { char: "▀", fg: topSample.color, bg: background, top: topSample.color, bottom: background },
-    { char: "▄", fg: bottomSample.color, bg: background, top: background, bottom: bottomSample.color },
-    { char: "█", fg: fullColor, bg: background, top: fullColor, bottom: fullColor },
-    { char: "▀", fg: topSample.color, bg: bottomSample.color, top: topSample.color, bottom: bottomSample.color },
-  ];
-
-  let best = candidates[0]!;
-  let bestError = Number.POSITIVE_INFINITY;
-  for (const candidate of candidates) {
-    const error = candidateError(topSample, candidate.top, background) + candidateError(bottomSample, candidate.bottom, background);
-    if (error < bestError) {
-      best = candidate;
-      bestError = error;
-    }
-  }
-
-  if (best.char === " ") return " ";
-  if (best.char === "█") return `${fg(best.fg)}█${RESET}`;
-  if (colorDistance(best.bg, background) < 0.03) return `${fg(best.fg)}${best.char}${RESET}`;
-  return `${fg(best.fg)}${bg(best.bg)}${best.char}${RESET}`;
-}
-
-function renderFrameAnsiHalfBlock(frame: AvatarFrame, background: Rgb, sampleWidth: number, sampleHeight: number): string[] {
-  const rows: string[] = [];
-  for (let y = 0; y < sampleHeight; y += 2) {
-    let line = "";
-    const topY0 = Math.floor((y * frame.height) / sampleHeight);
-    const topY1 = Math.max(topY0 + 1, Math.floor(((y + 1) * frame.height) / sampleHeight));
-    const bottomY0 = Math.floor(((y + 1) * frame.height) / sampleHeight);
-    const bottomY1 = Math.max(bottomY0 + 1, Math.floor(((y + 2) * frame.height) / sampleHeight));
-    for (let x = 0; x < sampleWidth; x++) {
-      const x0 = Math.floor((x * frame.width) / sampleWidth);
-      const x1 = Math.max(x0 + 1, Math.floor(((x + 1) * frame.width) / sampleWidth));
-      line += halfBlockFromSamples(
-        sampleRegion(frame, x0, x1, topY0, topY1, background),
-        sampleRegion(frame, x0, x1, bottomY0, bottomY1, background),
-        background,
-      );
-    }
-    rows.push(line);
-  }
-  return rows;
-}
 
 function renderFrameAnsi(frame: AvatarFrame, background: Rgb, columns: number, rows: number): string[] {
   return renderFrameAnsiHalfBlock(frame, background, columns, rows * 2);
@@ -722,84 +361,6 @@ export function renderThinkingAvatarFrame(frameIndex = 0): string[] {
   return renderThinkingAvatar(frameIndex, { backend: "ansi" })?.lines.map((line) => line.text) ?? [];
 }
 
-function hasAny(text: string, needles: readonly string[]): boolean {
-  return needles.some((needle) => text.includes(needle));
-}
-
-function toolKind(toolName: string, hintText = ""): ToolAvatarKind {
-  const text = `${toolName} ${hintText}`.toLowerCase();
-
-  // Dev / engineering tools — specific terms first so they win over the
-  // broader life-tracking keywords below (e.g. "git log" → git, not journal).
-  if (hasAny(text, ["terminal", "console", "repl", "tty"])) return "terminal";
-  if (hasAny(text, ["rebase", "git merge", "pull request", "pull_request"])) return "git-merge";
-  if (hasAny(text, ["git ", "git_", "commit", "checkout", "git-branch"])) return "git-branch";
-  if (hasAny(text, ["database", "sql", "postgres", "mysql", "sqlite", "mongo"])) return "database";
-  if (hasAny(text, ["docker", "container", "kubernetes", "k8s", "podman"])) return "container";
-  if (hasAny(text, ["browser", "playwright", "puppeteer", "headless", "navigate to"])) return "browser";
-  if (hasAny(text, ["vscode", "editor", "syntax", "lint"])) return "code";
-  if (hasAny(text, ["aws", "gcp", "azure", "lambda", "cloudformation"])) return "cloud";
-  if (hasAny(text, ["endpoint", "graphql", "webhook", "rest api", "api call", "openapi", "swagger", "http request"])) return "api";
-  if (hasAny(text, ["npm ", "package", "dependency", "node_modules", "yarn ", "pnpm", "cargo ", "pip install", "build artifact"])) return "package";
-  if (hasAny(text, ["slack", "discord", "chat"])) return "chat";
-  if (hasAny(text, ["deploy", "release build", "ship it", "launch"])) return "rocket";
-  if (hasAny(text, ["settings", "config", "preferences"])) return "gear";
-  if (hasAny(text, ["debug", "stack trace", "traceback", "exception"])) return "bug";
-  if (hasAny(text, ["encrypt", "secure ", "lockdown"])) return "lock";
-  if (hasAny(text, ["game", "gamepad"])) return "gamepad";
-  if (hasAny(text, ["idea", "brainstorm"])) return "lightbulb";
-  if (hasAny(text, ["design", "illustrat", "paint"])) return "paint-brush";
-
-  // Domain / life-tracking tools
-  if (hasAny(text, ["journal", "diary", "log", "note", "memo"])) return "journal";
-  if (hasAny(text, ["sport", "running", "run ", "cardio", "steps", "athletic", "jog"])) return "running";
-  if (hasAny(text, ["gym", "dumbbell", "workout", "exercise", "fitness", "lift"])) return "dumbbell";
-  if (hasAny(text, ["nutrition", "meal", "diet", "food", "plate", "calorie"])) return "plate-fork";
-  if (hasAny(text, ["heart", "pulse", "vitals", "hrv", "blood pressure", "heartbeat"])) return "heart-pulse";
-  if (hasAny(text, ["sleep", "rest", "moon", "circadian", "bedtime"])) return "moon-stars";
-  if (hasAny(text, ["kanban", "backlog", "checklist", "task list", "todo list", "to-do list", "task board", "jira", "trello", "linear issue"])) return "tasks";
-  if (hasAny(text, ["calendar", "schedule", "event", "appointment", "reminder", "todo", "task"])) return "calendar";
-  if (hasAny(text, ["email", "mail", "message", "inbox", "send"])) return "envelope";
-  if (hasAny(text, ["location", "map", "place", "navigate", "route", "gps"])) return "map-pin";
-  if (hasAny(text, ["credit card", "debit card", "card payment", "checkout", "stripe", "billing", "invoice", "paypal"])) return "card";
-  if (hasAny(text, ["finance", "money", "budget", "expense", "coin", "payment"])) return "coin-stack";
-  if (hasAny(text, ["music", "audio", "sound", "podcast", "playlist"])) return "music-note";
-  if (hasAny(text, ["photo", "camera", "image", "picture", "screenshot"])) return "camera";
-  if (hasAny(text, ["medicine", "pill", "drug", "medication", "health track", "symptom"])) return "pill-potion";
-  if (hasAny(text, ["mood", "emotion", "feeling", "how i feel", "wellbeing", "well-being"])) return "mood";
-  if (hasAny(text, ["mind", "brain", "cognitive", "focus", "mental", "think"])) return "brain";
-  if (hasAny(text, ["navigate", "compass", "direction", "goal", "plan", "roadmap"])) return "compass";
-  if (hasAny(text, ["habit", "streak", "routine", "daily habit"])) return "habit";
-  if (hasAny(text, ["growth", "plant", "garden", "progress", "seedling"])) return "seedling";
-  if (hasAny(text, ["time", "timer", "stopwatch", "duration", "hourglass", "pomodoro"])) return "hourglass";
-  if (hasAny(text, ["access", "unlock", "auth", "credential", "password", "token", "secret"])) return "key";
-  if (hasAny(text, ["notify", "alert", "notification", "bell", "ping"])) return "bell";
-  // 30-tool library: extended life-management, calls & app integrations
-  if (hasAny(text, ["body weight", "weigh-in", "weight log", "weight track", "bmi", "body mass", "scale reading"])) return "weight";
-  if (hasAny(text, ["water", "hydration", "hydrate", "fluid intake", "drink water"])) return "water";
-  if (hasAny(text, ["phone call", "telephone", "voicemail", "dial ", "call log", "ring up"])) return "phone";
-  if (hasAny(text, ["video call", "zoom meeting", "facetime", "google meet", "webcam", "video conference", "video meeting"])) return "video";
-  if (hasAny(text, ["contact", "address book", "roster", "people list", "phonebook"])) return "contacts";
-  if (hasAny(text, ["microphone", "voice memo", "voice note", "dictation", "record voice"])) return "mic";
-  if (hasAny(text, ["share", "social media", "post to", "publish to", "tweet", "retweet"])) return "share";
-  if (hasAny(text, ["google drive", "cloud storage", "dropbox", "onedrive", "gdrive", "file backup", "upload to drive"])) return "drive";
-  if (hasAny(text, ["media player", "play video", "youtube", "netflix", "video stream", "streaming"])) return "media";
-  if (hasAny(text, ["document", "google doc", "word doc", ".docx", "notion page", "report doc", "write-up"])) return "docs";
-  // Core file / code operations
-  if (hasAny(text, ["open-websearch", "fetch-web", "fetchgithub", "fetch-github", "websearch", "web search"])) return "seer";
-  if (/\bsearch\b/.test(text) && !hasAny(text, ["grep", "ripgrep", "search files"])) return "seer";
-  if (hasAny(text, ["memory", "vault", "keeper"])) return "keeper";
-  if (hasAny(text, ["doctor", "warden"])) return "warden";
-  if (hasAny(text, ["skill_write", "skill-write", "skill", "evolv", "new head"])) return "new-head";
-  if (hasAny(text, ["read"])) return "scroll";
-  if (hasAny(text, ["edit", "patch", "replace"])) return "needle";
-  if (hasAny(text, ["write"])) return "quill";
-  if (hasAny(text, ["grep", "find"])) return "lens";
-  if (hasAny(text, ["ls", "list", "tree"])) return "folder";
-  if (hasAny(text, ["bash", "shell", "command"])) return "anvil";
-
-  return "hammer";
-}
 
 function toolFrameId(toolName: string, status: ToolAvatarStatus, hintText = "", frameIndex = 0): string {
   const kind = toolKind(toolName, hintText);
