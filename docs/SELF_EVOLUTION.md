@@ -12,7 +12,7 @@ rides the simplest mechanism that fits, instead of a custom unified index:
 |---|---|---|
 | Is | a **fact** (who/what/preference/decision) | a **procedure** (how to do a recurring thing) |
 | Lives | `vault/memory/` — **private** (gitignored) | `skills/<name>.md` — **tracked** (reviewable) |
-| Tool | `memory_write` | `skill_write` |
+| Tool | `memory_write` (explicit) · `memory_suggest` (proactive, asks first) | `skill_write` |
 | Engine | Nazar's own FTS5 index; auto-recalled every turn on all models (`recallContext`) | **Pi-native skills** — Pi discovers, injects & invokes them (`/skill:name`) |
 | Keystone | `whenToUse` (natural-language "use this when…") | `description` (Pi's surfacing hint) |
 
