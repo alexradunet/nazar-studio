@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { afterEach, expect, test } from "vitest";
+import type { TUI } from "@earendil-works/pi-tui";
 import { visibleWidth } from "./ansi.ts";
 import { headerFactory, renderFolkBand } from "./header.ts";
 import { clearSessionInfo, recordSessionStart } from "./session-info.ts";
+
+// The header factory ignores its tui argument; a typed null stands in for it.
+const noTui = null as unknown as TUI;
 
 const originalFolkBand = process.env.NAZAR_FOLK_BAND;
 
@@ -52,7 +56,7 @@ const theme: any = {
 
 test("header renders nameplate + folk band + blank row when enabled", () => {
   delete process.env.NAZAR_FOLK_BAND;
-  const lines = headerFactory(null, theme).render(100);
+  const lines = headerFactory(noTui, theme).render(100);
   expect(lines).toHaveLength(3);
   // Row 0 is the gold nameplate band — contains the brand name
   expect(stripAnsi(lines[0])).toContain("B A L A U R");
@@ -65,7 +69,7 @@ test("header renders nameplate + folk band + blank row when enabled", () => {
 
 test("NAZAR_FOLK_BAND=off skips the carpet row", () => {
   process.env.NAZAR_FOLK_BAND = "off";
-  const lines = headerFactory(null, theme).render(100);
+  const lines = headerFactory(noTui, theme).render(100);
   expect(lines).toHaveLength(2); // nameplate + blank, no carpet
   expect(stripAnsi(lines[0])).toContain("B A L A U R");
   expect(lines[1].trim()).toBe("");
@@ -73,8 +77,8 @@ test("NAZAR_FOLK_BAND=off skips the carpet row", () => {
 
 test("header adapts brand name on narrow widths", () => {
   process.env.NAZAR_FOLK_BAND = "off"; // narrow the assertion to the title row
-  const wide = stripAnsi(headerFactory(null, theme).render(100)[0]);
-  const narrow = stripAnsi(headerFactory(null, theme).render(40)[0]);
+  const wide = stripAnsi(headerFactory(noTui, theme).render(100)[0]);
+  const narrow = stripAnsi(headerFactory(noTui, theme).render(40)[0]);
   expect(wide).toContain("B A L A U R");
   expect(narrow).toContain("NAZAR");
   expect(narrow).not.toContain("B A L A U R");
@@ -84,13 +88,13 @@ test("header swaps the trailing blank for a chapter divider once session info is
   delete process.env.NAZAR_FOLK_BAND;
   // Before any recordSessionStart call, the third row is a plain blank
   // (so ad-hoc / unit-test renders stay stable).
-  const before = headerFactory(null, theme).render(100);
+  const before = headerFactory(noTui, theme).render(100);
   expect(before[2].trim()).toBe("");
 
   // After session_start fires, the third row becomes a centred chapter
   // divider with the "session opened · HH:MM" label.
   recordSessionStart("opened");
-  const after = headerFactory(null, theme).render(100);
+  const after = headerFactory(noTui, theme).render(100);
   const divider = stripAnsi(after[2]);
   expect(divider).toContain("session opened");
   // Local-time HH:MM somewhere in the label.
@@ -102,6 +106,6 @@ test("header swaps the trailing blank for a chapter divider once session info is
 test("chapter divider label uses 'resumed' when the session is restored", () => {
   delete process.env.NAZAR_FOLK_BAND;
   recordSessionStart("resumed");
-  const divider = stripAnsi(headerFactory(null, theme).render(100)[2]);
+  const divider = stripAnsi(headerFactory(noTui, theme).render(100)[2]);
   expect(divider).toContain("session resumed");
 });

@@ -4,6 +4,7 @@ import type { Component, TUI } from "@earendil-works/pi-tui";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { compact, padVisible, visibleWidth } from "./ansi.ts";
 import { panelStyle } from "./panel-style.ts";
+import type { MessageContentPart, RenderableMessage } from "./pi-surface.ts";
 import {
   emptyAvatarLine,
   renderNazarExpression,
@@ -91,14 +92,15 @@ function previewTextLines(preview: string, width: number, rows: number, frameInd
 }
 
 export function extractThinkingPreview(message: unknown): string {
-  const content = Array.isArray((message as any)?.content) ? (message as any).content : [];
-  const thinkingParts = content.filter((part: any) => part?.type === "thinking");
+  const raw = (message as RenderableMessage)?.content;
+  const content: MessageContentPart[] = Array.isArray(raw) ? raw : [];
+  const thinkingParts = content.filter((part) => part?.type === "thinking");
   const visible = thinkingParts
-    .filter((part: any) => !part?.redacted && typeof part?.thinking === "string" && part.thinking.trim())
-    .map((part: any) => part.thinking);
+    .filter((part) => !part?.redacted && typeof part?.thinking === "string" && part.thinking.trim())
+    .map((part) => part.thinking);
 
   if (visible.length > 0) return tailThinkingText(visible.join("\n\n"));
-  if (thinkingParts.some((part: any) => part?.redacted)) return "Thinking redacted by provider.";
+  if (thinkingParts.some((part) => part?.redacted)) return "Thinking redacted by provider.";
   return "";
 }
 

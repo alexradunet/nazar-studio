@@ -23,12 +23,15 @@ export type RuntimeMetaContext = {
 const DIRTY_CACHE_MS = 2500;
 const dirtyCache = new WeakMap<object, { value: boolean; checkedAt: number }>();
 
-function isLocalModel(model: any): boolean {
+/** The subset of Pi's Model object the nameplate reads (best-effort). */
+type ModelInfo = { baseUrl?: unknown; name?: unknown; id?: unknown } | undefined;
+
+function isLocalModel(model: ModelInfo): boolean {
   const baseUrl = String(model?.baseUrl || "");
   return /^(https?:\/\/)?(127\.0\.0\.1|localhost)(:|\/|$)/.test(baseUrl);
 }
 
-function shortModelLabel(model: any): string {
+function shortModelLabel(model: ModelInfo): string {
   const raw = String(model?.name || model?.id || "no-model");
   return raw
     .replace(/^qwen_/, "qwen/")
@@ -102,14 +105,14 @@ export function renderRuntimeMeta(
   style: PanelStyle = panelStyle("system"),
 ): string {
   const { pi, ctx } = meta;
-  const model = (ctx as any).model;
+  const model = ctx.model;
   const usage = ctx.getContextUsage?.();
   // If the caller provides getGitBranch (even one that returns undefined),
   // honour that — it's the explicit "no git" signal. Only fall back to our
   // env-probe when no source is provided at all, e.g. ad-hoc render outside
   // Pi's session lifecycle where footerData.onBranchChange isn't wired.
-  const branch = meta.getGitBranch ? meta.getGitBranch() : probeGitBranch((ctx as any).cwd);
-  const dirty = branch ? cachedRepoDirty(ctx as object, (ctx as any).cwd) : false;
+  const branch = meta.getGitBranch ? meta.getGitBranch() : probeGitBranch(ctx.cwd);
+  const dirty = branch ? cachedRepoDirty(ctx, ctx.cwd) : false;
   const toolCount = (() => {
     try { return pi.getActiveTools()?.length || pi.getAllTools()?.length || 0; }
     catch { return 0; }

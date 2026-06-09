@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Nazar-styled review prompt for proactive memory capture.
 import { Key, matchesKey, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { panelStyle, type PanelStyle } from "./panel-style.ts";
 import { nameplateRow, paintBgStrip } from "./turn-composer.ts";
 
@@ -158,10 +159,10 @@ export function renderMemoryPromptLines(config: PromptConfig, width: number, sel
   return lines.map((line) => visibleWidth(line) <= safeWidth ? line : truncateToWidth(line, safeWidth, ""));
 }
 
-export async function promptMemoryChoice(ctx: any, config: PromptConfig, opts: PromptOptions = {}): Promise<string | undefined> {
+export async function promptMemoryChoice(ctx: ExtensionContext, config: PromptConfig, opts: PromptOptions = {}): Promise<string | undefined> {
   if (typeof ctx?.ui?.custom === "function") {
     try {
-      return await ctx.ui.custom((tui: any, _theme: any, _keybindings: any, done: (choice: string | undefined) => void) => {
+      return await ctx.ui.custom((tui, _theme, _keybindings, done: (choice: string | undefined) => void) => {
         let selected = 0;
         let settled = false;
         let timeout: NodeJS.Timeout | undefined;
