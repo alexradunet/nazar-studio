@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { beforeEach, expect, test } from "vitest";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import memory from "./memory.ts";
 
-// Redirect the vault (and its disposable SQLite index) to a throwaway dir.
-beforeEach(() => { process.env.VAULT_PATH = mkdtempSync(join(tmpdir(), "nazar-memext-")); });
+// Redirect the vault (+ its disposable SQLite index) and the skills dir to throwaway dirs.
+beforeEach(() => {
+  const dir = mkdtempSync(join(tmpdir(), "nazar-memext-"));
+  process.env.VAULT_PATH = dir;
+  process.env.NAZAR_SKILLS_DIR = join(dir, "skills");
+});
 
 function fakePi() {
   const tools: any[] = [];
@@ -45,7 +49,7 @@ test("memory extension registers the memory + skill tools and recall hooks", () 
   const { pi, tools, handlers } = fakePi();
   memory(pi);
   expect(tools.map((t) => t.name).sort()).toEqual(
-    ["memory_duplicates", "memory_get", "memory_search", "memory_suggest", "memory_write", "skill_write"],
+    ["memory_duplicates", "memory_get", "memory_search", "memory_suggest", "memory_write", "skill_suggest", "skill_write"],
   );
   expect(typeof handlers.session_start).toBe("function");
   expect(typeof handlers.before_agent_start).toBe("function");
@@ -159,4 +163,93 @@ test("memory_suggest does not re-ask the same fact twice in one session", async 
   await suggest.execute("sug", proposal, undefined, undefined, ctx);
   await suggest.execute("sug", proposal, undefined, undefined, ctx);
   expect(calls.select.length).toBe(1);
+});
+
+test("memory captures persist an outcome tag (ReasoningBank-style)", async () => {
+  const { pi, tools } = fakePi();
+  memory(pi);
+  const write = tools.find((t) => t.name === "memory_write");
+  const get = tools.find((t) => t.name === "memory_get");
+  await write.execute("id", { title: "Avoid X", content: "X corrupts the index; reindex instead", outcome: "failure" });
+  expect((await get.execute("id", { title: "Avoid X" })).content[0].text).toContain("outcome: failure");
+});
+
+test("skill_suggest writes a skill file when the user picks Save", async () => {
+  const { pi, tools } = fakePi();
+  memory(pi);
+  const suggest = tools.find((t) => t.name === "skill_suggest");
+  const { ctx } = fakeCtx({ choice: "Save" });
+  const r = await suggest.execute("sug", { name: "Morning catchup", description: "Summarize overnight", content: "1. read inbox\n2. summarize" }, undefined, undefined, ctx);
+  expect(r.details.saved).toBe(true);
+  const path = join(process.env.NAZAR_SKILLS_DIR!, "morning-catchup.md");
+  expect(existsSync(path)).toBe(true);
+  expect(readFileSync(path, "utf8")).toContain("name: morning-catchup");
+});
+
+test("skill_suggest writes nothing on Skip", async () => {
+  const { pi, tools } = fakePi();
+  memory(pi);
+  const suggest = tools.find((t) => t.name === "skill_suggest");
+  const { ctx } = fakeCtx({ choice: "Skip" });
+  await suggest.execute("sug", { name: "Skipped skill", description: "x", content: "y" }, undefined, undefined, ctx);
+  expect(existsSync(join(process.env.NAZAR_SKILLS_DIR!, "skipped-skill.md"))).toBe(false);
+});
+
+test("skill_suggest edits name/description before writing", async () => {
+  const { pi, tools } = fakePi();
+  memory(pi);
+  const suggest = tools.find((t) => t.name === "skill_suggest");
+  const { ctx } = fakeCtx({ choice: "Edit…", inputs: ["Renamed skill", "better description"] });
+  await suggest.execute("sug", { name: "Orig skill", description: "meh", content: "steps here" }, undefined, undefined, ctx);
+  const path = join(process.env.NAZAR_SKILLS_DIR!, "renamed-skill.md");
+  expect(existsSync(path)).toBe(true);
+  expect(readFileSync(path, "utf8")).toContain("better description");
+  expect(existsSync(join(process.env.NAZAR_SKILLS_DIR!, "orig-skill.md"))).toBe(false);
+});
+
+test("skill_suggest offers to update an existing skill and overwrites on approval", async () => {
+  const { pi, tools } = fakePi();
+  memory(pi);
+  const write = tools.find((t) => t.name === "skill_write");
+  const suggest = tools.find((t) => t.name === "skill_suggest");
+  await write.execute("id", { name: "Deploy flow", description: "d", content: "old steps" });
+  const { ctx, calls } = fakeCtx({ choice: "Update the existing skill" });
+  await suggest.execute("sug", { name: "Deploy flow", description: "d2", content: "new steps qrs" }, undefined, undefined, ctx);
+  expect(calls.select[0].title).toContain("Update skill?");
+  expect(readFileSync(join(process.env.NAZAR_SKILLS_DIR!, "deploy-flow.md"), "utf8")).toContain("new steps qrs");
+});
+
+test("skill_suggest degrades to a text nudge when there's no UI", async () => {
+  const { pi, tools } = fakePi();
+  memory(pi);
+  const suggest = tools.find((t) => t.name === "skill_suggest");
+  const { ctx, calls } = fakeCtx({ hasUI: false });
+  const r = await suggest.execute("sug", { name: "Headless skill", description: "d", content: "c" }, undefined, undefined, ctx);
+  expect(calls.select.length).toBe(0);
+  expect(r.details.headless).toBe(true);
+  expect(existsSync(join(process.env.NAZAR_SKILLS_DIR!, "headless-skill.md"))).toBe(false);
+});
+
+test("skill_suggest does not re-ask the same procedure twice in one session", async () => {
+  const { pi, tools } = fakePi();
+  memory(pi);
+  const suggest = tools.find((t) => t.name === "skill_suggest");
+  const { ctx, calls } = fakeCtx({ choice: "Skip" });
+  const proposal = { name: "Once skill", description: "d", content: "same proc steps" };
+  await suggest.execute("sug", proposal, undefined, undefined, ctx);
+  await suggest.execute("sug", proposal, undefined, undefined, ctx);
+  expect(calls.select.length).toBe(1);
+});
+
+test("skill_write refuses to overwrite an existing skill unless overwrite is set", async () => {
+  const { pi, tools } = fakePi();
+  memory(pi);
+  const write = tools.find((t) => t.name === "skill_write");
+  const path = join(process.env.NAZAR_SKILLS_DIR!, "guarded.md");
+  await write.execute("id", { name: "Guarded", description: "d", content: "first" });
+  const blocked = await write.execute("id", { name: "Guarded", description: "d", content: "second" });
+  expect(blocked.details.blocked).toBe(true);
+  expect(readFileSync(path, "utf8")).toContain("first");
+  await write.execute("id", { name: "Guarded", description: "d", content: "third", overwrite: true });
+  expect(readFileSync(path, "utf8")).toContain("third");
 });

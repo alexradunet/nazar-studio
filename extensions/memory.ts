@@ -9,10 +9,13 @@
  *              impose life/coding/project categories; it preserves the user's wording.
  *              Tools: memory_write (explicit) / memory_suggest (proactive, asks first) /
  *              memory_search / memory_get / memory_duplicates. memory_suggest realizes the
- *              "detect → suggest → approve" capture loop (SELF_EVOLUTION.md) for memory.
+ *              "detect → suggest → approve" capture loop (SELF_EVOLUTION.md) for memory; a capture
+ *              may carry outcome: success|failure (ReasoningBank-style) so failure lessons
+ *              (guardrails) live alongside facts.
  *   - SKILLS → procedures as Pi-native skill files (skills/<name>.md, frontmatter
- *              name/description). Pi discovers, injects, and invokes them (/skill:name), so
- *              skill_write just writes the file — there is nothing to index. See SELF_EVOLUTION.md.
+ *              name/description). Pi discovers, injects, and invokes them (/skill:name).
+ *              Tools: skill_write (explicit) / skill_suggest (proactive, asks first); neither
+ *              silently overwrites an existing skill. See SELF_EVOLUTION.md.
  *
  * The extension injects relevant saved memory into the turn's system prompt on EVERY turn, for
  * all models. On a frontier/cloud model this sends recalled memory to that provider, so keep
@@ -21,14 +24,14 @@
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { writeMemory, searchMemory, getMemory, findDuplicates, recallContext, reindexMemory, type Hit } from "../lib/memory.ts";
 import { nodeSqliteUpgradePrompt } from "../lib/node-version.ts";
 import { moduleDir } from "../lib/paths.ts";
 
 /** Where Pi-native skill files live (declared in package.json `pi.skills`). */
-const skillsDir = (): string => join(moduleDir(import.meta.url), "..", "skills");
+const skillsDir = (): string => process.env.NAZAR_SKILLS_DIR || join(moduleDir(import.meta.url), "..", "skills");
 
 /** kebab-case a skill name for the filename and the `/skill:` handle. */
 function slugifySkill(s: string): string {
@@ -47,6 +50,7 @@ const OPT_SAVE = "Save";
 const OPT_EDIT = "Edit…";
 const OPT_SKIP = "Skip";
 const OPT_UPDATE = "Update the existing note";
+const OPT_UPDATE_SKILL = "Update the existing skill";
 
 /**
  * Proactive-capture suggestions already offered this Pi session, so Nazar never re-nags about the
@@ -74,6 +78,27 @@ function sameTitlePage(title: string): Hit | null {
     if (h.title.trim().toLowerCase() === want) return h;
   }
   return null;
+}
+
+/** Resolve a skill name to its slug + on-disk path. */
+function skillFilePath(name: string): { slug: string; path: string } {
+  const slug = slugifySkill(name);
+  return { slug, path: join(skillsDir(), `${slug}.md`) };
+}
+
+/**
+ * Write a Pi-native skill file. Refuses to silently clobber an existing skill unless `overwrite`
+ * is set — returns { blocked: true } in that case so the caller can ask or relabel instead.
+ */
+function writeSkillFile(name: string, description: string, content: string, overwrite: boolean): { slug: string; path: string; blocked?: boolean } {
+  const { slug, path } = skillFilePath(name);
+  if (existsSync(path) && !overwrite) return { slug, path, blocked: true };
+  mkdirSync(skillsDir(), { recursive: true });
+  const fm =
+    `---\nname: ${slug}\ndescription: ${JSON.stringify((description ?? "").trim())}\n---\n\n` +
+    `${String(content ?? "").trim()}\n`;
+  writeFileSync(path, fm);
+  return { slug, path };
 }
 
 export default function (pi: ExtensionAPI) {
@@ -109,6 +134,7 @@ export default function (pi: ExtensionAPI) {
       whenToUse: Type.Optional(Type.String({ description: "Optional retrieval hint in the user's terms; omit if not needed." })),
       tags: Type.Optional(Type.Array(Type.String({ description: "Optional user-chosen tag." }))),
       pinned: Type.Optional(Type.Boolean({ description: "Always keep in context; use only when explicitly requested." })),
+      outcome: Type.Optional(Type.Union([Type.Literal("success"), Type.Literal("failure")], { description: "Optional ReasoningBank-style lesson tag: 'success' (a validated approach) or 'failure' (a guardrail — what to avoid and why). Omit for ordinary facts." })),
     }),
     async execute(_id: string, p: any) {
       const r = writeMemory(p);
@@ -127,6 +153,7 @@ export default function (pi: ExtensionAPI) {
       "Offer at most once per fact; never re-offer something already saved or skipped this session.",
       "Never put secrets, credentials, or sensitive data the user didn't ask you to keep into a suggestion.",
       "Use memory_write (not memory_suggest) when the user explicitly says to remember something.",
+      "When an approach FAILED and you found what works, offer to keep the lesson with outcome:\"failure\" — put the guardrail (what to avoid and why -> do this instead) in the content.",
     ],
     parameters: Type.Object({
       title: Type.String({ description: "Short page title for the fact; also the [[wikilink]] handle." }),
@@ -134,6 +161,7 @@ export default function (pi: ExtensionAPI) {
       type: Type.Optional(Type.String({ description: "Optional folder/category slug. Defaults to notes." })),
       whenToUse: Type.Optional(Type.String({ description: "Optional retrieval hint in the user's terms." })),
       tags: Type.Optional(Type.Array(Type.String({ description: "Optional tag." }))),
+      outcome: Type.Optional(Type.Union([Type.Literal("success"), Type.Literal("failure")], { description: "Optional ReasoningBank-style lesson tag: 'success' (validated approach) or 'failure' (a guardrail — what to avoid and why; put it in the content). Omit for ordinary facts." })),
     }),
     async execute(_id: string, p: any, signal: any, _onUpdate: any, ctx: any): Promise<any> {
       const proposal = {
@@ -142,6 +170,7 @@ export default function (pi: ExtensionAPI) {
         type: p?.type as string | undefined,
         whenToUse: p?.whenToUse as string | undefined,
         tags: p?.tags as string[] | undefined,
+        outcome: p?.outcome as ("success" | "failure" | undefined),
       };
       if (!proposal.title || !proposal.content) {
         return { content: [{ type: "text", text: "Nothing to suggest (empty title or content)." }], details: { skipped: "empty" } };
@@ -218,19 +247,94 @@ export default function (pi: ExtensionAPI) {
       description: Type.String({ description: "When to use it + what it does — Pi shows this to the model to decide when to surface the skill." }),
       content: Type.String({ description: "The procedure (Markdown): steps, conventions, examples." }),
     }),
-    async execute(_id: string, p: { name: string; description: string; content: string }) {
-      const slug = slugifySkill(p.name);
-      const dir = skillsDir();
-      mkdirSync(dir, { recursive: true });
-      const path = join(dir, `${slug}.md`);
-      const fm =
-        `---\nname: ${slug}\ndescription: ${JSON.stringify((p.description ?? "").trim())}\n---\n\n` +
-        `${String(p.content ?? "").trim()}\n`;
-      writeFileSync(path, fm);
+    async execute(_id: string, p: { name: string; description: string; content: string; overwrite?: boolean }): Promise<any> {
+      const r = writeSkillFile(p.name, p.description, p.content, !!p.overwrite);
+      if (r.blocked) {
+        return {
+          content: [{ type: "text", text: `Skill "${r.slug}" already exists. Re-run with overwrite: true to replace it, or choose a different name.` }],
+          details: { blocked: true, path: r.path, name: r.slug },
+        };
+      }
       return {
-        content: [{ type: "text", text: `Learned skill → ${path} (invoke with /skill:${slug})` }],
-        details: { path, name: slug },
+        content: [{ type: "text", text: `Learned skill → ${r.path} (invoke with /skill:${r.slug})` }],
+        details: { path: r.path, name: r.slug },
       };
+    },
+  });
+
+  pi.registerTool({
+    name: "skill_suggest",
+    label: "offer to learn a skill",
+    description:
+      "PROACTIVELY offer to turn a recurring procedure into a Pi-native SKILL, asking the user to approve first (Save / Edit / Skip). Call this yourself when you notice the user repeating a multi-step workflow worth capturing as a reusable /skill:name playbook, that isn't already a skill. Nothing is written unless the user approves; prefer skill_write when the user explicitly asks to make a skill.",
+    promptSnippet: "skill_suggest — offer (with the user's approval) to capture a recurring procedure as a skill.",
+    promptGuidelines: [
+      "When the user repeats the same multi-step procedure, offer to capture it as a skill with skill_suggest — it asks before writing.",
+      "Offer at most once per procedure; don't re-offer a skill that already exists or was skipped this session.",
+      "Use skill_write (not skill_suggest) when the user explicitly asks to make a skill.",
+    ],
+    parameters: Type.Object({
+      name: Type.String({ description: "Skill name; kebab-cased for the file and the /skill: handle." }),
+      description: Type.String({ description: "When to use it + what it does — Pi's surfacing hint." }),
+      content: Type.String({ description: "The procedure (Markdown): steps, conventions, examples." }),
+    }),
+    async execute(_id: string, p: any, signal: any, _onUpdate: any, ctx: any): Promise<any> {
+      const name = String(p?.name ?? "").trim();
+      const description = String(p?.description ?? "").trim();
+      const content = String(p?.content ?? "").trim();
+      if (!name || !content) {
+        return { content: [{ type: "text", text: "Nothing to suggest (empty skill name or content)." }], details: { skipped: "empty" } };
+      }
+      const { slug, path } = skillFilePath(name);
+      const exists = existsSync(path);
+
+      const fp = `skill:${suggestFingerprint(name, content)}`;
+      if (offeredThisSession.has(fp)) {
+        return { content: [{ type: "text", text: "Already offered this skill once this session; not asking again." }], details: { skipped: "already-offered" } };
+      }
+      if (!ctx?.hasUI || typeof ctx?.ui?.select !== "function") {
+        offeredThisSession.add(fp);
+        return { content: [{ type: "text", text: `No interactive prompt here. If the user wants a "${slug}" skill, write it with skill_write.` }], details: { headless: true, slug } };
+      }
+
+      offeredThisSession.add(fp);
+      const dialogOpts = { timeout: 30000, signal };
+      let choice: string | undefined;
+      try {
+        choice = exists
+          ? await ctx.ui.select(`Update skill? (/skill:${slug} exists)`, [OPT_UPDATE_SKILL, OPT_SKIP], dialogOpts)
+          : await ctx.ui.select(`Make this a skill? (/skill:${slug})`, [OPT_SAVE, OPT_EDIT, OPT_SKIP], dialogOpts);
+      } catch {
+        return { content: [{ type: "text", text: "Suggestion dismissed." }], details: { skipped: "dialog-error" } };
+      }
+      if (!choice || choice === OPT_SKIP) {
+        try { ctx.ui.notify("Skipped — won't ask again this session.", "info"); } catch { /* ignore */ }
+        return { content: [{ type: "text", text: "Skipped (no skill written)." }], details: { skipped: "user" } };
+      }
+
+      let finalName = name;
+      let finalDesc = description;
+      if (choice === OPT_EDIT) {
+        const n = await ctx.ui.input("Edit skill · name", name, dialogOpts);
+        if (n === undefined) {
+          try { ctx.ui.notify("Edit cancelled — no skill written.", "info"); } catch { /* ignore */ }
+          return { content: [{ type: "text", text: "Edit cancelled (no skill written)." }], details: { skipped: "edit-cancelled" } };
+        }
+        if (n.trim()) finalName = n.trim();
+        const d = await ctx.ui.input("Edit skill · description", description, dialogOpts);
+        if (d === undefined) {
+          try { ctx.ui.notify("Edit cancelled — no skill written.", "info"); } catch { /* ignore */ }
+          return { content: [{ type: "text", text: "Edit cancelled (no skill written)." }], details: { skipped: "edit-cancelled" } };
+        }
+        if (d.trim()) finalDesc = d.trim();
+      }
+
+      const r = writeSkillFile(finalName, finalDesc, content, choice === OPT_UPDATE_SKILL);
+      if (r.blocked) {
+        return { content: [{ type: "text", text: `A skill "${r.slug}" already exists — not overwritten.` }], details: { blocked: true, path: r.path, name: r.slug } };
+      }
+      try { ctx.ui.notify(`Learned skill → /skill:${r.slug}`, "info"); } catch { /* ignore */ }
+      return { content: [{ type: "text", text: `Learned skill → ${r.path} (invoke with /skill:${r.slug})` }], details: { saved: true, choice, path: r.path, name: r.slug } };
     },
   });
 
@@ -275,5 +379,5 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
-  log(pi, "[memory] tools registered: memory_write, memory_suggest, skill_write, memory_search, memory_get, memory_duplicates");
+  log(pi, "[memory] tools registered: memory_write, memory_suggest, skill_write, skill_suggest, memory_search, memory_get, memory_duplicates");
 }

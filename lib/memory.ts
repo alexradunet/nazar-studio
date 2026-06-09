@@ -76,6 +76,7 @@ export interface MemoryInput {
   tags?: string[];
   whenToUse?: string;   // optional retrieval hint in the user's terms
   pinned?: boolean;     // always-in-context; use only when explicitly requested
+  outcome?: "success" | "failure"; // ReasoningBank-style lesson tag: a validated approach, or a guardrail (what to avoid)
 }
 
 function indexRow(db: DatabaseSync, r: {
@@ -106,6 +107,8 @@ export function writeMemory(m: MemoryInput): { path: string; title: string } {
 
   const fm: string[] = [`title: ${JSON.stringify(title)}`, `type: ${type}`];
   if (whenToUse) fm.push(`whenToUse: ${JSON.stringify(whenToUse)}`);
+  const outcome = m.outcome === "success" || m.outcome === "failure" ? m.outcome : undefined;
+  if (outcome) fm.push(`outcome: ${outcome}`);
   fm.push(`tags: [${tags.join(", ")}]`);
   if (m.pinned) fm.push("pinned: true");
   fm.push(`created: ${created}`, `updated: ${now}`);
