@@ -102,13 +102,13 @@ export class NazarEditor extends CustomEditor {
     super(tui, theme, keybindings, options);
   }
 
-  setPaddingX(_padding: number): void {
+  override setPaddingX(_padding: number): void {
     // The two-column composer owns all outer padding — tell Pi to render
     // flush so we don't double-pad on the left.
     super.setPaddingX(0);
   }
 
-  handleInput(data: string): void {
+  override handleInput(data: string): void {
     const before = this.getText();
     super.handleInput(data);
     if (this.getText() !== before) {
@@ -119,7 +119,7 @@ export class NazarEditor extends CustomEditor {
     }
   }
 
-  render(width: number): string[] {
+  override render(width: number): string[] {
     const currentText = this.getText();
     const avatar = userAvatarCell(currentText, this.typingFrame);
     const style = editorPanelStyle();

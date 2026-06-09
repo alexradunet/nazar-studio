@@ -19,13 +19,11 @@ import {
   trimOuterBlankLines,
 } from "./turn-composer.ts";
 import {
-  centerAvatarLine,
   emptyAvatarLine,
   renderNazarExpression,
   renderRoleAvatar,
   renderToolPixelAvatar,
   type AvatarBackground,
-  type AvatarRenderLine,
   type RenderedAvatar,
 } from "./pixel-avatar.ts";
 import { NAZAR_MOOD_FRAME, nazarMoodFrame } from "./nazar-mood.ts";

@@ -10,7 +10,6 @@
 // climbs to 85%+ so the alert is never silently hidden.
 import type { ExtensionAPI, ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
 import { compact, visibleWidth } from "./ansi.ts";
-import { panelStyle } from "./panel-style.ts";
 
 const FOOTER_HORIZONTAL_PADDING = 1;
 
@@ -47,7 +46,6 @@ export function footerFactory(_pi: ExtensionAPI, ctx: ExtensionContext, _onTui?:
           return [" ".repeat(Math.max(0, width))];
         }
 
-        const style = panelStyle("system");
         const innerWidth = Math.max(1, width - FOOTER_HORIZONTAL_PADDING * 2);
         const gap = Math.max(1, innerWidth - visibleWidth(warning));
         const line = compact(" ".repeat(gap) + warning, innerWidth);

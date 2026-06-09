@@ -125,16 +125,6 @@ type EyeKind =
   | "tasks" | "habit" | "weight" | "water" | "meds" | "mood" | "goal" | "cart"
   | "phone" | "video" | "chat" | "contacts" | "mic" | "bell"
   | "share" | "drive" | "card" | "map" | "media" | "docs";
-const EYE_KINDS: readonly EyeKind[] = [
-  "read", "write", "edit", "search", "bash", "files", "grep", "browser",
-  "memory", "skill", "health", "journal", "gym", "calendar", "mail", "music", "time",
-  "terminal", "rocket", "gear", "idle",
-  "money", "sports", "diet", "sleep", "mind",
-  "git", "merge", "database", "cloud", "container", "bug", "api", "code", "lock", "package",
-  "tasks", "habit", "weight", "water", "meds", "mood", "goal", "cart",
-  "phone", "video", "chat", "contacts", "mic", "bell",
-  "share", "drive", "card", "map", "media", "docs",
-];
 // Tool kind -> the eye Nazar shows while running it (idle cosmos is the fallback).
 const KIND_TO_EYE: Record<ToolAvatarKind, EyeKind> = {
   scroll: "read", needle: "edit", quill: "write", anvil: "bash", lens: "grep",
@@ -470,11 +460,6 @@ function bg(color: Rgb): string {
 
 function paintBg(text: string, color: Rgb | undefined): string {
   return color ? `${bg(color)}${text}${BG_RESET}` : text;
-}
-
-function sampleIsOn(sample: RegionSample, threshold: number): boolean {
-  const edgeBoost = Math.min(0.30, sample.contrast * 0.52);
-  return sample.coverage > 0 && sample.coverage + edgeBoost >= threshold;
 }
 
 function sampleWeight(sample: RegionSample): number {
