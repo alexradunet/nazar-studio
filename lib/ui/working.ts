@@ -3,7 +3,7 @@
 import type { Component, TUI } from "@earendil-works/pi-tui";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { compact, padVisible, visibleWidth } from "./ansi.ts";
-import { panelStyle, type PanelStyle } from "./panel-style.ts";
+import { panelStyle } from "./panel-style.ts";
 import {
   emptyAvatarLine,
   renderNazarExpression,
@@ -18,7 +18,6 @@ const BOLD_OFF = "\x1b[22m";
 
 const THINKING_WIDGET_KEY = "nazar-thinking";
 const THINKING_INTERVAL_MS = 180;
-const THINKING_LEFT_PADDING = 1;
 const THINKING_PREVIEW_MAX_CHARS = 900;
 
 let currentThinkingPreview = "";
@@ -29,23 +28,6 @@ function thought(text: string): string {
 
 function muted(text: string): string {
   return panelStyle("thinking", "running").paint.muted(text);
-}
-
-function panelWidths(_avatarInnerWidth: number): { width: number; previewWidth: number } {
-  // The TUI/widget path renders full-width lines. Keep the panel inside the
-  // terminal width so the differential renderer never has to wrap it. Preview
-  // text owns its own rows; the avatar is decorative and rendered above.
-  const width = Math.max(32, (process.stdout.columns || 80) - THINKING_LEFT_PADDING);
-  return { width, previewWidth: width };
-}
-
-function spacedUpper(text: string): string {
-  return text.toUpperCase().split("").join(" ");
-}
-
-function withLeftPadding(lines: string[]): string {
-  const prefix = " ".repeat(THINKING_LEFT_PADDING);
-  return lines.map((line) => `${prefix}${line}`).join("\n");
 }
 
 function stripControl(text: string): string {
