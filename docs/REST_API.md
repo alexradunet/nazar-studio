@@ -17,7 +17,7 @@ Run it with:
 bun run api
 ```
 
-Optional environment variables:
+Optional environment variables (or values loaded from `.env`):
 
 ```bash
 BALAUR_API_HOST=127.0.0.1

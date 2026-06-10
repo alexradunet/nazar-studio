@@ -23,7 +23,7 @@
     "balaur": "./src/main.tsx"
   },
   "scripts": {
-    "test": "bun test lib/runtime lib/tui lib/avatar lib/design lib/vault.test.ts",
+    "test": "bun test lib/runtime lib/tui lib/avatar lib/design lib/vault.test.ts lib/env.test.ts",
     "test:watch": "bun test --watch",
     "typecheck": "tsc --noEmit",
     "balaur": "bun src/main.tsx",
@@ -48,6 +48,7 @@
     "skills",
     "assets",
     "models.json",
+    ".env.example",
     "AGENTS.md",
     "README.md",
     "LICENSE",

@@ -21,6 +21,11 @@ handoff/
 publish-audit/
 audit/
 
+# Keep secrets/config separate from source
+.env
+.env.*
+!.env.example
+
 # WhatsApp gateway linked-device session (secrets — never commit)
 .wwebjs_auth/
 **/whatsapp-auth/

@@ -73,6 +73,23 @@ BALAUR_MODEL=openai/gpt-4o-mini bun run balaur
 API keys are read from standard provider environment variables supported by `pi-ai`, or `BALAUR_<PROVIDER>_API_KEY`.
 Synthetic also accepts `SYNTHETIC_API_KEY` (or `BALAUR_SYNTHETIC_API_KEY`).
 
+You can also place these in a `.env` file in the project root and run Balaur normally:
+
+```bash
+bun run balaur
+```
+
+`runtimeEnv()` prefers real environment variables over `.env` values, and `BALAUR_ENV_FILE`
+can point to an explicit file path when needed. A full template is available in
+`.env.example`.
+
+```bash
+cp .env.example .env
+# edit .env
+# then run
+bun run balaur
+```
+
 ## Project layout
 
 ```txt
