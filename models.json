@@ -13,9 +13,9 @@
       },
       "models": [
         {
-          "id": "hf:unsloth/gemma-4-12b-it-GGUF:UD-Q4_K_XL",
-          "name": "Gemma 4 12B Instruct UD-Q4_K_XL",
-          "reasoning": true,
+          "id": "hf:bartowski/granite-3.1-8b-instruct-GGUF:Q4_K_M",
+          "name": "Granite 3.1 8B Instruct Q4_K_M",
+          "reasoning": false,
           "contextWindow": 262144,
           "maxTokens": 2048,
           "input": ["text"],
@@ -24,5 +24,5 @@
       ]
     }
   },
-  "_notes": "Canonical local runtime is Balaur's node-llama-cpp provider. The default text model is Unsloth Gemma 4 12B Instruct GGUF UD-Q4_K_XL, resolved with node-llama-cpp from Hugging Face into Balaur's private model cache on startup. The runtime requires at least 16GB RAM and creates a 128K-token context by default."
+  "_notes": "Canonical local runtime is Balaur's node-llama-cpp provider. The default text model is Granite 3.1 8B Instruct GGUF Q4_K_M, resolved with node-llama-cpp from Hugging Face into Balaur's private model cache on startup. The runtime requires at least 16GB RAM and creates a 128K-token context by default."
 }

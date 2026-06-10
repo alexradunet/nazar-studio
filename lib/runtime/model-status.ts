@@ -2,6 +2,7 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 import type { Model } from "@earendil-works/pi-ai";
+import { runtimeEnv } from "../env.ts";
 import { modelsDir } from "../paths.ts";
 import { DEFAULT_BALAUR_LLAMA_CPP_MODEL_REF, isBalaurLlamaCppModel } from "./llama-cpp-provider.ts";
 import { resolveBalaurModel } from "./pi-core-engine.ts";
@@ -72,7 +73,7 @@ export function localModelCacheStatus(modelUri: string, cacheDir = modelsDir()):
   return { cacheDir, complete: matches.length > 0, partial: partialMatches.length > 0, matches, partialMatches };
 }
 
-export function getBalaurModelStatus(env: NodeJS.ProcessEnv = process.env, cacheDir = modelsDir()): BalaurModelStatus {
+export function getBalaurModelStatus(env: NodeJS.ProcessEnv = runtimeEnv(), cacheDir = modelsDir()): BalaurModelStatus {
   const ref = env.BALAUR_MODEL ?? DEFAULT_BALAUR_LLAMA_CPP_MODEL_REF;
   const model = resolveBalaurModel(ref);
   const local = isBalaurLlamaCppModel(model);

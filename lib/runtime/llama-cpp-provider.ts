@@ -3,12 +3,13 @@ import { mkdirSync } from "node:fs";
 import { totalmem } from "node:os";
 import { createAssistantMessageEventStream, type AssistantMessage, type Context, type Model, type SimpleStreamOptions, type Tool, type Usage } from "@earendil-works/pi-ai";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
+import { runtimeEnv } from "../env.ts";
 import { modelsDir } from "../paths.ts";
 import { createModelDownloadProgressReporter } from "./download-progress.ts";
 
 export const BALAUR_LLAMA_CPP_PROVIDER = "llama-cpp";
 export const BALAUR_LLAMA_CPP_API = "balaur-llama-cpp";
-export const DEFAULT_BALAUR_LLAMA_CPP_MODEL_URI = "hf:unsloth/gemma-4-12b-it-GGUF:UD-Q4_K_XL";
+export const DEFAULT_BALAUR_LLAMA_CPP_MODEL_URI = "hf:bartowski/granite-3.1-8b-instruct-GGUF:Q4_K_M";
 export const DEFAULT_BALAUR_LLAMA_CPP_MODEL_REF = `${BALAUR_LLAMA_CPP_PROVIDER}/${DEFAULT_BALAUR_LLAMA_CPP_MODEL_URI}`;
 export const DEFAULT_BALAUR_LLAMA_CPP_CONTEXT_SIZE = 131072;
 export const DEFAULT_BALAUR_LLAMA_CPP_MAX_TOKENS = 2048;
@@ -81,11 +82,11 @@ export function createBalaurLlamaCppModel(modelUri = DEFAULT_BALAUR_LLAMA_CPP_MO
   const isDefault = modelUri === DEFAULT_BALAUR_LLAMA_CPP_MODEL_URI;
   return {
     id: modelUri,
-    name: isDefault ? "Gemma 4 12B Instruct UD-Q4_K_XL" : modelUri,
+    name: isDefault ? "Granite 3.1 8B Instruct Q4_K_M" : modelUri,
     api: BALAUR_LLAMA_CPP_API,
     provider: BALAUR_LLAMA_CPP_PROVIDER,
     baseUrl: "local://node-llama-cpp",
-    reasoning: true,
+    reasoning: false,
     thinkingLevelMap: { off: null, minimal: null, low: null, medium: null, high: null, xhigh: null },
     input: ["text"],
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
@@ -105,7 +106,7 @@ export function assertBalaurLlamaCppRam(totalBytes = totalmem(), minBytes = DEFA
   throw new Error(`Balaur's default local model requires at least ${requiredGb}GB RAM; detected ${actualGb}GB.`);
 }
 
-export function resolveBalaurLlamaCppContextSize(env: NodeJS.ProcessEnv = process.env): number | "auto" {
+export function resolveBalaurLlamaCppContextSize(env: NodeJS.ProcessEnv = runtimeEnv()): number | "auto" {
   const raw = env.BALAUR_LLAMA_CPP_CONTEXT_SIZE?.trim();
   if (!raw) return DEFAULT_BALAUR_LLAMA_CPP_CONTEXT_SIZE;
   if (raw === "auto") return "auto";
@@ -116,7 +117,7 @@ export function resolveBalaurLlamaCppContextSize(env: NodeJS.ProcessEnv = proces
   return parsed;
 }
 
-export function resolveBalaurLlamaCppMaxTokens(env: NodeJS.ProcessEnv = process.env): number {
+export function resolveBalaurLlamaCppMaxTokens(env: NodeJS.ProcessEnv = runtimeEnv()): number {
   const raw = env.BALAUR_LLAMA_CPP_MAX_TOKENS?.trim();
   if (!raw) return DEFAULT_BALAUR_LLAMA_CPP_MAX_TOKENS;
   const parsed = Number(raw);

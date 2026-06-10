@@ -13,7 +13,7 @@ import {
 } from "./llama-cpp-provider.ts";
 import { resolveBalaurModel } from "./pi-core-engine.ts";
 
-test("defaults Balaur to the local Gemma 4 llama.cpp model", () => {
+test("defaults Balaur to the local Granite llama.cpp model", () => {
   const model = resolveBalaurModel();
   expect(model.provider).toBe(BALAUR_LLAMA_CPP_PROVIDER);
   expect(model.api).toBe(BALAUR_LLAMA_CPP_API);

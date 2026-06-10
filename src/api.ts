@@ -2,19 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { createRuntimeGatewayBridge } from "../lib/runtime/gateway.ts";
 import { createBalaurRuntime } from "../lib/runtime/session-runner.ts";
-
-declare const Bun: {
-  serve(options: {
-    hostname: string;
-    port: number;
-    fetch(request: Request): Response | Promise<Response>;
-  }): { url: URL; stop(closeActiveConnections?: boolean): void };
-};
+import { runtimeEnv } from "../lib/env.ts";
 
 const MAX_BODY_BYTES = 64 * 1024;
 
 function envPort(): number {
-  const raw = process.env.BALAUR_API_PORT;
+  const raw = runtimeEnv().BALAUR_API_PORT;
   if (!raw) return 8787;
   const port = Number.parseInt(raw, 10);
   return Number.isFinite(port) ? port : 8787;
@@ -46,7 +39,7 @@ const runtime = await createBalaurRuntime({
   onStartupStatus: (text) => { console.error(`[startup] ${text}`); },
 });
 const bridge = createRuntimeGatewayBridge(runtime, "rest");
-const host = process.env.BALAUR_API_HOST ?? "127.0.0.1";
+const host = runtimeEnv().BALAUR_API_HOST ?? "127.0.0.1";
 const port = envPort();
 
 const server = Bun.serve({

@@ -15,11 +15,11 @@ test("detects missing, partial, and complete llama.cpp model cache files", () =>
   const root = tempDir();
   expect(localModelCacheStatus(DEFAULT_BALAUR_LLAMA_CPP_MODEL_URI, root)).toMatchObject({ complete: false, partial: false });
 
-  writeFileSync(join(root, "hf_unsloth_gemma-4-12b-it.UD-Q4_K_XL.gguf.ipull"), "partial");
+  writeFileSync(join(root, "hf_bartowski_granite-3.1-8b-instruct.Q4_K_M.gguf.ipull"), "partial");
   expect(localModelCacheStatus(DEFAULT_BALAUR_LLAMA_CPP_MODEL_URI, root)).toMatchObject({ complete: false, partial: true });
 
   mkdirSync(join(root, "llm"));
-  writeFileSync(join(root, "llm", "hf_unsloth_gemma-4-12b-it.UD-Q4_K_XL.gguf"), "complete");
+  writeFileSync(join(root, "llm", "hf_bartowski_granite-3.1-8b-instruct.Q4_K_M.gguf"), "complete");
   expect(localModelCacheStatus(DEFAULT_BALAUR_LLAMA_CPP_MODEL_URI, root)).toMatchObject({ complete: true, partial: true });
 });
 

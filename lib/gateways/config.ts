@@ -6,6 +6,7 @@
  * single identity allowed through the master lock. mirrorLocal controls whether
  * turns typed at the local terminal also echo to the external chat (default off).
  */
+import { runtimeEnv } from "../env.ts";
 
 export interface GatewayConfig {
   /** Whether the gateway extension should arm itself. */
@@ -22,7 +23,7 @@ export interface GatewayConfig {
 
 const TRUEY = new Set(["1", "true", "yes", "on"]);
 
-export function readGatewayConfig(env: NodeJS.ProcessEnv = process.env): GatewayConfig {
+export function readGatewayConfig(env: NodeJS.ProcessEnv = runtimeEnv()): GatewayConfig {
   const gateway = (env.BALAUR_GATEWAY ?? "").trim().toLowerCase();
   const owner = (env.BALAUR_GATEWAY_OWNER ?? "").trim();
   const mirrorLocal = TRUEY.has((env.BALAUR_GATEWAY_MIRROR_LOCAL ?? "").trim().toLowerCase());

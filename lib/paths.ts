@@ -2,25 +2,25 @@
 /**
  * paths.ts — canonical path resolution for the balaur package.
  *
- * Replaces Bun's `import.meta.dir` with a Node-native `fileURLToPath` helper, and
- * centralizes the three roots every extension must agree on:
+ * Uses Bun's module metadata and centralizes the three roots every extension
+ * must agree on:
  *   - packageRoot() — the installed package (holds src/, lib/, assets/, …).
  *   - dataDir()     — PRIVATE data: runtimes, models, logs, the SQLite index.
  *   - vaultRoot()   — the owner's PRIVATE Markdown vault.
  *
  * Resolution is lazy so VAULT_PATH / BALAUR_DATA_DIR can be set per-process (and per-test).
  */
-import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { runtimeEnv } from "./env.ts";
 
-/** Directory of the calling module without relying on Bun's `import.meta.dir`. */
+/** Directory of a module URL using Bun's native file URL helper. */
 export function moduleDir(metaUrl: string): string {
-  return dirname(fileURLToPath(metaUrl));
+  return dirname(Bun.fileURLToPath(metaUrl));
 }
 
 /** The installed package root (the dir that holds src/, lib/, assets/, …). */
 export function packageRoot(): string {
-  return join(moduleDir(import.meta.url), "..");
+  return join(import.meta.dir, "..");
 }
 
 /**
@@ -31,9 +31,10 @@ export function packageRoot(): string {
  *   3. <packageRoot>/.balaur-data (last-resort fallback when there is no HOME)
  */
 export function dataDir(): string {
-  if (process.env.BALAUR_DATA_DIR) return process.env.BALAUR_DATA_DIR;
-  const home = process.env.HOME ?? process.env.USERPROFILE ?? "";
-  const xdg = process.env.XDG_DATA_HOME || (home ? join(home, ".local", "share") : "");
+  const env = runtimeEnv();
+  if (env.BALAUR_DATA_DIR) return env.BALAUR_DATA_DIR;
+  const home = env.HOME ?? env.USERPROFILE ?? "";
+  const xdg = env.XDG_DATA_HOME || (home ? join(home, ".local", "share") : "");
   if (xdg) return join(xdg, "balaur");
   return join(packageRoot(), ".balaur-data");
 }
@@ -49,5 +50,5 @@ export function modelsDir(): string {
  *   2. dataDir() (the default — keeps the vault next to runtimes/models)
  */
 export function vaultRoot(): string {
-  return process.env.VAULT_PATH || dataDir();
+  return runtimeEnv().VAULT_PATH || dataDir();
 }

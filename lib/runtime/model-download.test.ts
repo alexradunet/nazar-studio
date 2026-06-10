@@ -12,7 +12,7 @@ function tempDir(): string {
 
 function cachedModelPath(root: string): string {
   mkdirSync(join(root, "llm"), { recursive: true });
-  return join(root, "llm", "hf_unsloth_gemma-4-12b-it.UD-Q4_K_XL.gguf");
+  return join(root, "llm", "hf_bartowski_granite-3.1-8b-instruct.Q4_K_M.gguf");
 }
 
 test("skips download when the local model is cached", async () => {

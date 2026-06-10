@@ -7,6 +7,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { runtimeEnv } from "../env.ts";
 import { dataDir } from "../paths.ts";
 import { readGatewayConfig } from "./config.ts";
 
@@ -27,7 +28,7 @@ export interface EffectiveConfig {
 }
 
 export function gatewayConfigPath(): string {
-  return process.env.BALAUR_GATEWAY_CONFIG || join(dataDir(), "gateway", "config.json");
+  return runtimeEnv().BALAUR_GATEWAY_CONFIG || join(dataDir(), "gateway", "config.json");
 }
 
 export function loadStoredConfig(path = gatewayConfigPath()): StoredConfig {
@@ -60,7 +61,7 @@ export function clearStoredConfig(path = gatewayConfigPath()): void {
 
 /** Merge env (fallback) with the persisted file (authoritative). */
 export function resolveEffectiveConfig(
-  env: NodeJS.ProcessEnv = process.env,
+  env: NodeJS.ProcessEnv = runtimeEnv(),
   path = gatewayConfigPath(),
 ): EffectiveConfig {
   const base = readGatewayConfig(env);
