@@ -8,7 +8,7 @@ import { loadMasterMessages } from "./master-conversation.ts";
 import { balaurTools } from "./balaur-tools.ts";
 import { skillIndexBlock } from "./skills.ts";
 
-export interface BalaurPiCoreAgentOptions {
+export interface BalaurAgentOptions {
   model?: Model<any>;
   modelRef?: string;
   onStatus?: (text: string) => void;
@@ -16,20 +16,13 @@ export interface BalaurPiCoreAgentOptions {
   sessionId?: string;
 }
 
-export interface BalaurPiCoreRuntime {
-  agent: Agent;
-  close: () => void;
-}
-
-export type BalaurPiCoreRuntimeOptions = BalaurPiCoreAgentOptions;
-
 export function balaurSystemPrompt(): string {
   return `You are Balaur, a sovereign local-first personal agent.
 Be concise, calm, and technically precise.
 Use vault_search when saved vault context could help.
 Use vault_write only when the user explicitly asks you to remember/save/write something or confirms it should persist.
 When the user shares life, food, sport, or health details, treat them as part of the conversation unless they explicitly ask you to save them to the vault.
-You are running as a Balaur-owned runtime process, not inside the Pi coding-agent UI.${skillIndexBlock()}`;
+You are running inside Balaur's local runtime process.${skillIndexBlock()}`;
 }
 
 function parseModelRef(ref: string): { provider: string; id: string } {
@@ -48,7 +41,7 @@ export function resolveBalaurModel(modelRef = runtimeEnv().BALAUR_MODEL ?? DEFAU
   return model;
 }
 
-export function createBalaurPiCoreAgent(options: BalaurPiCoreAgentOptions = {}): Agent {
+export function createBalaurAgent(options: BalaurAgentOptions = {}): Agent {
   const model = options.model ?? resolveBalaurModel(options.modelRef);
   const provider = isBalaurLlamaCppModel(model) ? createBalaurLlamaCppProvider({ model, cli: false, onStatus: options.onStatus }) : undefined;
   return new Agent({
@@ -63,29 +56,4 @@ export function createBalaurPiCoreAgent(options: BalaurPiCoreAgentOptions = {}):
     sessionId: options.sessionId,
     getApiKey: getBalaurApiKey,
   });
-}
-
-export async function createBalaurPiCoreRuntime(options: BalaurPiCoreRuntimeOptions = {}): Promise<BalaurPiCoreRuntime> {
-  const model = options.model ?? resolveBalaurModel(options.modelRef);
-  const provider = isBalaurLlamaCppModel(model) ? createBalaurLlamaCppProvider({ model, onStatus: options.onStatus }) : undefined;
-  await provider?.prepare();
-  const agent = new Agent({
-    initialState: {
-      systemPrompt: options.systemPrompt ?? balaurSystemPrompt(),
-      model,
-      thinkingLevel: "off",
-      tools: [...balaurTools],
-      messages: loadMasterMessages(),
-    },
-    streamFn: provider?.stream,
-    sessionId: options.sessionId,
-    getApiKey: getBalaurApiKey,
-  });
-  return {
-    agent,
-    close: () => {
-      agent.abort();
-      void provider?.close();
-    },
-  };
 }

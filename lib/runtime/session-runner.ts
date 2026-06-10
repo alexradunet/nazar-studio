@@ -11,7 +11,7 @@ import {
 } from "./conversation-store.ts";
 import { createEventBus, type InboundMessage, type OutboundMessage, type RuntimeSessionState, type RuntimeSource, type StatusNotice, type ToolNotice } from "./events.ts";
 import { ensureBalaurLocalModel } from "./model-download.ts";
-import { createBalaurPiCoreAgent } from "./pi-core-engine.ts";
+import { createBalaurAgent } from "./agent-engine.ts";
 import { expandSkillCommand } from "./skills.ts";
 
 export interface BalaurRuntimeOptions {
@@ -46,7 +46,7 @@ export async function createBalaurRuntime(options: BalaurRuntimeOptions = {}): P
   };
 
   await ensureBalaurLocalModel({ onStatus: options.onStartupStatus, signal: options.startupSignal });
-  const agent = createBalaurPiCoreAgent({ onStatus: (text) => status(activeTarget, text) });
+  const agent = createBalaurAgent({ onStatus: (text) => status(activeTarget, text) });
 
   const runtimeState = (): RuntimeSessionState => ({
     conversation: activeBranch ? "branch" : "master",

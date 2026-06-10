@@ -5,7 +5,7 @@ import type { Model } from "@earendil-works/pi-ai";
 import { runtimeEnv } from "../env.ts";
 import { modelsDir } from "../paths.ts";
 import { DEFAULT_BALAUR_LLAMA_CPP_MODEL_REF, isBalaurLlamaCppModel } from "./llama-cpp-provider.ts";
-import { resolveBalaurModel } from "./pi-core-engine.ts";
+import { resolveBalaurModel } from "./agent-engine.ts";
 
 export interface LocalModelCacheStatus {
   cacheDir: string;

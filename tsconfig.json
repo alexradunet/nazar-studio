@@ -26,5 +26,5 @@
     "lib/vault.ts",
     "src"
   ],
-  "exclude": ["node_modules", "lib/gateways"]
+  "exclude": ["node_modules"]
 }

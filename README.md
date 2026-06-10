@@ -7,7 +7,7 @@
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0--or--later-blue.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A523.4-339933.svg)](./package.json)
 
-Balaur is a Bun/Ink personal agent with a Johnny Decimal Markdown vault, skills, and one continuous life conversation. It uses `@earendil-works/pi-ai` for model/provider access and `@earendil-works/pi-agent-core` for the agent loop. It does **not** use Pi coding-agent, Pi extensions, Pi TUI, or MCP.
+Balaur is a Bun/Ink personal agent with a Johnny Decimal Markdown vault, skills, and one continuous life conversation. It uses `@earendil-works/pi-ai` for model/provider access and `@earendil-works/pi-agent-core` for the agent loop. It does **not** use coding-agent extensions, external TUI packages, or MCP.
 
 The name comes from the Romanian fairy-tale balaur: a dragon with multiple heads. Balaur keeps one main head: the master life conversation. Focused work happens as temporary sub-heads, created with `/branch`, then compacted and merged back into the master head with `/merge`. That constraint is intentional: one conversation, one scope, many focused branches when needed.
 
@@ -83,8 +83,7 @@ skills/       Built-in Markdown seed skills
 assets/        Avatar/source PNG sprite sheets
 lib/avatar/    ANSI avatar renderer: sextant + octant only
 lib/design/    Shared React/Ink design tokens
-lib/gateways/  Legacy transport source; active gateway contract lives in lib/runtime/gateway.ts
-docs/adr/      Architecture decisions
+docs/          Project documentation
 ```
 
 ## Development
@@ -100,12 +99,6 @@ Bun single-file target:
 ```bash
 bun run build:balaur:bun
 ```
-
-## Migration status
-
-The Pi extension product has been removed from the active package/runtime. Avatar rendering, shared design tokens, and a provider-agnostic runtime gateway contract have been migrated into Pi-free modules. The first active gateway surface is a Bun-native loopback REST API; WhatsApp/Signal-style gateways can attach to the same contract later.
-
-Do not reintroduce Pi coding-agent dependencies. See [ADR 0002](./docs/adr/0002-balaur-cli-with-pi-core-libraries.md).
 
 ## License
 

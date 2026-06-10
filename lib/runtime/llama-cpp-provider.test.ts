@@ -11,7 +11,7 @@ import {
   resolveBalaurLlamaCppContextSize,
   resolveBalaurLlamaCppMaxTokens,
 } from "./llama-cpp-provider.ts";
-import { resolveBalaurModel } from "./pi-core-engine.ts";
+import { resolveBalaurModel } from "./agent-engine.ts";
 
 test("defaults Balaur to the local Granite llama.cpp model", () => {
   const model = resolveBalaurModel();
@@ -38,13 +38,13 @@ test("resolves llama.cpp generation token cap from env", () => {
   expect(() => resolveBalaurLlamaCppMaxTokens({ BALAUR_LLAMA_CPP_MAX_TOKENS: "auto" })).toThrow(/positive integer/);
 });
 
-test("converts Pi tools to llama.cpp function definitions", () => {
+test("converts runtime tools to llama.cpp function definitions", () => {
   const functions = llamaFunctionsFromTools([{ name: "vault_search", description: "Search vault", parameters: Type.Object({ query: Type.String() }) }]);
   expect(functions?.vault_search.description).toBe("Search vault");
   expect(functions?.vault_search.params).toMatchObject({ type: "object", properties: { query: { type: "string" } } });
 });
 
-test("converts Pi context to llama.cpp chat history with tool results", () => {
+test("converts runtime context to llama.cpp chat history with tool results", () => {
   const history = llamaChatHistoryFromContext({
     systemPrompt: "You are Balaur.",
     messages: [
