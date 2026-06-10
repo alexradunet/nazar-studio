@@ -1,0 +1,28 @@
+{
+  "providers": {
+    "llama-cpp": {
+      "baseUrl": "local://node-llama-cpp",
+      "api": "balaur-llama-cpp",
+      "compat": {
+        "supportsDeveloperRole": false,
+        "supportsReasoningEffort": false,
+        "supportsUsageInStreaming": false,
+        "supportsStrictMode": false,
+        "supportsStore": false,
+        "maxTokensField": "max_tokens"
+      },
+      "models": [
+        {
+          "id": "hf:unsloth/gemma-4-12b-it-GGUF:UD-Q4_K_XL",
+          "name": "Gemma 4 12B Instruct UD-Q4_K_XL",
+          "reasoning": true,
+          "contextWindow": 262144,
+          "maxTokens": 2048,
+          "input": ["text"],
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        }
+      ]
+    }
+  },
+  "_notes": "Canonical local runtime is Balaur's node-llama-cpp provider. The default text model is Unsloth Gemma 4 12B Instruct GGUF UD-Q4_K_XL, resolved with node-llama-cpp from Hugging Face into Balaur's private model cache on startup. The runtime requires at least 16GB RAM and creates a 128K-token context by default."
+}

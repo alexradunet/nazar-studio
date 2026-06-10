@@ -1,0 +1,29 @@
+Balaur — your personal wise companion
+Copyright (C) 2026 Alex Radu <hello@alexradu.net>
+
+This program is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later).
+See the LICENSE file for the full text.
+
+A separate COMMERCIAL LICENSE is available for organisations that wish to host,
+embed, or distribute Balaur without the obligations of the AGPL.
+Contact: hello@alexradu.net
+
+----------------------------------------------------------------------
+Third-party components
+----------------------------------------------------------------------
+Balaur builds on and/or deploys these open-source projects, each under its own
+license:
+
+  - @earendil-works/pi-ai and pi-agent-core . MIT
+  - Bun runtime/toolchain ................... MIT
+  - React and Ink ........................... MIT
+  - TypeBox ................................. MIT
+  - node-llama-cpp / llama.cpp .............. MIT
+  - SQLite FTS5 (via Bun SQLite) ............ Public Domain
+  - Cozette (Samhain & contributors) ....... MIT
+    Vendored under assets/fonts/cozette/ for the Basm terminal font.
+  - Departure Mono (Helena Zhang) .......... SIL Open Font License 1.1
+    Vendored under assets/fonts/departure-mono/ for the Basm terminal font.
+
+Trademarks and product names are the property of their respective owners.

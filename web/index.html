@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!--
+  Balaur — landing page. Hand-rolled, no framework, no build step (Bun/suckless ethos).
+  Palette + type mirror lib/design/tokens.ts (the canonical source). Dark-first; .light toggles.
+  Marks: ./logo.png (compact, top bar + favicon) and ./crest.png (hero emblem).
+  Fonts: self-hosted in ./fonts/ via fonts.css — no third-party calls.
+-->
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Balaur — your personal wise companion that grows with you</title>
+<meta name="description" content="Your personal wise companion: a self-hosted AI assistant that lives on your own box, remembers what matters, grows new skills over time, and keeps your data and information your own.">
+<link rel="icon" type="image/png" href="./logo.png">
+<meta property="og:title" content="Balaur — your personal wise companion that grows with you">
+<meta property="og:description" content="Your personal wise companion that lives on your own box, remembers what matters, and keeps one master conversation with focused branch heads.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="./crest.png">
+<link rel="stylesheet" href="./fonts.css">
+<style>
+/* GENERATED TOKENS START */
+/* Mirrors lib/design/tokens.ts. Keep in sync until a web-token generator returns. */
+:root{
+  --gold:#f2c14e;
+  --gold-deep:#b8862a;
+  --ember:#ff6a2b;
+  --ember-deep:#c2410c;
+  --ember-red:#e5484d;
+  --teal:#2dd4bf;
+  --teal-deep:#0d9488;
+  --folkred:#e0563b;
+  --indigo:#a8c0f0;
+  --violet:#c084fc;
+  --bg:#0b1310;
+  --surface:#11201b;
+  --surface-2:#172a23;
+  --surface-3:#1f352c;
+  --fg:#eae4d6;
+  --on-surface:#f5f0e6;
+  --muted:#93a59b;
+  --hair:#233530;
+  --outline-2:#1a2823;
+  --font-display:'Pixelify Sans', system-ui, sans-serif;
+  --font-pixel:'Silkscreen', monospace;
+  --font-body:'Work Sans', system-ui, sans-serif;
+  --font-mono:'JetBrains Mono', ui-monospace, monospace;
+  --radius:3px; --maxw:1080px;
+}
+:root.light{
+  --gold:#8a6d12;
+  --gold-deep:#6b5410;
+  --ember:#c2410c;
+  --ember-deep:#9a3410;
+  --ember-red:#b42318;
+  --teal:#00656b;
+  --teal-deep:#024a4f;
+  --folkred:#983f20;
+  --indigo:#1e3a8a;
+  --violet:#7c3aed;
+  --bg:#f5f1e8;
+  --surface:#fffdf7;
+  --surface-2:#ece6d7;
+  --surface-3:#e3dcc9;
+  --fg:#18221d;
+  --on-surface:#121b16;
+  --muted:#5c6e63;
+  --hair:#d8d0bf;
+  --outline-2:#e2dccb;
+}
+/* GENERATED TOKENS END */
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font-family:var(--font-body); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  background-image:
+    radial-gradient(circle at 12% -8%, rgba(45,212,191,.05), transparent 42%),
+    radial-gradient(circle at 92% -2%, rgba(255,106,43,.06), transparent 44%);
+}
+h1,h2,h3,h4{font-family:var(--font-display); color:var(--on-surface); margin:0}
+a{color:var(--ember); text-decoration:none}
+a:hover{color:var(--gold)}
+code{font-family:var(--font-mono)}
+.pixel{image-rendering:pixelated; image-rendering:crisp-edges}
+.wrap{max-width:var(--maxw); margin:0 auto; padding:0 clamp(20px,6vw,48px)}
+section{padding:clamp(48px,9vw,96px) 0}
+.eyebrow{font-family:var(--font-pixel); font-size:11px; letter-spacing:.04em; color:var(--teal); text-transform:uppercase; margin-bottom:12px}
+.kicker{font-family:var(--font-pixel); font-size:12px; letter-spacing:.04em; color:var(--gold); text-transform:uppercase; margin-bottom:16px}
+.lede{font-family:var(--font-display); font-size:clamp(21px,3vw,30px); line-height:1.25; color:var(--fg); max-width:46ch}
+.body-copy{font-size:17px; line-height:1.65; color:var(--muted); max-width:65ch}
+.body-copy b, .body-copy strong{color:var(--on-surface)}
+.accent{color:var(--teal)}
+.codepill{font-family:var(--font-mono); font-size:.86em; padding:2px 6px; border-radius:var(--radius); background:var(--surface-2); color:var(--teal)}
+.section-title{font-family:var(--font-display); font-size:clamp(30px,4.6vw,52px); line-height:1.05; color:var(--on-surface); margin-bottom:14px}
+
+/* topbar */
+.topbar{position:sticky; top:0; z-index:30; backdrop-filter:blur(8px); background:color-mix(in srgb, var(--bg) 82%, transparent); border-bottom:2px solid var(--hair)}
+.topbar .row{display:flex; align-items:center; gap:16px; padding:12px 0}
+.brandmark{width:30px; height:30px; border:2px solid var(--hair); border-radius:var(--radius)}
+.brandword{font-family:var(--font-pixel); font-size:15px; color:var(--on-surface); letter-spacing:.02em}
+.spacer{flex:1}
+.navlink{font-family:var(--font-mono); font-size:12.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted)}
+.navlink:hover{color:var(--on-surface)}
+.themebtn{width:34px; height:34px; display:grid; place-items:center; border:2px solid var(--hair); border-radius:var(--radius); background:transparent; color:var(--muted); cursor:pointer}
+.themebtn:hover{color:var(--on-surface); border-color:var(--teal)}
+
+/* buttons — pixel-hard */
+.btn{display:inline-flex; align-items:center; gap:9px; font-family:var(--font-mono); font-size:13px; font-weight:500; text-transform:uppercase; letter-spacing:.06em; padding:12px 18px; border-radius:var(--radius); border:2px solid var(--on-surface); transition:transform .08s, box-shadow .08s; cursor:pointer}
+.btn-primary{background:var(--ember); color:#1a0e07; box-shadow:5px 5px 0 var(--ember-deep)}
+.btn-ghost{background:var(--surface); color:var(--on-surface); box-shadow:5px 5px 0 var(--hair)}
+.btn:hover{transform:translate(1px,1px)}
+.btn:active{transform:translate(5px,5px); box-shadow:0 0 0}
+
+/* hero */
+.hero{display:grid; grid-template-columns:1.05fr .95fr; gap:48px; align-items:center; padding:clamp(40px,7vw,80px) 0 28px}
+.hero h1{font-family:var(--font-display); font-weight:700; font-size:clamp(58px,12vw,96px); line-height:.86; color:var(--on-surface); text-shadow:4px 4px 0 var(--ember-deep)}
+.hero .tag{font-family:var(--font-display); font-size:clamp(20px,2.6vw,26px); color:var(--ember); line-height:1.2; margin:12px 0}
+.hero-meta{display:flex; flex-wrap:wrap; gap:8px; margin-top:24px; font-family:var(--font-mono); font-size:11.5px; color:var(--muted)}
+.crestframe{border:2px solid var(--hair); border-radius:var(--radius); background:var(--surface-2); padding:12px; box-shadow:8px 8px 0 var(--outline-2, #0d1714)}
+.crestframe img{width:100%; display:block; border-radius:2px}
+
+/* folk band */
+.folk-band{height:14px; border-top:2px solid var(--on-surface); border-bottom:2px solid var(--on-surface);
+  background:repeating-linear-gradient(135deg, var(--folkred) 0 8px, var(--gold) 8px 16px, var(--teal) 16px 24px, var(--ember-deep) 24px 32px);
+  image-rendering:pixelated}
+
+/* grids */
+.grid{display:grid; gap:20px}
+.cols-3{grid-template-columns:repeat(3,1fr)}
+.cols-2{grid-template-columns:repeat(2,1fr)}
+.cols-3b{grid-template-columns:repeat(3,1fr); gap:24px 40px}
+@media(max-width:880px){ .hero{grid-template-columns:1fr; gap:32px} .cols-3,.cols-3b{grid-template-columns:1fr 1fr} }
+@media(max-width:560px){ .cols-3,.cols-2,.cols-3b{grid-template-columns:1fr} }
+
+/* cards */
+.card{position:relative; background:var(--surface); border:2px solid var(--hair); border-radius:var(--radius); padding:22px 20px; transition:transform .12s, border-color .12s}
+.card:hover{transform:translateY(-2px); border-color:var(--teal)}
+.card::after{content:''; position:absolute; top:0; right:0; width:7px; height:7px; background:var(--gold)}
+.card h3{font-family:var(--font-display); font-size:19px; color:var(--on-surface); margin-bottom:8px}
+.card p{font-size:14.5px; line-height:1.55; color:var(--muted)}
+.ico{font-family:var(--font-pixel); font-size:22px; color:var(--gold); margin-bottom:12px}
+
+/* principle / statement / steps / tags / roadmap */
+.statement-list{list-style:none; padding:0; margin:0; display:grid; grid-template-columns:1fr 1fr; gap:10px 40px; max-width:60rem}
+.statement-list li{font-size:16px; line-height:1.55; color:var(--muted); border-bottom:1px dashed var(--hair); padding-bottom:10px}
+.principle{border-left:3px solid var(--teal); padding:4px 0 4px 16px}
+.principle h3{font-family:var(--font-display); font-size:17px; color:var(--on-surface); margin-bottom:4px}
+.principle p{font-size:15px; line-height:1.55; color:var(--muted)}
+.tag{font-family:var(--font-mono); font-size:12px; padding:6px 12px; border-radius:999px; border:2px solid var(--hair); background:var(--surface); color:var(--muted)}
+.tag code{color:var(--teal)}
+.step .n{font-family:var(--font-pixel); color:var(--gold); font-size:14px; margin-bottom:8px}
+.step h4{font-family:var(--font-display); font-size:19px; color:var(--on-surface); margin-bottom:4px}
+.step p{font-size:15px; line-height:1.55; color:var(--muted)}
+.stop{background:var(--surface); border:2px solid var(--hair); border-radius:var(--radius); padding:18px}
+.stop .head{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; gap:10px}
+.stop h3{font-family:var(--font-display); font-size:18px; color:var(--on-surface)}
+.stop p{font-size:15px; line-height:1.55; color:var(--muted)}
+.pill{font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:.05em; padding:3px 9px; border-radius:999px; white-space:nowrap}
+.pill-done{background:rgba(45,212,191,.16); color:var(--teal)}
+.pill-now{background:rgba(242,193,78,.16); color:var(--gold)}
+.pill-next{background:rgba(168,192,240,.16); color:var(--indigo)}
+.pill-later{border:2px solid var(--hair); color:var(--muted)}
+.flex{display:flex; flex-wrap:wrap; gap:12px}
+.center{text-align:center}
+.mt{margin-top:32px}
+footer{border-top:2px solid var(--hair)}
+footer .row{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; padding:28px 0; font-family:var(--font-mono); font-size:12px; color:var(--muted)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important; scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<div class="topbar"><div class="wrap row">
+  <img class="brandmark pixel" src="./logo.png" alt="Balaur mark">
+  <span class="brandword">BALAUR</span>
+  <span class="spacer"></span>
+  <a class="navlink" href="#what">What</a>
+  <a class="navlink" href="#features">Features</a>
+  <a class="navlink" href="#philosophy">Philosophy</a>
+  <a class="navlink" href="#roadmap">Roadmap</a>
+  <button id="themeBtn" class="themebtn" aria-label="Toggle light and dark">
+    <svg class="t-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    <svg class="t-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+  </button>
+</div></div>
+
+<div class="wrap">
+  <div class="hero">
+    <div>
+      <div class="kicker">★ WISE COMPANION · LOCAL-FIRST · GROWS WITH YOU ★</div>
+      <h1>BALAUR</h1>
+      <p class="tag">Your personal wise companion that grows with you.</p>
+      <p class="body-copy">A wise companion that lives on your own box. It keeps the facts of your life in a durable Markdown <span class="accent">vault</span>, learns <span class="accent">skills</span> that act on them, and keeps everything in open files you own. The master conversation is the main head; focused branches are sub-heads that merge back when done.</p>
+      <div class="flex" style="margin-top:24px">
+        <a class="btn btn-primary" href="#now">▶ See what is live</a>
+        <a class="btn btn-ghost" href="#now">What is live ↓</a>
+      </div>
+      <div class="hero-meta">
+        <span class="accent">● local-first</span><span>·</span><span>AGPL-3.0</span><span>·</span><span>Markdown vault</span><span>·</span><span>human-approved growth</span>
+      </div>
+    </div>
+    <div class="crestframe">
+      <img class="pixel" src="./crest.png" alt="Balaur crest — a dragon head over a glowing teal data-orb in a woven folk frame">
+    </div>
+  </div>
+</div>
+
+<div class="folk-band" role="presentation"></div>
+
+<section id="what"><div class="wrap">
+  <div class="eyebrow">// WHAT IS IT</div>
+  <p class="lede" style="max-width:62ch">Most personal AI is rented memory in someone else's cloud. Balaur is the opposite: a wise companion whose source of truth is a vault you own.</p>
+  <div class="mt" style="display:grid; gap:16px">
+    <p class="body-copy">It runs <span class="accent">host-native</span> on the box as a Bun/Ink CLI named <code class="codepill">balaur</code>, with a Johnny Decimal Markdown vault, Markdown skills, and one continuous life conversation. No containers, no MCP.</p>
+    <p class="body-copy">Knowledge splits cleanly onto two rails. <span class="accent">Facts and notes</span> are Johnny Decimal Markdown vault entries, indexed by a disposable <span class="accent">SQLite FTS5</span> accelerator. <span class="accent">Procedures</span> are Markdown skills in <span class="codepill">skills/</span> or vault entries marked <span class="codepill">kind: skill</span>, invocable with <span class="codepill">/skill:name</span>.</p>
+    <p class="body-copy">It's named for the <span class="accent">balaur</span> — the multi-headed dragon of Romanian fairy tales. Yours is one wise companion with one master conversation, plus focused sub-heads for scoped branches.</p>
+  </div>
+</div></section>
+
+<div class="folk-band" role="presentation"></div>
+
+<section id="statement"><div class="wrap">
+  <div class="eyebrow">// THE STATEMENT</div>
+  <h2 class="section-title">Your life is not a product.</h2>
+  <p class="lede" style="max-width:62ch; margin-bottom:24px">The record of your life — what you ate, where you walked, what you felt, who you love — should answer to you alone.</p>
+  <ul class="statement-list">
+    <li><b style="color:var(--on-surface)">Your data lives on hardware you control</b> — never as the price of admission to your own memory.</li>
+    <li><b style="color:var(--on-surface)">Open formats only.</b> Plain files you can read, move, and delete. No hostage-taking.</li>
+    <li><b style="color:var(--on-surface)">Open standards over private APIs;</b> open source over closed clouds.</li>
+    <li><b style="color:var(--on-surface)">Private by default</b> — your personal context never trains anyone's model.</li>
+    <li><b style="color:var(--on-surface)">European by conviction,</b> not by compliance — your ownership as the starting point.</li>
+    <li><b style="color:var(--on-surface)">Free at the core, forever.</b> You should never have to buy back your own autonomy.</li>
+  </ul>
+</div></section>
+
+<div class="folk-band" role="presentation"></div>
+
+<section id="features"><div class="wrap">
+  <div class="eyebrow">// WHAT IT DOES FOR YOU</div>
+  <h2 class="section-title">Yours by construction</h2>
+  <div class="grid cols-3 mt">
+    <div class="card"><div class="ico">⌂</div><h3>Your data, your box</h3><p>Journal, diet, sport, and durable facts live as plain Markdown in a vault you can read, grep, back up, and move.</p></div>
+    <div class="card"><div class="ico">☉</div><h3>Provider explicit</h3><p>Model access goes through <code class="codepill">pi-ai</code>. Personal context is yours; local-model setup is a roadmap item, not assumed.</p></div>
+    <div class="card"><div class="ico">◇</div><h3>Facts you can grep</h3><p>Vault entries are plain Markdown in a Johnny Decimal tree, indexed by a disposable FTS5 accelerator.</p></div>
+    <div class="card"><div class="ico">◆</div><h3>One life conversation</h3><p>A master conversation holds the long thread, with compactable branches for focused work that can merge back.</p></div>
+    <div class="card"><div class="ico">☊</div><h3>Skills grow as heads</h3><p>Approved procedures become Markdown skills — discovered and invocable with <code class="codepill">/skill:name</code>.</p></div>
+    <div class="card"><div class="ico">⌬</div><h3>Terminal-first core</h3><p>A standalone Ink terminal app with a typed runtime event bus for future channels.</p></div>
+  </div>
+</div></section>
+
+<div class="folk-band" role="presentation"></div>
+
+<section id="philosophy"><div class="wrap">
+  <div class="eyebrow">// HOW IT'S BUILT</div>
+  <h2 class="section-title">Build the smallest thing that's truly yours.</h2>
+  <p class="body-copy" style="margin-bottom:32px">Balaur is shaped by a few hard-won principles: local-first by default, files over platforms, and growth by explicit approval. Pareto, KISS, YAGNI, made operational.</p>
+  <div class="grid cols-3b">
+    <div class="principle"><h3>Files over platforms</h3><p>Facts and procedures are plain Markdown in a repo and a vault you own — versioned in git, never an opaque memory service.</p></div>
+    <div class="principle"><h3>Two rails, one ethos</h3><p>Facts ride the Johnny Decimal vault; procedures ride Markdown skills. Each on the simplest rail that fits.</p></div>
+    <div class="principle"><h3>Disposable index</h3><p>Markdown remains the source of truth; SQLite FTS5 is an accelerator that can be rebuilt.</p></div>
+    <div class="principle"><h3>Branches that return</h3><p>Focused sub-conversations can compact and merge back into the master life thread.</p></div>
+    <div class="principle"><h3>Suggest → approve</h3><p>The agent proposes new skills or consolidations. The human approves. Git records the change. No silent self-modification.</p></div>
+    <div class="principle"><h3>Woven, not rendered</h3><p>A storybook, hand-built look in tactile pixel-art. Craftsmanship you can see is craftsmanship you can trust.</p></div>
+  </div>
+</div></section>
+
+<section id="now"><div class="wrap">
+  <div class="eyebrow">// LIVE NOW</div>
+  <h2 class="section-title">Each focused scope is a head.</h2>
+  <p class="lede" style="max-width:62ch; margin-bottom:24px">“When Balaur branches, a sub-head takes one scope. When the work is done, it closes and merges back into the main head.”</p>
+  <p class="body-copy">Balaur ships as a <span class="accent">standalone CLI</span>. Vault tools — <code class="codepill">vault_write</code>, <code class="codepill">vault_search</code>, <code class="codepill">vault_get</code>, <code class="codepill">vault_duplicates</code> — work over the FTS5-backed Markdown vault. Skills are Markdown files or vault entries with <code class="codepill">kind: skill</code>. The approval/review loop is deliberately human-owned.</p>
+</div></section>
+
+<div class="folk-band" role="presentation"></div>
+
+<section><div class="wrap">
+  <div class="eyebrow">// THE WEAVE</div>
+  <h2 class="section-title">Built from small, sharp, FOSS tools</h2>
+  <p class="body-copy" style="margin-bottom:32px">No frameworks for their own sake. Each piece does one thing, speaks a simple boundary, and can be swapped out.</p>
+  <div class="flex">
+    <span class="tag">Bun</span><span class="tag">Ink/React</span><span class="tag">pi-ai</span>
+    <span class="tag">pi-agent-core</span><span class="tag">Johnny Decimal vault</span><span class="tag">Markdown skills</span>
+    <span class="tag">SQLite FTS5 index</span><span class="tag">ANSI avatars</span><span class="tag">human-approved growth</span>
+    <span class="tag">runtime event bus</span><span class="tag">Signal / WhatsApp / web next</span>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="eyebrow">// RAISE YOUR OWN</div>
+  <h2 class="section-title">Three steps to your companion</h2>
+  <div class="grid cols-3 mt">
+    <div class="step"><div class="n">01</div><h4>Install</h4><p>Clone the repo and run <code class="codepill">bun install</code>.</p></div>
+    <div class="step"><div class="n">02</div><h4>Configure</h4><p>Set your provider key and optional vault path in the environment. No container stack.</p></div>
+    <div class="step"><div class="n">03</div><h4>Talk</h4><p>Run <code class="codepill">bun run balaur</code> or the <code class="codepill">balaur</code> binary.</p></div>
+  </div>
+</div></section>
+
+<div class="folk-band" role="presentation"></div>
+
+<section id="roadmap"><div class="wrap">
+  <div class="eyebrow">// THE ROAD</div>
+  <h2 class="section-title">Where Balaur is headed.</h2>
+  <p class="body-copy" style="margin-bottom:32px">Built in the open, in phases — each piece pulled in only when it earns its keep.</p>
+  <div class="grid cols-2">
+    <div class="stop"><div class="head"><h3>Standalone foundation</h3><span class="pill pill-done">Done</span></div><p>Bun/Ink CLI, pi-ai provider access, pi-agent-core loop, Markdown vault, skills, and master/branch conversations.</p></div>
+    <div class="stop"><div class="head"><h3>Clean knowledge split</h3><span class="pill pill-done">Done</span></div><p>Johnny Decimal vault entries for facts and notes; Markdown skills under <code class="codepill">skills/</code> or vault entries with <code class="codepill">kind: skill</code>.</p></div>
+    <div class="stop"><div class="head"><h3>Vault review and self-evolution</h3><span class="pill pill-now">Now</span></div><p>Build the inbox/review flow: suggest entries, approve/edit/reject later, add skills, and consolidate duplicates as the vault grows.</p></div>
+    <div class="stop"><div class="head"><h3>Channels</h3><span class="pill pill-next">Next</span></div><p>Signal, WhatsApp, web, or HTTP bridges attached to the Balaur runtime event bus.</p></div>
+    <div class="stop" style="grid-column:1/-1"><div class="head"><h3>The weave widens</h3><span class="pill pill-later">Later</span></div><p>Calendar, contacts, files, and photos through open standards (CalDAV / CardDAV / Immich) — pulled in only when they earn their keep.</p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap center">
+  <h2 class="section-title">Grow your companion deliberately.</h2>
+  <p class="body-copy" style="margin:0 auto 28px">Balaur is built in the open, in Brașov. Self-host it or help shape the next head — vault entries and skills in plain files, approved by the human who owns them.</p>
+  <div class="flex" style="justify-content:center">
+    <a class="btn btn-primary" href="#what">Start with the shape</a>
+    <a class="btn btn-ghost" href="#roadmap">See the roadmap</a>
+  </div>
+</div></section>
+
+<footer><div class="wrap row">
+  <span>BALAUR · your wise companion · local-first · one conversation, many heads</span>
+  <span>AGPL-3.0 · built in the open, in Brașov</span>
+</div></footer>
+
+<script>
+(function(){
+  var root=document.documentElement;
+  var moon=document.querySelector('.t-moon'), sun=document.querySelector('.t-sun');
+  try{ if(localStorage.getItem('balaur-theme')==='light') root.classList.replace('dark','light'); }catch(e){}
+  function sync(){ var light=root.classList.contains('light'); moon.style.display=light?'none':'block'; sun.style.display=light?'block':'none'; }
+  sync();
+  document.getElementById('themeBtn').addEventListener('click',function(){
+    var light=root.classList.toggle('light'); root.classList.toggle('dark',!light);
+    try{ localStorage.setItem('balaur-theme', light?'light':'dark'); }catch(e){}
+    sync();
+  });
+})();
+</script>
+</body>
+</html>

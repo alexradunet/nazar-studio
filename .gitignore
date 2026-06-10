@@ -1,0 +1,27 @@
+# Local agent runtime/auth/session state inherited from tooling
+.pi/agent/**
+.pi/npm/node_modules/**
+.pi/npm/package.json
+.pi/npm/package-lock.json
+.pi/git/github.com/**
+
+# Workspace/package npm dependencies are reproducible from package manifests
+node_modules/**
+packages/*/node_modules/**
+
+# Private/generated Balaur vault/data (external vault preferred; repo-local fallback is local-only)
+/vault/
+
+# Legacy private data directories; ignored so old local data is never committed
+/memory/
+.nazar-data/
+
+# Local review/handoff artifacts
+handoff/
+publish-audit/
+audit/
+
+# WhatsApp gateway linked-device session (secrets — never commit)
+.wwebjs_auth/
+**/whatsapp-auth/
+.balaur-data/
