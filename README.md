@@ -37,7 +37,6 @@ Optional local REST API gateway:
 bun run api
 # POST http://127.0.0.1:8787/api/messages
 # GET  http://127.0.0.1:8787/api/events?clientId=local
-# Missing local models download during startup before the gateway accepts chat.
 ```
 
 Useful commands in the chat:
@@ -64,13 +63,15 @@ Ctrl+A / Ctrl+E   move to start/end of input
 Backspace/Delete  edit at cursor
 ```
 
-Model selection currently uses:
+Model selection uses any `@earendil-works/pi-ai` built-in provider/model pair, for example:
 
 ```bash
-BALAUR_MODEL=anthropic/claude-sonnet-4-20250514 bun run balaur
+BALAUR_MODEL=synthetic/syn:large:text bun run balaur
+BALAUR_MODEL=openai/gpt-4o-mini bun run balaur
 ```
 
 API keys are read from standard provider environment variables supported by `pi-ai`, or `BALAUR_<PROVIDER>_API_KEY`.
+Synthetic also accepts `SYNTHETIC_API_KEY` (or `BALAUR_SYNTHETIC_API_KEY`).
 
 ## Project layout
 

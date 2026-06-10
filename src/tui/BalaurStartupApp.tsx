@@ -2,7 +2,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Box, Text, useApp, useInput } from "ink";
 import { renderAvatar } from "../../lib/avatar/avatar.ts";
-import { modelsDir } from "../../lib/paths.ts";
 import { createBalaurRuntime, type BalaurRuntime } from "../../lib/runtime/session-runner.ts";
 import { TUI_THEME } from "../../lib/tui/theme.ts";
 import { BalaurInkApp } from "./BalaurInkApp.tsx";
@@ -10,7 +9,7 @@ import { BalaurIdentity } from "./molecules/BalaurIdentity.tsx";
 
 function startupErrorMessage(error: unknown): string {
   const text = error instanceof Error ? error.message : String(error);
-  return text.split(modelsDir()).join("<balaur-models>");
+  return text;
 }
 
 export function BalaurStartupApp({ onRuntime }: { onRuntime?: (runtime: BalaurRuntime) => void }) {
@@ -64,7 +63,7 @@ export function BalaurStartupApp({ onRuntime }: { onRuntime?: (runtime: BalaurRu
       <BalaurIdentity avatar={avatar} />
       <Text color={error ? TUI_THEME.color.tool : TUI_THEME.color.steel}>{error ? "Startup failed" : "Preparing local runtime"}</Text>
       <Text color={error ? TUI_THEME.color.tool : TUI_THEME.color.muted}>{error ?? status}</Text>
-      {!error ? <Text color={TUI_THEME.color.muted} dimColor>Chat opens automatically when the local model is ready.</Text> : null}
+      {!error ? <Text color={TUI_THEME.color.muted} dimColor>Chat opens automatically once runtime is ready.</Text> : null}
       <Text color={TUI_THEME.color.muted} dimColor>Ctrl+C to quit</Text>
     </Box>
   );

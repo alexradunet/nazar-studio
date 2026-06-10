@@ -36,7 +36,6 @@
     "@earendil-works/pi-agent-core": "^0.78.1",
     "@earendil-works/pi-ai": "^0.78.1",
     "ink": "^7.0.5",
-    "node-llama-cpp": "^3.18.1",
     "react": "^19.2.7"
   },
   "devDependencies": {
@@ -55,7 +54,5 @@
     "NOTICE",
     "src"
   ],
-  "trustedDependencies": [
-    "node-llama-cpp"
-  ]
+  "trustedDependencies": []
 }

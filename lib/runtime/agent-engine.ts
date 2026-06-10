@@ -3,7 +3,7 @@ import { Agent } from "@earendil-works/pi-agent-core";
 import { getModel, type Model } from "@earendil-works/pi-ai";
 import { runtimeEnv } from "../env.ts";
 import { getBalaurApiKey } from "./auth.ts";
-import { createBalaurLlamaCppModel, createBalaurLlamaCppProvider, DEFAULT_BALAUR_LLAMA_CPP_MODEL_REF, isBalaurLlamaCppModel, BALAUR_LLAMA_CPP_PROVIDER } from "./llama-cpp-provider.ts";
+import { createSyntheticModel, DEFAULT_SYNTHETIC_MODEL_REF, SYNTHETIC_PROVIDER } from "./synthetic-provider.ts";
 import { loadMasterMessages } from "./master-conversation.ts";
 import { balaurTools } from "./balaur-tools.ts";
 import { skillIndexBlock } from "./skills.ts";
@@ -33,9 +33,9 @@ function parseModelRef(ref: string): { provider: string; id: string } {
   return { provider: ref.slice(0, slash), id: ref.slice(slash + 1) };
 }
 
-export function resolveBalaurModel(modelRef = runtimeEnv().BALAUR_MODEL ?? DEFAULT_BALAUR_LLAMA_CPP_MODEL_REF): Model<any> {
+export function resolveBalaurModel(modelRef = runtimeEnv().BALAUR_MODEL ?? DEFAULT_SYNTHETIC_MODEL_REF): Model<any> {
   const { provider, id } = parseModelRef(modelRef);
-  if (provider === BALAUR_LLAMA_CPP_PROVIDER) return createBalaurLlamaCppModel(id);
+  if (provider === SYNTHETIC_PROVIDER) return createSyntheticModel(id);
   const model = getModel(provider as never, id as never);
   if (!model) throw new Error(`Unknown model "${modelRef}". Set BALAUR_MODEL=provider/model.`);
   return model;
@@ -43,7 +43,6 @@ export function resolveBalaurModel(modelRef = runtimeEnv().BALAUR_MODEL ?? DEFAU
 
 export function createBalaurAgent(options: BalaurAgentOptions = {}): Agent {
   const model = options.model ?? resolveBalaurModel(options.modelRef);
-  const provider = isBalaurLlamaCppModel(model) ? createBalaurLlamaCppProvider({ model, cli: false, onStatus: options.onStatus }) : undefined;
   return new Agent({
     initialState: {
       systemPrompt: options.systemPrompt ?? balaurSystemPrompt(),
@@ -52,7 +51,6 @@ export function createBalaurAgent(options: BalaurAgentOptions = {}): Agent {
       tools: [...balaurTools],
       messages: loadMasterMessages(),
     },
-    streamFn: provider?.stream,
     sessionId: options.sessionId,
     getApiKey: getBalaurApiKey,
   });

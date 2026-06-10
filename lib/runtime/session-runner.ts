@@ -10,7 +10,6 @@ import {
   type ConversationBranch,
 } from "./conversation-store.ts";
 import { createEventBus, type InboundMessage, type OutboundMessage, type RuntimeSessionState, type RuntimeSource, type StatusNotice, type ToolNotice } from "./events.ts";
-import { ensureBalaurLocalModel } from "./model-download.ts";
 import { createBalaurAgent } from "./agent-engine.ts";
 import { expandSkillCommand } from "./skills.ts";
 
@@ -34,7 +33,7 @@ type RuntimeTarget = { source: RuntimeSource; sourceId: string };
 
 const TERMINAL_TARGET: RuntimeTarget = { source: "terminal", sourceId: "local" };
 
-export async function createBalaurRuntime(options: BalaurRuntimeOptions = {}): Promise<BalaurRuntime> {
+export async function createBalaurRuntime(_options: BalaurRuntimeOptions = {}): Promise<BalaurRuntime> {
   const bus = createEventBus();
   let activeBranch: ConversationBranch | null = null;
   let captureAssistantText: string[] | null = null;
@@ -45,7 +44,6 @@ export async function createBalaurRuntime(options: BalaurRuntimeOptions = {}): P
     void bus.publish("status", { source: target.source, sourceId: target.sourceId, text } satisfies StatusNotice);
   };
 
-  await ensureBalaurLocalModel({ onStatus: options.onStartupStatus, signal: options.startupSignal });
   const agent = createBalaurAgent({ onStatus: (text) => status(activeTarget, text) });
 
   const runtimeState = (): RuntimeSessionState => ({

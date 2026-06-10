@@ -5,7 +5,7 @@
  * Uses Bun's module metadata and centralizes the three roots every extension
  * must agree on:
  *   - packageRoot() — the installed package (holds src/, lib/, assets/, …).
- *   - dataDir()     — PRIVATE data: runtimes, models, logs, the SQLite index.
+ *   - dataDir()     — PRIVATE data: runtimes, logs, and the SQLite index.
  *   - vaultRoot()   — the owner's PRIVATE Markdown vault.
  *
  * Resolution is lazy so VAULT_PATH / BALAUR_DATA_DIR can be set per-process (and per-test).
@@ -24,8 +24,8 @@ export function packageRoot(): string {
 }
 
 /**
- * Private DATA root — runtimes, models, logs, the disposable SQLite index, and
- * the default vault. Resolution order:
+ * Private DATA root — runtimes, logs, and the disposable SQLite index.
+ * Resolution order:
  *   1. BALAUR_DATA_DIR (explicit override)
  *   2. $XDG_DATA_HOME/balaur, else ~/.local/share/balaur
  *   3. <packageRoot>/.balaur-data (last-resort fallback when there is no HOME)
@@ -39,15 +39,10 @@ export function dataDir(): string {
   return join(packageRoot(), ".balaur-data");
 }
 
-/** Private local model cache used by the built-in llama.cpp provider. */
-export function modelsDir(): string {
-  return join(dataDir(), "models");
-}
-
 /**
  * Vault root — the owner's PRIVATE data, kept OUTSIDE the code package. Resolution order:
  *   1. VAULT_PATH (the explicit, authoritative override)
- *   2. dataDir() (the default — keeps the vault next to runtimes/models)
+ *   2. dataDir() (the default — keeps the vault next to runtime state)
  */
 export function vaultRoot(): string {
   return runtimeEnv().VAULT_PATH || dataDir();

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { createEventBus, RuntimeSource } from "./events.ts";
-import { MODEL_DOWNLOAD_ALLOWED_MESSAGE, MODEL_DOWNLOAD_CONSENT_COMMAND, MODEL_DOWNLOAD_REQUIRED_MESSAGE } from "./model-download-consent.ts";
 
 export type GatewayOutputPayload =
   | { sourceId: string; kind: "outbound"; text: string }
@@ -19,7 +18,6 @@ export interface RuntimeGatewayBridge {
 
 export interface RuntimeGatewayOptions {
   maxEventsPerClient?: number;
-  modelDownloadConsentRequired?: boolean;
 }
 
 export interface RuntimeGatewayHost {
@@ -38,7 +36,6 @@ export function createRuntimeGatewayBridge(
   const maxEvents = options.maxEventsPerClient ?? 200;
   const queues = new Map<string, GatewayOutputEvent[]>();
   const handlers = new Set<(event: GatewayOutputEvent) => void>();
-  const modelDownloadAllowed = new Set<string>();
   let nextId = 1;
 
   const push = (event: GatewayOutputPayload): void => {
@@ -65,16 +62,7 @@ export function createRuntimeGatewayBridge(
 
     async sendInbound(sourceId: string, text: string): Promise<void> {
       const trimmed = text.trim();
-      if (options.modelDownloadConsentRequired && trimmed === MODEL_DOWNLOAD_CONSENT_COMMAND) {
-        modelDownloadAllowed.add(sourceId);
-        push({ sourceId, kind: "status", text: MODEL_DOWNLOAD_ALLOWED_MESSAGE });
-        return;
-      }
-
-      if (options.modelDownloadConsentRequired && !modelDownloadAllowed.has(sourceId)) {
-        push({ sourceId, kind: "status", text: MODEL_DOWNLOAD_REQUIRED_MESSAGE });
-        return;
-      }
+      if (!trimmed) return;
 
       await runtime.bus.publish("inbound", { source, sourceId, text });
     },
